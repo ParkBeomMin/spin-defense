@@ -37,7 +37,7 @@ const ADS = {
   client: 'ca-pub-7426857657290789',     // 기존 AdSense 게시자 ID (parkbeommin.github.io 승인됨)
   bannerSlot: '5615159769',               // 하단 배너 광고 단위 spin-defense-bottom (320x50)
   prodHosts: ['parkbeommin.github.io'],
-  BANNER_H: 64, GAP: 160,                 // 구글 권장: 게임 영역에서 150px 이상 떨어뜨리기
+  BANNER_H: 64, GAP: 160, GAP_MIN: 100,                 // 구글 권장: 게임 영역에서 150px 이상 떨어뜨리기
 };
 ADS.prod = ADS.prodHosts.includes(location.hostname);
 ADS.enabled = !/[?&](rec|noads)=1/.test(location.search);
@@ -66,12 +66,15 @@ function showTip() {
   if (!tipTimer) tipTimer = setInterval(() => { el.style.opacity = 0; setTimeout(() => { tipIdx++; showTip(); el.style.opacity = 1; }, 400); }, 6000);
 }
 function layoutBanner(s0) {
-  // 화면이 충분히 길 때만 배너를 켠다 (게임을 최대 15%까지 줄이는 것 허용)
+  // 배너는 항상 켠다. 우선순위: ① 간격 160px + 게임 크기 85% 이상 유지 ② 간격을 줄여서(최소 100px) 게임 85% 유지 ③ 그래도 안 되면 게임을 더 줄임
   if (!ADS.wantBanner) return s0;
-  const leftover = innerHeight - H * s0, need = ADS.BANNER_H + ADS.GAP;
-  let s = s0, on = false;
-  if (leftover >= need) on = true;
-  else { const s1 = Math.min(innerWidth / W, (innerHeight - need) / H); if (s1 >= s0 * 0.85) { s = s1; on = true; } }
+  const avail = innerHeight - ADS.BANNER_H, minS = s0 * 0.85;
+  let s = Math.min(s0, (avail - ADS.GAP) / H), on = true;
+  if (s < minS) {
+    const gapAtMin = avail - H * minS;
+    s = gapAtMin >= ADS.GAP_MIN ? minS : Math.max(0.3, (avail - ADS.GAP_MIN) / H);
+  }
+  s = Math.min(s, innerWidth / W);
   ADS.bannerOn = on;
   const bar = document.getElementById('adbar');
   bar.style.display = on ? 'flex' : 'none'; document.body.classList.toggle('withbar', on);
