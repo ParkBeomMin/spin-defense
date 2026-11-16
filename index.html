@@ -263,12 +263,13 @@ const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (
 
 // ===== 상태 =====
 const LIMIT = 60, WAVE_LEN = 22, MAX_AD_SPINS = 3;
+const FREE_RECHARGE = 90, FREE_MAX = 3, REVIVE_WAIT = 8;
 let S, screen = 'loading', drag = null, selected = -1, ad = null, press = null, paused = false, T = 0;
 function newGame() {
   S = {
     gold: 100, goldShown: 100, wave: 0, waveT: 3, spawnLeft: 0, spawnGap: 1, spawnT: 0,
     enemies: [], units: Array(COLS * ROWS).fill(null), fx: [], proj: [], dmg: [], parts: [], coins: [], dying: [], decals: [], hitstop: 0, hsCd: 0, flash: null, kick: null,
-    spins: 0, adSpins: MAX_AD_SPINS, lv: { sword: 0, bow: 0, magic: 0, ice: 0 }, lvPop: {},
+    spins: 0, adSpins: MAX_AD_SPINS, freeCharges: 1, freeT: FREE_RECHARGE, lv: { sword: 0, bow: 0, magic: 0, ice: 0 }, lvPop: {},
     revived: false, speed: 1, kills: 0, time: 0, shake: 0,
     msg: '', msgT: 0, msgCol: '#fff', banner: null,
     reels: [0, 1, 2].map(i => ({ strip: [SYMS[i]], pos: 0, from: 0, to: 0, t: 0, dur: 0, done: true })),
@@ -503,6 +504,7 @@ function update(dt) {
   if (S.flash) { S.flash.a -= dt * 4; if (S.flash.a <= 0) S.flash = null; }
   if (S.kick) { S.kick.t -= dt; if (S.kick.t <= 0) S.kick = null; }
   if (S.hsCd > 0) S.hsCd -= dt;
+  if (!adMode() && S.freeCharges < FREE_MAX) { S.freeT -= dt; if (S.freeT <= 0) { S.freeCharges++; S.freeT = FREE_RECHARGE; flash('무료 스핀 1회 충전!', '#8fd8ff', 1.4); } }
   for (const c of S.coins) { c.t += dt; if (c.t >= c.dur && !c.done) { c.done = true; sfx('coin'); } } S.coins = S.coins.filter(c => c.t < c.dur);
   S.goldShown += (S.gold - S.goldShown) * Math.min(1, dt * 12); if (Math.abs(S.gold - S.goldShown) < 0.5) S.goldShown = S.gold;
   if (aliveWeight() >= LIMIT) gameOver();
@@ -580,6 +582,9 @@ function revive() {
 }
 // 실제 앱에서는 AdMob 보상형 광고로 교체
 // 보상형 광고: 실제 광고(H5 Games Ads)가 준비되면 그걸 쓰고, 아니면 테스트용 가짜 광고
+// H5 게임 광고 승인 전에는 '시간' 방식: 무료 스핀은 90초마다 충전, 부활은 8초 기다리기
+const adMode = () => ADS.enabled && ADS.ready;
+const mmss = t => { t = Math.max(0, Math.ceil(t)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 function showRewardAd(onReward, name = 'reward') {
   if (!ADS.enabled || !ADS.ready) { ad = { t: 3, onReward }; return; }
   let got = false;
@@ -858,13 +863,24 @@ function drawSlot() {
       text('배속', cx + 12, cy + 13, 11, 'rgba(255,255,255,.75)', 'center', 2);
     }, 'speed');
   }
-  const adOk = S.adSpins > 0 && can;
-  button(BTN.ad, '#2f8ae0', adOk, (cx, cy) => {
-    icon('chest', cx - 22, cy + 1, 30);
-    text('무료', cx + 14, cy - 8, 15, '#fff', 'center', 3);
-    text(`${S.adSpins}/${MAX_AD_SPINS}`, cx + 14, cy + 11, 12, '#cfe8ff', 'center', 2.5);
-    rr(cx + 22, cy - 30, 22, 13, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 33, cy - 23, 9, '#5a3a00');
-  }, 'ad');
+  if (adMode()) {
+    const adOk = S.adSpins > 0 && can;
+    button(BTN.ad, '#2f8ae0', adOk, (cx, cy) => {
+      icon('chest', cx - 22, cy + 1, 30);
+      text('무료', cx + 14, cy - 8, 15, '#fff', 'center', 3);
+      text(`${S.adSpins}/${MAX_AD_SPINS}`, cx + 14, cy + 11, 12, '#cfe8ff', 'center', 2.5);
+      rr(cx + 22, cy - 30, 22, 13, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 33, cy - 23, 9, '#5a3a00');
+    }, 'ad');
+  } else {
+    const has = S.freeCharges > 0;
+    button(BTN.ad, '#2f8ae0', has && can, (cx, cy) => {
+      icon('chest', cx - 22, cy + 1, 30);
+      text('무료', cx + 14, cy - 8, 15, '#fff', 'center', 3);
+      text(has ? `${S.freeCharges}/${FREE_MAX}` : mmss(S.freeT), cx + 14, cy + 11, 12, has ? '#cfe8ff' : '#ffe08a', 'center', 2.5);
+      // 충전 게이지 (시계 대신 얇은 바)
+      if (S.freeCharges < FREE_MAX) { const p = 1 - S.freeT / FREE_RECHARGE; rr(cx - 36, cy + 21, 72, 4, 2); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill(); rr(cx - 36, cy + 21, 72 * p, 4, 2); ctx.fillStyle = '#8fe3ff'; ctx.fill(); }
+    }, 'ad');
+  }
 }
 function drawField() {
   drawPath(); drawGrid();
@@ -1046,7 +1062,7 @@ function drawOver() {
   text(`처치 ${S.kills.toLocaleString()}마리`, W / 2, 332, 14, 'rgba(255,255,255,.8)', 'center', 3);
   if (S.newBest) text('최고 기록 갱신!', W / 2, 354, 14, '#ffd166', 'center', 3);
   else text(`최고 기록 WAVE ${store.best}`, W / 2, 354, 13, 'rgba(255,255,255,.6)', 'center', 3);
-  if (!S.revived) button(BTN.revive, '#2f8ae0', true, (cx, cy) => { icon('heart', cx - 70, cy, 26); text('광고 보고 부활', cx + 10, cy, 19, '#fff', 'center', 4); rr(cx + 72, cy - 22, 24, 14, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 84, cy - 15, 9, '#5a3a00'); }, 'revive');
+  if (!S.revived) button(BTN.revive, '#2f8ae0', true, (cx, cy) => { icon('heart', cx - 70, cy, 26); if (adMode()) { text('광고 보고 부활', cx + 10, cy, 19, '#fff', 'center', 4); rr(cx + 72, cy - 22, 24, 14, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 84, cy - 15, 9, '#5a3a00'); } else text(`${REVIVE_WAIT}초 쉬고 부활`, cx + 10, cy, 19, '#fff', 'center', 4); }, 'revive');
   button(BTN.retry, '#ff4f72', true, (cx, cy) => text('다시 하기', cx, cy, 20, '#fff', 'center', 4, '#8a1f38'), 'retry');
 }
 function drawPause() {
@@ -1055,6 +1071,15 @@ function drawPause() {
   button(BTN.resume, '#ff4f72', true, (cx, cy) => text('계속하기', cx, cy, 22, '#fff', 'center', 4, '#8a1f38'), 'resume');
 }
 function drawAd() {
+  if (ad.kind === 'wait') {
+    ctx.fillStyle = 'rgba(10,6,24,.96)'; ctx.fillRect(0, 0, W, H);
+    const p = 1 - ad.t / ad.max, pulse = 1 + Math.sin(T * 6) * 0.06;
+    ctx.save(); ctx.translate(W / 2, 250); ctx.scale(pulse, pulse); icon('heart', 0, 0, 72); ctx.restore();
+    text('영웅들이 숨을 고르는 중...', W / 2, 315, 18, '#fff', 'center', 3);
+    text(String(Math.ceil(ad.t)), W / 2, 365, 40, '#ff8fa3', 'center', 6);
+    rr(W / 2 - 90, 400, 180, 8, 4); ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fill(); rr(W / 2 - 90, 400, 180 * p, 8, 4); ctx.fillStyle = '#ff8fa3'; ctx.fill();
+    return;
+  }
   ctx.fillStyle = 'rgba(0,0,0,.92)'; ctx.fillRect(0, 0, W, H);
   icon('chest', W / 2, 250, 70);
   text('광고 재생 중 (테스트)', W / 2, 310, 18, '#fff', 'center', 3);
@@ -1106,15 +1131,16 @@ function activate(key) {
   switch (key) {
     case 'start': newGame(); screen = 'play'; sfx('click'); break;
     case 'retry': sfx('click'); betweenGames(() => { newGame(); screen = 'play'; }); break;
-    case 'revive': showRewardAd(revive, 'revive'); break;
+    case 'revive': if (adMode()) showRewardAd(revive, 'revive'); else ad = { t: REVIVE_WAIT, max: REVIVE_WAIT, onReward: revive, kind: 'wait' }; break;
     case 'resume': paused = false; sfx('click'); break;
     case 'spin': doSpin(false); break;
     case 'speed': S.speed = S.speed === 1 ? 2 : 1; sfx('click'); break;
     case 'sound': store.mute = !store.mute; sfx('click'); break;
     case 'ad':
-      if (S.adSpins <= 0) { flash('이번 판 무료 스핀을 다 썼어요', '#ffb35c'); sfx('error'); }
-      else if (!canSpin()) { flash('칸이 꽉 찼거나 슬롯이 도는 중이에요', '#ffb35c'); sfx('error'); }
-      else showRewardAd(() => { S.adSpins--; doSpin(true); }, 'free_spin');
+      if (!canSpin()) { flash('칸이 꽉 찼거나 슬롯이 도는 중이에요', '#ffb35c'); sfx('error'); }
+      else if (adMode()) { if (S.adSpins <= 0) { flash('이번 판 무료 스핀을 다 썼어요', '#ffb35c'); sfx('error'); } else showRewardAd(() => { S.adSpins--; doSpin(true); }, 'free_spin'); }
+      else if (S.freeCharges <= 0) { flash(`무료 스핀은 ${mmss(S.freeT)} 후에 충전돼요`, '#8fd8ff', 1.6); sfx('error'); }
+      else { if (S.freeCharges >= FREE_MAX) S.freeT = FREE_RECHARGE; S.freeCharges--; doSpin(true); }
       break;
     default: if (key && key.startsWith('up_')) doUpgrade(key.slice(3));
   }
