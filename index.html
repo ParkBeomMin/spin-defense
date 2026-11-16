@@ -791,6 +791,18 @@ function judgment(u, i) {
   S.fx.push({ k: 'ring', x: ux, y: uy, t: 0.7, max: 0.7, col: '#ffe9a0' });
   flashScreen(0.18, '#fff3c4'); addShake(0.25); sfx('boom'); u.cheer = CHEER_T;
 }
+// 영웅 판매(버리기): 선택 후 위에 뜨는 버튼, 또는 끌어서 왼쪽 아래 버튼 자리에 놓기
+function sellRect() {
+  if (selected < 0 || !S || !S.units[selected] || screen !== 'play') return null;
+  const [cx, cy] = cellCenter(selected);
+  return { x: cx - 38, y: Math.max(64, cy - 58), w: 76, h: 24 };
+}
+function sellUnit(i) {
+  const u = S.units[i]; if (!u) return;
+  const v = SELL[u.grade]; S.gold += v; S.units[i] = null; if (selected === i) selected = -1;
+  const [x, y] = cellCenter(i); puffs(x, y, 5); for (let k = 0; k < Math.min(6, 1 + u.grade); k++) if (S.coins.length < 14) S.coins.push({ x, y, sx: x + (Math.random() - 0.5) * 20, sy: y, t: 0, dur: 0.5 + k * 0.05 });
+  flash(`${GRADES[u.grade].name} ${TYPES[u.type].name} 판매 +${v} 골드`, '#ffd166', 1.6); sfx('sell'); buzz(10);
+}
 function findPair() {
   for (let i = 0; i < S.units.length; i++) for (let j = i + 1; j < S.units.length; j++) if (canMerge(i, j)) return [i, j];
   return null;
@@ -1161,6 +1173,17 @@ function drawField() {
     drawUnitAt(u, x, y, { alpha: drag && drag.moved && drag.idx === i ? 0.3 : 1 });
   });
   for (const e of es) if (e.y >= GY) drawEnemy(e);
+  // 선택한 영웅 위 '판매' 버튼
+  const sr = sellRect();
+  if (sr) {
+    const su = S.units[selected], pr = press && press.key === 'sellsel';
+    ctx.save(); ctx.translate(0, pr ? 2 : 0);
+    rr(sr.x, sr.y + 3, sr.w, sr.h, 12); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill();
+    rr(sr.x, sr.y, sr.w, sr.h, 12); ctx.fillStyle = '#e0443c'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sr.x + sr.w / 2 - 5, sr.y + sr.h); ctx.lineTo(sr.x + sr.w / 2 + 5, sr.y + sr.h); ctx.lineTo(sr.x + sr.w / 2, sr.y + sr.h + 6); ctx.closePath(); ctx.fillStyle = '#e0443c'; ctx.fill();
+    text('판매', sr.x + 20, sr.y + sr.h / 2, 12, '#fff', 'center', 2.5); icon('coin', sr.x + 40, sr.y + sr.h / 2, 12); text(`+${SELL[su.grade]}`, sr.x + 48, sr.y + sr.h / 2, 11, '#fff2b0', 'left', 2.5);
+    ctx.restore();
+  }
   // 죽는 연출: 하얗게 번적이며 부풀었다가 사라짐
   for (const d of S.dying) {
     const a = d.t / d.max, p = 1 - a;
@@ -1370,7 +1393,7 @@ function drawTitle() {
   button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawSpeaker(cx - 2, cy, store.mute), 'tmute');
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(`최고 기록  WAVE ${store.best}`, W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text('v0.9 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text('v0.9.1 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -1580,6 +1603,7 @@ function hitKey(x, y) {
   }
   if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; return null; }
   if (S.pick) { for (let i = 0; i < 3; i++) if (inRect(x, y, pickRect(i))) return 'card_' + i; return null; }
+  { const sr = sellRect(); if (sr && inRect(x, y, sr)) return 'sellsel'; }
   if (paused) return inRect(x, y, BTN.resume) ? 'resume' : null;
   for (const k of ['spin', 'ad', 'speed', 'sound']) if (inRect(x, y, BTN[k])) return k;
   for (const b of UPG) if (inRect(x, y, b)) return 'up_' + b.t;
@@ -1591,6 +1615,7 @@ function activate(key) {
     case 'shop': screen = 'shop'; sfx('click'); break;
     case 'reward': ensureDaily(); screen = 'missions'; sfx('click'); break;
     case 'attc': claimAtt(); break;
+    case 'sellsel': if (selected >= 0) sellUnit(selected); break;
     case 'tmute': store.mute = !store.mute; sfx('click'); break;
     case 'back': screen = 'title'; sfx('click'); break;
     case 'home': screen = 'shop'; sfx('click'); break;
@@ -1619,7 +1644,9 @@ function activate(key) {
 cv.addEventListener('pointerdown', e => {
   e.preventDefault(); startMusic(); if (ad || screen === 'loading') return;
   const [x, y] = pos(e);
-  if (screen === 'play' && !paused) {
+  if (screen === 'play' && !paused && !(S && S.pick)) {
+    const sr = sellRect();
+    if (sr && inRect(x, y, sr)) { press = { key: 'sellsel' }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; }
     const i = cellAt(x, y);
     if (i >= 0 && S.units[i]) { const [rx0, ry0] = rawPos(e); drag = { idx: i, x, y, sx: x, sy: y, rx: rx0, ry: ry0, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; }
   }
@@ -1644,10 +1671,7 @@ cv.addEventListener('pointerup', e => {
     return;
   }
   const u = S.units[d.idx];
-  if (inRect(d.x, d.y, BTN.speed)) {
-    S.gold += SELL[u.grade]; S.units[d.idx] = null; selected = -1;
-    flash(`판매 +${SELL[u.grade]} 골드`, '#ffd166', 1.2); sfx('sell'); return;
-  }
+  if (inRect(d.x, d.y, BTN.speed)) { sellUnit(d.idx); return; }
   const j = cellAt(d.x, d.y);
   if (j < 0 || j === d.idx) return;
   const v = S.units[j];
