@@ -8,7 +8,7 @@
 <style>
 @font-face{font-family:Jua;src:url(assets/Jua-Regular.ttf) format("truetype");font-display:block}
 html,body{margin:0;height:100%;background:#1a1233;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-body{display:flex;align-items:center;justify-content:center;flex-direction:column}
+body{display:block}
 body.withbar{justify-content:flex-start}
 #adbar{position:fixed;left:0;right:0;bottom:0;display:none;flex-direction:column;align-items:center;padding-bottom:env(safe-area-inset-bottom);background:#1a1233}
 #gapinfo{position:fixed;left:0;right:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;font-family:Jua,sans-serif;text-align:center;padding:0 18px;box-sizing:border-box}
@@ -65,23 +65,12 @@ function showTip() {
   const best = +(localStorage.getItem('sd_best') || 0); b.textContent = best ? `최고 기록 WAVE ${best}` : '';
   if (!tipTimer) tipTimer = setInterval(() => { el.style.opacity = 0; setTimeout(() => { tipIdx++; showTip(); el.style.opacity = 1; }, 400); }, 6000);
 }
-function layoutBanner(s0) {
-  // 배너는 항상 켠다. 우선순위: ① 간격 160px + 게임 크기 85% 이상 유지 ② 간격을 줄여서(최소 100px) 게임 85% 유지 ③ 그래도 안 되면 게임을 더 줄임
-  if (!ADS.wantBanner) return s0;
-  const avail = innerHeight - ADS.BANNER_H, minS = s0 * 0.85;
-  let s = Math.min(s0, (avail - ADS.GAP) / H), on = true;
-  if (s < minS) {
-    const gapAtMin = avail - H * minS;
-    s = gapAtMin >= ADS.GAP_MIN ? minS : Math.max(0.3, (avail - ADS.GAP_MIN) / H);
-  }
-  s = Math.min(s, innerWidth / W);
-  ADS.bannerOn = on;
+function layoutBanner() {
+  // 게임은 화면을 꽉 채우고, 배너는 맨 아래에 붙인다
   const bar = document.getElementById('adbar');
-  bar.style.display = on ? 'flex' : 'none'; document.body.classList.toggle('withbar', on);
-  // 게임과 배너 사이 빈 공간: 누를 것 없는 팁 문구로 채움 (광고-게임 간격은 그대로 유지)
-  const gi = document.getElementById('gapinfo'); gi.style.display = on ? 'flex' : 'none';
-  if (on) { const gameH = H * s; gi.style.top = gameH + 'px'; gi.style.height = Math.max(0, innerHeight - gameH - ADS.BANNER_H) + 'px'; showTip(); }
-  if (on && !ADS.bannerFilled) {
+  document.getElementById('gapinfo').style.display = 'none';
+  ADS.bannerOn = ADS.wantBanner; bar.style.display = ADS.bannerOn ? 'flex' : 'none';
+  if (ADS.bannerOn && !ADS.bannerFilled) {
     ADS.bannerFilled = true;
     if (ADS.bannerSlot) {
       const ins = document.createElement('ins'); ins.className = 'adsbygoogle';
@@ -90,15 +79,22 @@ function layoutBanner(s0) {
       bar.appendChild(ins); try { window.adsbygoogle.push({}); } catch (e) {}
     } else { const ph = document.createElement('div'); ph.className = 'ph'; ph.textContent = '하단 배너 광고 자리 (320x50)'; bar.appendChild(ph); }
   }
-  return s;
+  return ADS.bannerOn ? ADS.BANNER_H : 0;
 }
+// 화면 꽉 채우기: 캔버스는 (화면 - 배너) 전체. 게임 기본판(360x640)은 가로에 맞추고
+// 남는 세로 공간(EX)은 필드와 아래 조작부 사이 풀밭으로, 남는 가로(OX)는 양옆 배경으로 채운다
+let VW = W, VH = H, OX = 0, EX = 0, BASE_T = [1, 0, 0, 1, 0, 0];
+const SPLIT = 380; // 이 y보다 아래(강화 줄, 슬롯, 버튼)는 화면 맨 아래에 붙인다
 function resize() {
-  const s = layoutBanner(Math.min(innerWidth / W, innerHeight / H));
-  scale = s;
+  const bannerH = layoutBanner();
+  const cw = innerWidth, ch = Math.max(200, innerHeight - bannerH);
+  const s = Math.min(cw / W, ch / H);
+  scale = s; VW = cw / s; VH = ch / s; OX = (VW - W) / 2; EX = VH - H;
   const dpr = Math.min(3, window.devicePixelRatio || 1);
-  cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px';
-  cv.width = Math.round(W * s * dpr); cv.height = Math.round(H * s * dpr);
-  ctx.setTransform(s * dpr, 0, 0, s * dpr, 0, 0);
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+  BASE_T = [s * dpr, 0, 0, s * dpr, 0, 0];
+  ctx.setTransform(...BASE_T);
   ctx.imageSmoothingQuality = 'high';
 }
 addEventListener('resize', resize); resize();
@@ -666,10 +662,12 @@ function panel(x, y, w, h, r = 18) {
 
 // ===== 장면 그리기 =====
 function drawBG() {
+  ctx.save(); ctx.setTransform(...BASE_T);
   if (IMG.bg && IMG.bg.width) {
-    const s = Math.max(W / IMG.bg.width, H / IMG.bg.height);
-    ctx.drawImage(IMG.bg, (W - IMG.bg.width * s) / 2, (H - IMG.bg.height * s) / 2, IMG.bg.width * s, IMG.bg.height * s);
-  } else { ctx.fillStyle = '#5a9a3a'; ctx.fillRect(0, 0, W, H); }
+    const s = Math.max(VW / IMG.bg.width, VH / IMG.bg.height);
+    ctx.drawImage(IMG.bg, (VW - IMG.bg.width * s) / 2, (VH - IMG.bg.height * s) / 2, IMG.bg.width * s, IMG.bg.height * s);
+  } else { ctx.fillStyle = '#5a9a3a'; ctx.fillRect(0, 0, VW, VH); }
+  ctx.restore();
 }
 let pebbles = null;
 function drawPath() {
@@ -763,7 +761,7 @@ function drawEnemy(e) {
 function drawHUD() {
   // 상단 바
   const g = ctx.createLinearGradient(0, 0, 0, 62); g.addColorStop(0, 'rgba(20,12,40,.92)'); g.addColorStop(1, 'rgba(20,12,40,.6)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 62);
+  ctx.fillStyle = g; ctx.fillRect(-OX, 0, VW, 62);
   // 웨이브 배지 + 타이머 링
   ctx.fillStyle = '#2a1d4f'; ctx.beginPath(); ctx.arc(32, 31, 22, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(32, 31, 22, 0, Math.PI * 2); ctx.stroke();
@@ -817,9 +815,9 @@ function drawSymbol(sym, cx, cy, alpha) {
 function drawSlot() {
   // 패널
   const py = 430;
-  rr(0, py, W, H - py + 20, 26); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill();
+  rr(-OX, py, VW, H - py + 20, 26); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill();
   const pg = ctx.createLinearGradient(0, py, 0, H); pg.addColorStop(0, '#34245f'); pg.addColorStop(1, '#1b1236');
-  rr(0, py + 4, W, H - py + 20, 26); ctx.fillStyle = pg; ctx.fill();
+  rr(-OX, py + 4, VW, H - py + 20, 26); ctx.fillStyle = pg; ctx.fill();
   // 머신 몸체
   const mx = REEL.x - 14, my = REEL.y - 10, mw = REEL.w * 3 + REEL.gap * 2 + 28, mh = REEL.h + 20;
   rr(mx, my + 4, mw, mh, 16); ctx.fillStyle = '#7a4a12'; ctx.fill();
@@ -903,7 +901,7 @@ function drawField() {
   const showIdx = drag && drag.moved ? drag.idx : selected;
   if (showIdx >= 0 && S.units[showIdx]) {
     const u = S.units[showIdx], st = stats(u);
-    const [cx, cy] = drag && drag.moved ? [drag.x, drag.y] : cellCenter(showIdx);
+    const [cx, cy] = drag && drag.moved ? [drag.rx, drag.ry] : cellCenter(showIdx);
     ctx.beginPath(); ctx.arc(cx, cy, st.range, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fill(); ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
   }
@@ -1041,8 +1039,7 @@ function drawTutorial() {
   text(label, lx, ly + 1, 14, '#3a2160');
 }
 function drawTitle() {
-  drawBG();
-  ctx.fillStyle = 'rgba(20,10,45,.55)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(20,10,45,.55)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   // 영웅 라인업
   const lineup = ['ice', 'magic', 'sword', 'bow'];
   const pos = [[70, 400], [130, 388], [228, 388], [290, 400]];
@@ -1070,7 +1067,7 @@ function drawTitle() {
   text('v0.5 베타', W / 2, 620, 10, 'rgba(255,255,255,.4)');
 }
 function drawOver() {
-  ctx.fillStyle = 'rgba(10,6,24,.75)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(10,6,24,.75)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   panel(40, 130, 280, 380);
   sprite('boss', W / 2, 238, 88);
   text('방어 실패', W / 2, 262, 32, '#ff6b6b', 'center', 6);
@@ -1082,13 +1079,13 @@ function drawOver() {
   button(BTN.retry, '#ff4f72', true, (cx, cy) => text('다시 하기', cx, cy, 20, '#fff', 'center', 4, '#8a1f38'), 'retry');
 }
 function drawPause() {
-  ctx.fillStyle = 'rgba(10,6,24,.7)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(10,6,24,.7)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   text('일시정지', W / 2, 250, 32, '#fff', 'center', 6);
   button(BTN.resume, '#ff4f72', true, (cx, cy) => text('계속하기', cx, cy, 22, '#fff', 'center', 4, '#8a1f38'), 'resume');
 }
 function drawAd() {
   if (ad.kind === 'wait') {
-    ctx.fillStyle = 'rgba(10,6,24,.96)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(10,6,24,.96)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
     const p = 1 - ad.t / ad.max, pulse = 1 + Math.sin(T * 6) * 0.06;
     ctx.save(); ctx.translate(W / 2, 250); ctx.scale(pulse, pulse); icon('heart', 0, 0, 72); ctx.restore();
     text('영웅들이 숨을 고르는 중...', W / 2, 315, 18, '#fff', 'center', 3);
@@ -1096,45 +1093,58 @@ function drawAd() {
     rr(W / 2 - 90, 400, 180, 8, 4); ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fill(); rr(W / 2 - 90, 400, 180 * p, 8, 4); ctx.fillStyle = '#ff8fa3'; ctx.fill();
     return;
   }
-  ctx.fillStyle = 'rgba(0,0,0,.92)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(0,0,0,.92)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   icon('chest', W / 2, 250, 70);
   text('광고 재생 중 (테스트)', W / 2, 310, 18, '#fff', 'center', 3);
   text(`${Math.ceil(ad.t)}초 후 보상 지급`, W / 2, 340, 14, 'rgba(255,255,255,.7)');
   text('실제 서비스에서는 구글 광고가 나와요', W / 2, 380, 11, 'rgba(255,255,255,.4)');
 }
 function draw() {
-  ctx.clearRect(0, 0, W, H);
-  if (screen === 'loading') { ctx.fillStyle = '#1a1233'; ctx.fillRect(0, 0, W, H); text('불러오는 중...', W / 2, H / 2, 16, '#fff'); return; }
-  if (screen === 'title') return drawTitle();
+  ctx.setTransform(...BASE_T);
+  ctx.clearRect(0, 0, VW, VH);
+  if (screen === 'loading') { ctx.fillStyle = '#1a1233'; ctx.fillRect(0, 0, VW, VH); text('불러오는 중...', VW / 2, VH / 2, 16, '#fff'); return; }
+  if (screen === 'title') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawTitle(); ctx.restore(); return; }
   ctx.save();
   if (S.shake > 0) { const m = Math.min(1, S.shake / 0.4); ctx.translate((Math.random() - 0.5) * 10 * m, (Math.random() - 0.5) * 10 * m); }
   if (S.kick) { const q = S.kick.t / 0.12; ctx.translate(S.kick.x * q, S.kick.y * q); }
-  drawBG(); drawField(); drawUpgrades(); drawSlot(); drawHUD();
-  if (S.flash) { ctx.save(); ctx.globalAlpha = Math.min(1, S.flash.a); ctx.fillStyle = S.flash.col; ctx.fillRect(-20, -20, W + 40, H + 40); ctx.restore(); }
-  drawBanner(); drawTutorial();
-  if (drag && drag.moved) drawUnitAt(S.units[drag.idx], drag.x, drag.y - 10, { alpha: 0.95, still: true });
+  drawBG();
+  ctx.save(); ctx.translate(OX, 0); drawField(); ctx.restore();
+  ctx.save(); ctx.translate(OX, EX); drawUpgrades(); drawSlot(); ctx.restore();
+  ctx.save(); ctx.translate(OX, 0); drawHUD(); ctx.restore();
+  if (S.flash) { ctx.save(); ctx.globalAlpha = Math.min(1, S.flash.a); ctx.fillStyle = S.flash.col; ctx.fillRect(-20, -20, VW + 40, VH + 40); ctx.restore(); }
+  ctx.save(); ctx.translate(OX, 0); drawBanner(); ctx.restore();
+  ctx.save(); ctx.translate(OX, store.tut === 1 ? 0 : EX); drawTutorial(); ctx.restore();
+  if (drag && drag.moved) { ctx.save(); ctx.translate(OX, 0); drawUnitAt(S.units[drag.idx], drag.rx, drag.ry - 10, { alpha: 0.95, still: true }); ctx.restore(); }
   ctx.restore();
+  ctx.save(); ctx.translate(OX, EX / 2);
   if (screen === 'over') drawOver();
   if (paused && screen === 'play') drawPause();
   if (ad) drawAd();
+  ctx.restore();
   // 녹화용 터치 표시 (?rec=1)
   if (REC && touch.show > 0) {
     ctx.save(); ctx.globalAlpha = Math.min(1, touch.show * 4) * 0.85;
     ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(touch.x, touch.y, touch.down ? 13 : 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+    ctx.beginPath(); ctx.arc(touch.x + OX, touch.y, touch.down ? 13 : 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
   }
 }
 const REC = /[?&]rec=1/.test(location.search);
 const touch = { x: 0, y: 0, down: false, show: 0 };
 if (REC) {
-  const tp = e => { const [x, y] = pos(e); touch.x = x; touch.y = y; };
+  const tp = e => { const [x, y] = rawPos(e); touch.x = x; touch.y = y; };
   cv.addEventListener('pointerdown', e => { tp(e); touch.down = true; touch.show = 1; }, true);
   cv.addEventListener('pointermove', e => { tp(e); if (touch.down) touch.show = 1; }, true);
   cv.addEventListener('pointerup', e => { tp(e); touch.down = false; touch.show = 0.35; }, true);
 }
 
 // ===== 입력 =====
-function pos(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / scale, (e.clientY - r.top) / scale]; }
+// 화면 좌표 -> 게임 기본판 좌표. 위쪽(필드)은 그대로, 아래 조작부는 EX만큼 올려서 계산
+function rawPos(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / scale - OX, (e.clientY - r.top) / scale]; }
+function pos(e) {
+  const [x, y] = rawPos(e);
+  if (screen !== 'play' || paused || ad) return [x, y - EX / 2];
+  return [x, y < SPLIT ? y : Math.max(SPLIT, y - EX)];
+}
 function hitKey(x, y) {
   if (screen === 'title') return inRect(x, y, BTN.start) ? 'start' : null;
   if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; return null; }
@@ -1166,7 +1176,7 @@ cv.addEventListener('pointerdown', e => {
   const [x, y] = pos(e);
   if (screen === 'play' && !paused) {
     const i = cellAt(x, y);
-    if (i >= 0 && S.units[i]) { drag = { idx: i, x, y, sx: x, sy: y, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; }
+    if (i >= 0 && S.units[i]) { const [rx0, ry0] = rawPos(e); drag = { idx: i, x, y, sx: x, sy: y, rx: rx0, ry: ry0, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; }
   }
   const k = hitKey(x, y);
   if (k) { press = { key: k }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} }
@@ -1174,7 +1184,7 @@ cv.addEventListener('pointerdown', e => {
 });
 cv.addEventListener('pointermove', e => {
   const [x, y] = pos(e);
-  if (drag) { drag.x = x; drag.y = y; if (!drag.moved && Math.hypot(x - drag.sx, y - drag.sy) > 8) { drag.moved = true; selected = -1; } }
+  if (drag) { const [rx1, ry1] = rawPos(e); drag.rx = rx1; drag.ry = ry1; drag.x = x; drag.y = y; if (!drag.moved && Math.hypot(x - drag.sx, y - drag.sy) > 8) { drag.moved = true; selected = -1; } }
   else if (press && hitKey(x, y) !== press.key) press = null;
 });
 cv.addEventListener('pointerup', e => {
