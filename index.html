@@ -32,7 +32,7 @@ const ADS = {
   client: 'ca-pub-7426857657290789',     // 기존 AdSense 게시자 ID (parkbeommin.github.io 승인됨)
   bannerSlot: '5615159769',               // 하단 배너 광고 단위 spin-defense-bottom (320x50)
   prodHosts: ['parkbeommin.github.io'],
-  BANNER_H: 64, GAP: 150,                 // 구글 권장: 게임 영역에서 150px 이상 떨어뜨리기
+  BANNER_H: 64, GAP: 160,                 // 구글 권장: 게임 영역에서 150px 이상 떨어뜨리기
 };
 ADS.prod = ADS.prodHosts.includes(location.hostname);
 ADS.enabled = !/[?&](rec|noads)=1/.test(location.search);
