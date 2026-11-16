@@ -130,9 +130,9 @@ const TYPES = {
 const TYPE_KEYS = Object.keys(TYPES);
 const GRADES = [null,
   { name: '일반', col: '#c9ced6', m: 1 },
-  { name: '희귀', col: '#4fa3ff', m: 2.7 },
-  { name: '영웅', col: '#c070ff', m: 7 },
-  { name: '전설', col: '#ffb020', m: 18 },
+  { name: '희귀', col: '#4fa3ff', m: 3.2 },
+  { name: '영웅', col: '#c070ff', m: 10 },
+  { name: '전설', col: '#ffb020', m: 30 },
 ];
 const SELL = [0, 10, 30, 90, 270];
 const SYMS = ['sword', 'bow', 'magic', 'ice', 'star'];
@@ -323,8 +323,10 @@ newGame();
 function flash(txt, col = '#fff', t = 2.2) { S.msg = txt; S.msgCol = col; S.msgT = t; }
 function banner(text, sub, col = '#fff', t = 1.6) { S.banner = { text, sub, col, t, max: t }; }
 const spinCost = () => Math.round((20 + S.spins * 2) * S.B.spinCost);
-const upCost = t => 30 + S.lv[t] * 30;
-const enemyHP = () => Math.round(30 * Math.pow(1.17, S.wave - 1));
+const upCost = t => 40 + S.lv[t] * 35;
+// 난이도 곡선: 초반 5웨이브는 순하게, 이후 가파르게 (TUNE은 시뮬레이션으로 맞춘 값)
+const TUNE = { A: 32, G: 1.17, L: 0.5, from: 7, boss: 16, bossGrow: 0.2, bossTime: 40, upPct: 0.2 };
+const enemyHP = () => Math.round(TUNE.A * Math.pow(TUNE.G, S.wave - 1) * (1 + TUNE.L * Math.max(0, S.wave - TUNE.from)));
 function aliveWeight() { let w = 0; for (const e of S.enemies) w += e.boss ? 10 : 1; return w; }
 function emptyCells() { const r = []; S.units.forEach((u, i) => { if (!u) r.push(i); }); return r; }
 
@@ -335,7 +337,7 @@ function startWave() {
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
   S.spawnGap = Math.min(1.2, 14 / Math.max(1, S.spawnLeft)); S.spawnT = 0;
-  if (boss) { spawn(true); banner('BOSS', `WAVE ${S.wave}`, '#ff5d5d', 2); sfx('boss'); S.shake = 0.4; buzz(60); }
+  if (boss) { spawn(true); S.bossT = TUNE.bossTime; banner('BOSS', `${TUNE.bossTime}초 안에 처치!`, '#ff5d5d', 2); sfx('boss'); S.shake = 0.4; buzz(60); }
   else { banner(`WAVE ${S.wave}`, S.wave === 1 ? '몬스터가 몰려와요!' : `+${10 + S.wave} 골드 보너스`, '#fff', 1.3); sfx('wave'); }
   if (S.wave > 1) S.gold += 10 + S.wave;
 }
@@ -346,7 +348,7 @@ function enemyKind() {
 }
 function spawn(boss) {
   const kind = boss ? 'boss' : enemyKind(), k = ENEMY[kind];
-  const hp = boss ? enemyHP() * 30 : Math.round(enemyHP() * k.hp);
+  const hp = boss ? enemyHP() * TUNE.boss * (1 + TUNE.bossGrow * (S.wave / 10 - 1)) : Math.round(enemyHP() * k.hp);
   S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, d: 0, hp, max: hp, spd: boss ? 26 : k.spd, slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7 });
 }
 
@@ -413,7 +415,7 @@ function doUpgrade(t) {
   const c = upCost(t);
   if (S.gold < c) { flash('골드가 부족해요', '#ffb35c', 1.2); sfx('error'); return; }
   S.gold -= c; S.lv[t]++; S.lvPop[t] = 0.4;
-  flash(`${TYPES[t].name} 강화 Lv${S.lv[t]} · 공격력 +${S.lv[t] * 15}%`, TYPES[t].color, 1.6); sfx('up'); buzz(10);
+  flash(`${TYPES[t].name} 강화 Lv${S.lv[t]} · 공격력 +${Math.round(S.lv[t] * TUNE.upPct * 100)}%`, TYPES[t].color, 1.6); sfx('up'); buzz(10);
   if (store.tut === 2) store.tut = 3;
 }
 
@@ -421,7 +423,7 @@ function doUpgrade(t) {
 function stats(u) {
   const t = TYPES[u.type], g = GRADES[u.grade];
   const B = S.B;
-  return { range: t.range * (1 + 0.08 * (u.grade - 1)) * B.range, dmg: t.dmg * g.m * (1 + 0.15 * S.lv[u.type]) * (1 + 0.08 * metaLv(u.type)) * B.dmg[u.type], rate: t.rate * (1 - 0.07 * (u.grade - 1)) / B.spd[u.type] };
+  return { range: t.range * (1 + 0.08 * (u.grade - 1)) * B.range, dmg: t.dmg * g.m * (1 + TUNE.upPct * S.lv[u.type]) * (1 + 0.08 * metaLv(u.type)) * B.dmg[u.type], rate: t.rate * (1 - 0.07 * (u.grade - 1)) / B.spd[u.type] };
 }
 // ===== 타격감 도우미 =====
 const CRIT = { sword: 0.2, bow: 0.12, magic: 0.1, ice: 0.08 };
@@ -452,7 +454,7 @@ function burst(x, y, col, n = 8, spd = 90) {
 function killEnemy(e) {
   e.dead = true; S.kills++;
   const g = Math.round((e.boss ? 60 + S.wave * 6 : 2 + Math.floor(S.wave / 4)) * S.B.gold * (1 + 0.08 * metaLv('bounty')));
-  if (e.boss) S.bossKills++;
+  if (e.boss) { S.bossKills++; S.bossT = 0; }
   S.gold += g;
   if (e.boss) {
     flashScreen(0.38); addShake(0.6); S.hsCd = 0; hitstop(0.16); sfx('bigboom');
@@ -567,6 +569,8 @@ function update(dt) {
   if (!adMode() && S.freeCharges < FREE_MAX) { S.freeT -= dt; if (S.freeT <= 0) { S.freeCharges++; S.freeT = freeRecharge(); flash('무료 스핀 1회 충전!', '#8fd8ff', 1.4); } }
   for (const c of S.coins) { c.t += dt; if (c.t >= c.dur && !c.done) { c.done = true; sfx('coin'); } } S.coins = S.coins.filter(c => c.t < c.dur);
   S.goldShown += (S.gold - S.goldShown) * Math.min(1, dt * 12); if (Math.abs(S.gold - S.goldShown) < 0.5) S.goldShown = S.gold;
+  // 보스 제한시간: 시간 안에 못 잡으면 패배
+  if (S.bossT > 0) { S.bossT -= dt; if (S.bossT <= 0 && S.enemies.some(e => e.boss)) { S.bossFail = true; gameOver(); return; } }
   if (aliveWeight() >= LIMIT) gameOver();
 }
 function atkTimes(u) { const total = Math.min(0.34, stats(u).rate * 0.9); return [Math.min(0.09, total * 0.3), total]; }
@@ -638,7 +642,7 @@ function gameOver() {
   S.gemsEarned = total; M.gems += total - S.gemsGiven; S.gemsGiven = total; saveMeta();
 }
 function revive() {
-  S.revived = true; screen = 'play';
+  S.revived = true; screen = 'play'; S.bossT = 0; S.bossFail = false;
   S.enemies.sort((a, b) => a.hp - b.hp);
   while (aliveWeight() > LIMIT / 3) { const e = S.enemies.pop(); burst(e.x, e.y, '#fff', 6); }
   banner('부활!', '몬스터 일부를 쓸어냈어요', '#9be36d', 2); sfx('jackpot');
@@ -834,6 +838,15 @@ function drawHUD() {
   const coinPulse = S.coins.some(c => c.done && c.t < c.dur) ? 1.15 : 1;
   icon('coin', 262, 30, 26 * coinPulse);
   text(Math.round(S.goldShown).toLocaleString(), 342, 31, 18, '#ffd166', 'right', 3);
+  // 보스 체력·제한시간 바
+  const bs = S.enemies.find(e => e.boss);
+  if (bs && S.bossT > 0) {
+    const hpR = Math.max(0, bs.hp / bs.max), tR = Math.max(0, S.bossT / TUNE.bossTime), urgent = S.bossT < 8;
+    rr(70, 64, 220, 16, 8); ctx.fillStyle = 'rgba(20,10,30,.85)'; ctx.fill();
+    rr(72, 66, 216 * hpR, 12, 6); ctx.fillStyle = '#ff5d5d'; ctx.fill();
+    text(`BOSS  ${Math.ceil(S.bossT)}초`, 180, 72, 11, urgent && Math.sin(T * 12) > 0 ? '#ffd166' : '#fff', 'center', 3);
+    rr(72, 79, 216 * tR, 3, 1.5); ctx.fillStyle = urgent ? '#ffd166' : 'rgba(255,255,255,.6)'; ctx.fill();
+  }
   // 이번 판 버프 아이콘
   S.picked.slice(-8).forEach((c, i) => { rr(60 + i * 17, 50, 15, 15, 4); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); if (TYPES[c.icon]) sprite(c.icon, 67.5 + i * 17, 64, 14); else icon(c.icon, 67.5 + i * 17, 57.5, 12); });
   // 사운드
@@ -1124,7 +1137,7 @@ function drawOver() {
   ctx.fillStyle = 'rgba(10,6,24,.75)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   panel(40, 130, 280, 420);
   sprite('boss', W / 2, 238, 88);
-  text('방어 실패', W / 2, 262, 32, '#ff6b6b', 'center', 6);
+  text(S.bossFail ? '보스를 못 잡았어요' : '방어 실패', W / 2, 262, S.bossFail ? 26 : 32, '#ff6b6b', 'center', 6);
   text(`WAVE ${S.wave}`, W / 2, 302, 26, '#fff', 'center', 5);
   text(`처치 ${S.kills.toLocaleString()}마리 · ${S.newBest ? '최고 기록 갱신!' : `최고 WAVE ${store.best}`}`, W / 2, 326, 13, S.newBest ? '#ffd166' : 'rgba(255,255,255,.75)', 'center', 3);
   icon('gem', W / 2 - 70, 350, 18); text(`보석 +${S.gemsEarned || 0}`, W / 2 - 56, 350, 15, '#8fe3ff', 'left', 3); text(`보유 ${M.gems}`, W / 2 + 70, 350, 12, 'rgba(255,255,255,.6)', 'right', 2.5);
@@ -1350,7 +1363,7 @@ loadAssets().then(() => { screen = 'title'; });
 requestAnimationFrame(loop);
 
 // 테스트용 훅
-window.__game = { get paused() { return paused; }, set paused(v) { paused = v; }, get S() { return S; }, get screen() { return screen; }, set screen(v) { screen = v; }, newGame, update, doSpin, doUpgrade, upCost, spinCost, choosePick, openPick, buyMeta, get M() { return M; }, stats, cellCenter, store, stepFrame, synth, ctx, UPG, BTN };
+window.__game = { get paused() { return paused; }, set paused(v) { paused = v; }, get S() { return S; }, get screen() { return screen; }, set screen(v) { screen = v; }, newGame, update, doSpin, doUpgrade, upCost, spinCost, choosePick, openPick, buyMeta, TUNE, GRADES, get M() { return M; }, stats, cellCenter, store, stepFrame, synth, ctx, UPG, BTN };
 </script>
 </body>
 </html>
