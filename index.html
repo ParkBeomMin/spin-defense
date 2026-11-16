@@ -167,10 +167,10 @@ const PL = 25, PR = 335, PT = 90, PB = 372, PW = PR - PL, PH = PB - PT, PER = 2 
 const GOLD_POS = [300, 30];
 function pathPos(d) {
   d = ((d % PER) + PER) % PER;
-  if (d < PW) return [PL + d, PT, 1]; d -= PW;
-  if (d < PH) return [PR, PT + d, 1]; d -= PH;
-  if (d < PW) return [PR - d, PB, -1]; d -= PW;
-  return [PL, PB - d, -1];
+  if (d < PW) return [PL + d, PT, 1, 1]; d -= PW;
+  if (d < PH) return [PR, PT + d, 1, 0]; d -= PH;
+  if (d < PW) return [PR - d, PB, -1, 1]; d -= PW;
+  return [PL, PB - d, -1, 0];
 }
 const cellCenter = i => [GX + (i % COLS) * CELL + CELL / 2, GY + Math.floor(i / COLS) * CELL + CELL / 2];
 function cellAt(x, y) {
@@ -308,7 +308,7 @@ function enemyKind() {
 function spawn(boss) {
   const kind = boss ? 'boss' : enemyKind(), k = ENEMY[kind];
   const hp = boss ? enemyHP() * 30 : Math.round(enemyHP() * k.hp);
-  S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, d: 0, hp, max: hp, spd: boss ? 26 : k.spd, slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1 });
+  S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, d: 0, hp, max: hp, spd: boss ? 26 : k.spd, slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7 });
 }
 
 // ===== 슬롯 =====
@@ -458,7 +458,18 @@ function update(dt) {
     if (e.hit > 0) e.hit -= dt;
     if (e.hitCd > 0) e.hitCd -= dt;
     if (e.kbx) { const f = Math.pow(0.0005, dt); e.kbx *= f; e.kby *= f; if (Math.abs(e.kbx) + Math.abs(e.kby) < 0.05) e.kbx = e.kby = 0; }
-    const p = pathPos(e.d); e.x = p[0]; e.y = p[1]; e.dir = p[2];
+    // 길 폭 안에서 각자 차선(lane)을 두고 걸어서 한 점에 겹치지 않게
+    const p = pathPos(e.d), tx = p[0] + (p[3] ? 0 : e.lane || 0), ty = p[1] + (p[3] ? e.lane || 0 : 0);
+    if (e.placed) { const k = Math.min(1, dt * 14); e.x += (tx - e.x) * k; e.y += (ty - e.y) * k; } else { e.x = tx; e.y = ty; e.placed = true; }
+    e.dir = p[2];
+  }
+  // 가까이 붙은 적끼리는 서로 옆 차선으로 살짝 비켜서 뭉쳐 보이지 않게
+  if (S.enemies.length > 1) {
+    const es = S.enemies.filter(e => !e.boss).sort((a, b) => a.d - b.d);
+    for (let i = 0; i < es.length; i++) for (let j = i + 1; j < es.length && es[j].d - es[i].d < 14; j++) {
+      const a = es[i], b = es[j], dl = (b.lane || 0) - (a.lane || 0);
+      if (Math.abs(dl) < 9) { const push = (dl >= 0 ? 1 : -1) * 22 * dt; a.lane = Math.max(-10, Math.min(10, (a.lane || 0) - push)); b.lane = Math.max(-10, Math.min(10, (b.lane || 0) + push)); }
+    }
   }
   S.units.forEach((u, i) => {
     if (!u) return;
@@ -557,7 +568,7 @@ function projHit(p) {
     return;
   }
   if (!e || e.dead) return;
-  if (p.slow) { e.slowT = 1.5; e.slowF = Math.min(e.slowF, 1 - p.slow); }
+  if (p.slow) { e.slowT = 1.5; e.slowF = Math.max(0.5, Math.min(e.slowF, 1 - p.slow)); } // 최대 50%까지만 느려짐
   damage(e, p.dmg, p.show, p.x, p.y, p.crit);
   if (p.k === 'shard') {
     impactFx(p.tx, p.ty, '#bfe9ff', 13, p.crit); shardsFx(p.tx, p.ty, p.crit ? 9 : 6); stars(p.tx, p.ty, 2, '#e8f8ff'); sfx('shatter');
@@ -725,8 +736,10 @@ function drawUnitAt(u, x, y, opts = {}) {
 function drawEnemy(e) {
   const k = e.boss ? 'boss' : e.kind;
   const h = e.boss ? 46 : ENEMY[e.kind].h;
-  const hop = Math.abs(Math.sin(e.bob)) * (e.kind === 'slime' ? 0 : 2.5);
-  const squash = e.kind === 'slime' ? Math.sin(e.bob) * 0.08 : 0;
+  // 슬라임은 통통 튀며 이동 (착지할 때 납작)
+  const sb = Math.abs(Math.sin(e.bob * 0.9));
+  const hop = e.kind === 'slime' ? sb * 4.5 : Math.abs(Math.sin(e.bob)) * 2.5;
+  const squash = e.kind === 'slime' ? (sb < 0.35 ? (0.35 - sb) * 0.45 : -sb * 0.06) : 0;
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 6, e.boss ? 20 : 10, e.boss ? 6 : 4, 0, 0, Math.PI * 2); ctx.fill();
   const hitP = e.hit > 0 ? (e.hit / 0.08) * (e.boss ? 0.45 : 0.75) : 0;
   const ex = e.x + (e.kbx || 0), ey = e.y + (e.kby || 0);
