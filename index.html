@@ -138,11 +138,15 @@ let TYPE_KEYS = ['sword', 'bow', 'magic', 'ice'];   // 이번 판 덱 (newGame�
 const GRADES = [null,
   { name: '일반', col: '#c9ced6', m: 1 },
   { name: '희귀', col: '#4fa3ff', m: 3.2 },
-  { name: '영웅', col: '#c070ff', m: 10 },
-  { name: '전설', col: '#ffb020', m: 30 },
-  { name: '신화', col: '#ff4fd8', m: 80 },
+  { name: '영웅', col: '#c070ff', m: 12 },
+  { name: '전설', col: '#ffb020', m: 55 },
+  { name: '신화', col: '#ff4fd8', m: 150 },
+  { name: '초월', col: '#ffe9a0', m: 400 },
 ];
-const SELL = [0, 10, 30, 90, 270, 810];
+const SELL = [0, 10, 30, 90, 270, 810, 2400];
+// 합체에 필요한 같은 영웅 수: 희귀→영웅, 영웅→전설은 3명, 나머지는 2명. 최고 등급은 초월(6)
+const MERGE_NEED = g => (g === 2 || g === 3) ? 3 : 2;
+const MAX_GRADE = 6;
 let SYMS = ['sword', 'bow', 'magic', 'ice', 'star'];
 const SYM_W = [23, 23, 22, 22, 10];
 const ENEMY = {
@@ -209,7 +213,7 @@ const META_DEF = {
   ninja:  { icon: 'ninja', name: '닌자 단련',     max: 10, desc: l => `닌자 공격력 +${l * 8}%` },
   storm:  { icon: 'storm', name: '번개술사 단련', max: 10, desc: l => `번개술사 공격력 +${l * 8}%` },
   gold:   { icon: 'coin',  name: '두둑한 지갑', max: 5,  desc: l => `시작 골드 +${l * 25}` },
-  luck:   { icon: 'star',  name: '행운의 별',   max: 5,  desc: l => `별(와일드) 확률 +${l * 12}%` },
+  luck:   { icon: 'star',  name: '행운의 별',   max: 5,  desc: l => `별(와일드) 확률 +${l * 8}%` },
   bounty: { icon: 'chest', name: '전리품',      max: 5,  desc: l => `처치 골드 +${l * 8}%` },
   charge: { icon: 'bolt',  name: '빠른 충전',   max: 4,  desc: l => `무료 스핀 충전 -${l * 10}초` },
 };
@@ -252,7 +256,7 @@ const CARDS = [
   { icon: 'heart', name: '보스 사냥꾼',  desc: '보스에게 주는 피해 +60%',     apply: B => { B.boss *= 1.6; } },
   { icon: 'coin',  name: '단골 할인',    desc: '스핀 비용 -20%',              apply: B => { B.spinCost *= 0.8; } },
   { icon: 'coin',  name: '황금 사냥',    desc: '처치 골드 +35%',              apply: B => { B.gold *= 1.35; } },
-  { icon: 'star',  name: '행운의 별빛',  desc: '별(와일드) 확률 2배',         apply: B => { B.star *= 2; } },
+  { icon: 'star',  name: '행운의 별빛',  desc: '별(와일드) 확률 1.5배',       apply: B => { B.star *= 1.5; } },
   { icon: 'chest', name: '보물상자',     desc: '지금 바로 골드 +150',         apply: () => { S.gold += 150; } },
   { icon: 'chest', name: '공짜 스핀',    desc: '무료 스핀 +2회',              apply: () => { S.freeCharges += 2; S.adSpins += 2; } },
   { icon: 'gem',   name: '전군 강화',    desc: '모든 영웅 공격력 +20%',       apply: B => { ALL_TYPES.forEach(t => B.dmg[t] *= 1.2); } },
@@ -465,7 +469,7 @@ function spawn(boss) {
 
 // ===== 슬롯 =====
 function rollSym() {
-  const w = SYMS.map(k => k === 'star' ? 10 * S.B.star * (1 + 0.12 * metaLv('luck')) : 22.5);
+  const w = SYMS.map(k => k === 'star' ? 10 * S.B.star * (1 + 0.08 * metaLv('luck')) : 22.5);
   const tot = w.reduce((a, b) => a + b, 0); let r = Math.random() * tot, a = 0;
   for (let i = 0; i < SYMS.length; i++) { a += w[i]; if (r < a) return SYMS[i]; } return SYMS[0];
 }
@@ -535,8 +539,8 @@ function doUpgrade(t) {
 function stats(u) {
   const t = TYPES[u.type], g = GRADES[u.grade];
   const B = S.B;
-  let aura = 1, spdAura = 1; const ui = S.units.indexOf(u);
-  if (ui >= 0) { const c0 = ui % COLS, r0 = Math.floor(ui / COLS); for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; const c = c0 + dc, r = r0 + dr; if (c < 0 || c >= COLS || r < 0 || r >= ROWS) continue; const q = S.units[r * COLS + c]; if (q && q.grade === 5) aura += 0.15; if (q && q.type === 'bard') spdAura += (TYPES.bard.aura + 0.04 * (q.grade - 1)) * S.B.aura; } }
+  let aura = 1 + 0.1 * S.units.filter(q => q && q.grade === 6).length, spdAura = 1; const ui = S.units.indexOf(u);
+  if (ui >= 0) { const c0 = ui % COLS, r0 = Math.floor(ui / COLS); for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; const c = c0 + dc, r = r0 + dr; if (c < 0 || c >= COLS || r < 0 || r >= ROWS) continue; const q = S.units[r * COLS + c]; if (q && q.grade >= 5) aura += 0.15; if (q && q.type === 'bard') spdAura += (TYPES.bard.aura + 0.04 * (q.grade - 1)) * S.B.aura; } }
   return { range: t.range * (1 + 0.08 * (u.grade - 1)) * B.range, dmg: t.dmg * g.m * (1 + TUNE.upPct * S.lv[u.type]) * (1 + 0.08 * metaLv(u.type)) * B.dmg[u.type] * aura, rate: t.rate * (1 - 0.07 * (u.grade - 1)) / B.spd[u.type] / spdAura };
 }
 // ===== 타격감 도우미 =====
@@ -637,6 +641,7 @@ function update(dt) {
     if (!u) return;
     if (u.born > 0) u.born -= dt;
     if (u.cheer > 0) u.cheer -= dt;
+    if (u.grade === 6) { u.judgT = (u.judgT ?? 3) - dt; if (u.judgT <= 0 && S.enemies.length) { u.judgT = 6; judgment(u, i); } }
     // 눈 깜빡임: 2~5초마다 0.13초
     if (u.blinkT == null) u.blinkT = 1 + Math.random() * 3;
     u.blinkT -= dt; if (u.blinkT <= 0) { u.blink = 0.13; u.blinkT = 2 + Math.random() * 3; }
@@ -760,11 +765,34 @@ function projHit(p) {
     if (!e.dead && S.fx.length < 120) S.fx.push({ k: 'stuck', e, ox: (Math.random() - 0.5) * 6, oy: -6 - Math.random() * 8, a: Math.atan2(p.ty - p.y, p.tx - p.x), t: 0.4, max: 0.4 });
   }
 }
+function thirdOf(i, j) {
+  const a = S.units[i];
+  for (let k = 0; k < S.units.length; k++) { if (k === i || k === j) continue; const q = S.units[k]; if (q && q.type === a.type && q.grade === a.grade) return k; }
+  return -1;
+}
+function canMerge(i, j) {
+  const a = S.units[i], b = S.units[j];
+  if (!a || !b || i === j || a.type !== b.type || a.grade !== b.grade || a.grade >= MAX_GRADE) return false;
+  return MERGE_NEED(a.grade) === 2 || thirdOf(i, j) >= 0;
+}
+// i를 j로 합친다 (3명 필요한 경우 세 번째도 자동으로 흡수). 새 등급 반환
+function mergeAt(i, j) {
+  const u = S.units[i];
+  const k = MERGE_NEED(u.grade) === 3 ? thirdOf(i, j) : -1;
+  const nt = rnd(TYPE_KEYS), ng = u.grade + 1; // 합체 결과 직업은 랜덤 (운 요소)
+  if (k >= 0) { const [kx, ky] = cellCenter(k), [jx, jy] = cellCenter(j); S.fx.push({ k: 'absorb', x1: kx, y1: ky, x2: jx, y2: jy, t: 0.35, max: 0.35, col: GRADES[u.grade].col }); S.units[k] = null; }
+  S.units[j] = { type: nt, grade: ng, cd: 0, anim: 0, born: 0.5, cheer: CHEER_T }; S.units[i] = null;
+  return { nt, ng };
+}
+// 초월 스킬 '심판': 필드의 모든 적에게 하늘에서 빛기둥
+function judgment(u, i) {
+  const st = stats(u), [ux, uy] = cellCenter(i);
+  for (const e of S.enemies) { if (e.dead) continue; S.fx.push({ k: 'pillar', x: e.x, y: e.y, t: 0.45, max: 0.45 }); damage(e, st.dmg * 1.5, e.boss, e.x, e.y - 30); }
+  S.fx.push({ k: 'ring', x: ux, y: uy, t: 0.7, max: 0.7, col: '#ffe9a0' });
+  flashScreen(0.18, '#fff3c4'); addShake(0.25); sfx('boom'); u.cheer = CHEER_T;
+}
 function findPair() {
-  for (let i = 0; i < S.units.length; i++) for (let j = i + 1; j < S.units.length; j++) {
-    const a = S.units[i], b = S.units[j];
-    if (a && b && a.type === b.type && a.grade === b.grade && a.grade < 5) return [i, j];
-  }
+  for (let i = 0; i < S.units.length; i++) for (let j = i + 1; j < S.units.length; j++) if (canMerge(i, j)) return [i, j];
   return null;
 }
 function gameOver() {
@@ -885,7 +913,7 @@ function drawGrid() {
     rr(x - 21, y - 21, 42, 40, 8); ctx.fillStyle = tc[1]; ctx.fill();
   }
 }
-const TILE = [['#d9cbb0', '#e8dcc3'], ['#d9cbb0', '#efe5d0'], ['#6fb0f0', '#bfe0ff'], ['#a77be0', '#e2cdff'], ['#e8a92a', '#ffe7a3'], ['#d63cb8', '#ffc8f4']];
+const TILE = [['#d9cbb0', '#e8dcc3'], ['#d9cbb0', '#efe5d0'], ['#6fb0f0', '#bfe0ff'], ['#a77be0', '#e2cdff'], ['#e8a92a', '#ffe7a3'], ['#d63cb8', '#ffc8f4'], ['#c8961e', '#fff6d6']];
 function drawUnitAt(u, x, y, opts = {}) {
   const g = GRADES[u.grade], bob = opts.still ? 0 : Math.sin(T * 3 + x * 0.1) * 1;
   // 공격 애니메이션 포즈 계산
@@ -909,7 +937,8 @@ function drawUnitAt(u, x, y, opts = {}) {
     ctx.strokeStyle = g.col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, y + 15, 18, 7, 0, 0, Math.PI * 2); ctx.stroke();
     if (u.grade >= 3) { ctx.globalAlpha *= 0.35 + 0.25 * Math.sin(T * 4); ctx.fillStyle = g.col; ctx.beginPath(); ctx.ellipse(x, y + 15, 18, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = opts.alpha ?? 1; }
   }
-  if (u.grade === 5) { const hue = (T * 140 + x) % 360; ctx.strokeStyle = `hsl(${hue},95%,65%)`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 15, 21 + Math.sin(T * 5) * 2, 8, 0, 0, Math.PI * 2); ctx.stroke(); ctx.shadowColor = `hsl(${hue},95%,65%)`; ctx.shadowBlur = 18; }
+  if (u.grade === 6) { ctx.save(); ctx.translate(x, y - 6); ctx.rotate(T * 0.8); ctx.globalCompositeOperation = 'lighter'; for (let r = 0; r < 8; r++) { ctx.rotate(Math.PI / 4); ctx.fillStyle = `rgba(255,226,140,${0.14 + 0.08 * Math.sin(T * 4 + r)})`; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-5, -34); ctx.lineTo(5, -34); ctx.closePath(); ctx.fill(); } ctx.restore(); ctx.strokeStyle = '#ffe9a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 15, 22, 8, 0, 0, Math.PI * 2); ctx.stroke(); ctx.shadowColor = '#ffe9a0'; ctx.shadowBlur = 20; }
+  else if (u.grade === 5) { const hue = (T * 140 + x) % 360; ctx.strokeStyle = `hsl(${hue},95%,65%)`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 15, 21 + Math.sin(T * 5) * 2, 8, 0, 0, Math.PI * 2); ctx.stroke(); ctx.shadowColor = `hsl(${hue},95%,65%)`; ctx.shadowBlur = 18; }
   else if (u.grade === 4) { ctx.shadowColor = '#ffb020'; ctx.shadowBlur = 14; }
   const A = ANIM[u.type];
   if (A) {
@@ -921,7 +950,7 @@ function drawUnitAt(u, x, y, opts = {}) {
   ctx.shadowBlur = 0;
   // 별
   if (u.type === 'bard' && !opts.still) { for (let k = 0; k < 2; k++) { const ph = (T * 0.8 + k * 0.5 + x * 0.01) % 1; ctx.save(); ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.8; ctx.fillStyle = '#ff8fb1'; ctx.font = `${10 + k * 2}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(k ? '♫' : '♪', x + (k ? 14 : -14) + Math.sin(T * 3 + k) * 3, y - 18 - ph * 22); ctx.restore(); } }
-  const sw = u.grade >= 5 ? 8 : 10; for (let s = 0; s < u.grade; s++) icon('star', x - (u.grade - 1) * sw / 2 + s * sw, y + 22, u.grade >= 5 ? 9 : 11);
+  const sw = u.grade >= 6 ? 7 : u.grade >= 5 ? 8 : 10; for (let s = 0; s < u.grade; s++) icon('star', x - (u.grade - 1) * sw / 2 + s * sw, y + 22, u.grade >= 5 ? (u.grade >= 6 ? 8 : 9) : 11);
   ctx.restore();
 }
 function drawEnemy(e) {
@@ -1112,7 +1141,7 @@ function drawField() {
   if (drag && drag.moved) {
     const du = S.units[drag.idx];
     S.units.forEach((u, i) => {
-      if (u && i !== drag.idx && u.type === du.type && u.grade === du.grade && u.grade < 5) {
+      if (u && i !== drag.idx && canMerge(drag.idx, i)) {
         const [x, y] = cellCenter(i); rr(x - 25, y - 25, 50, 50, 11); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3 + 1.5 * Math.sin(T * 10); ctx.stroke();
       }
     });
@@ -1174,6 +1203,8 @@ function drawField() {
     else if (f.k === 'swoosh') { const p = 1 - a; ctx.globalAlpha = a * 0.8; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.translate(f.x, f.y); ctx.scale(f.f, 1); ctx.beginPath(); ctx.arc(-6, 0, 16, -1.3 + p * 0.9, 0.1 + p * 0.9); ctx.stroke(); }
     else if (f.k === 'impact') { const p = 1 - a; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.translate(f.x, f.y); ctx.rotate(f.rot); const R = f.size * (0.45 + p * 0.75); ctx.fillStyle = f.col; ctx.beginPath(); for (let i = 0; i < 16; i++) { const rr2 = i % 2 ? R * 0.32 : R * (i % 4 ? 0.8 : 1); ctx.lineTo(Math.cos(i * Math.PI / 8) * rr2, Math.sin(i * Math.PI / 8) * rr2); } ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, R * 0.35, 0, 7); ctx.fill(); }
     else if (f.k === 'shock') { const p = 1 - a, e2 = 1 - Math.pow(1 - p, 3); ctx.globalAlpha = a; ctx.strokeStyle = f.col; ctx.lineWidth = f.w * a + 0.5; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r0 + (f.r1 - f.r0) * e2, (f.r0 + (f.r1 - f.r0) * e2) * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); }
+    else if (f.k === 'absorb') { const q = 1 - a, e2 = q * q; ctx.globalAlpha = 1 - q * 0.3; ctx.fillStyle = f.col; ctx.shadowColor = f.col; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(f.x1 + (f.x2 - f.x1) * e2, f.y1 + (f.y2 - f.y1) * e2 - Math.sin(q * Math.PI) * 20, 7 * (1 - q * 0.5), 0, 7); ctx.fill(); }
+    else if (f.k === 'pillar') { const q = 1 - a; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; const w2 = 14 * (1 - q * 0.6); const g = ctx.createLinearGradient(0, f.y - 140, 0, f.y); g.addColorStop(0, 'rgba(255,240,180,0)'); g.addColorStop(1, 'rgba(255,240,180,.95)'); ctx.fillStyle = g; ctx.fillRect(f.x - w2 / 2, f.y - 140, w2, 140); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(f.x, f.y, 14 * (1 + q), 5 * (1 + q), 0, 0, 7); ctx.fill(); }
     else if (f.k === 'bolt') {
       ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       const jag = (x1, y1, x2, y2, seed) => { const n = 6, pts2 = [[x1, y1]]; for (let i = 1; i < n; i++) { const q = i / n, nx = -(y2 - y1), ny = x2 - x1, L = Math.hypot(nx, ny) || 1, off = (i % 2 ? 1 : -1) * (4 + 6 * Math.abs(Math.sin(seed * 13.7 + i * 7.3 + T * 50))); pts2.push([x1 + (x2 - x1) * q + nx / L * off, y1 + (y2 - y1) * q + ny / L * off]); } pts2.push([x2, y2]); return pts2; };
@@ -1339,7 +1370,7 @@ function drawTitle() {
   button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawSpeaker(cx - 2, cy, store.mute), 'tmute');
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(`최고 기록  WAVE ${store.best}`, W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text('v0.8 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text('v0.9 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -1609,7 +1640,7 @@ cv.addEventListener('pointerup', e => {
   if (!S.units[d.idx]) return;
   if (!d.moved) {
     selected = selected === d.idx ? -1 : d.idx;
-    if (selected >= 0) { const su = S.units[selected], st = stats(su); flash(`${GRADES[su.grade].name} ${TYPES[su.type].name} · 공격력 ${Math.round(st.dmg)} · 판매 ${SELL[su.grade]}G`, GRADES[su.grade].col, 2.5); sfx('click'); }
+    if (selected >= 0) { const su = S.units[selected], st = stats(su); flash(`${GRADES[su.grade].name} ${TYPES[su.type].name} · 공격력 ${Math.round(st.dmg)}` + (su.grade < MAX_GRADE ? ` · ${GRADES[su.grade + 1].name}까지 같은 영웅 ${MERGE_NEED(su.grade)}명` : ' · 최고 등급!'), GRADES[su.grade].col, 2.8); sfx('click'); }
     return;
   }
   const u = S.units[d.idx];
@@ -1621,13 +1652,16 @@ cv.addEventListener('pointerup', e => {
   if (j < 0 || j === d.idx) return;
   const v = S.units[j];
   if (!v) { S.units[j] = u; S.units[d.idx] = null; sfx('click'); return; }
-  if (v.type === u.type && v.grade === u.grade && u.grade < 5) {
-    const nt = rnd(TYPE_KEYS), ng = u.grade + 1; // 합체 결과 직업은 랜덤 (운 요소)
-    S.units[j] = { type: nt, grade: ng, cd: 0, anim: 0, born: 0.5, cheer: CHEER_T }; S.units[d.idx] = null;
+  if (v.type === u.type && v.grade === u.grade && u.grade < MAX_GRADE && !canMerge(d.idx, j)) {
+    flash(`${GRADES[u.grade].name} ${MERGE_NEED(u.grade)}명이 모여야 ${GRADES[u.grade + 1].name}이 돼요 (지금 2명)`, GRADES[u.grade + 1].col, 2.2); sfx('error'); return;
+  }
+  if (canMerge(d.idx, j)) {
+    const { nt, ng } = mergeAt(d.idx, j);
     const [x2, y2] = cellCenter(j);
     S.fx.push({ k: 'ring', x: x2, y: y2, t: 0.6, max: 0.6, col: GRADES[ng].col }); burst(x2, y2, GRADES[ng].col, 14);
     mission('merge'); if (ng === 4) mission('legend');
-    if (ng === 5) { banner('신화 탄생!!', `${TYPES[nt].name} · 주변 영웅 공격력 +15%`, '#ff4fd8', 2.6); S.shake = 0.45; flashScreen(0.3, '#ffd6f6'); sfx('jackpot'); buzz([40, 50, 80]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
+    if (ng === 6) { banner('초월!!!', `${TYPES[nt].name} · 6초마다 전체 심판`, '#ffe9a0', 3); S.shake = 0.6; flashScreen(0.45, '#fff6d6'); sfx('bigboom'); sfx('jackpot'); buzz([60, 40, 120]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
+    else if (ng === 5) { banner('신화 탄생!!', `${TYPES[nt].name} · 주변 영웅 공격력 +15%`, '#ff4fd8', 2.6); S.shake = 0.45; flashScreen(0.3, '#ffd6f6'); sfx('jackpot'); buzz([40, 50, 80]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
     else if (ng >= 3) { banner(`${GRADES[ng].name}!`, `${TYPES[nt].name} 등장`, GRADES[ng].col, 1.6); S.shake = 0.2; }
     else flash(`합체! ${GRADES[ng].name} ${TYPES[nt].name}`, GRADES[ng].col, 1.8);
     sfx('merge'); buzz(20);
@@ -1660,7 +1694,7 @@ loadAssets().then(() => { screen = 'title'; });
 requestAnimationFrame(loop);
 
 // 테스트용 훅
-window.__game = { get paused() { return paused; }, set paused(v) { paused = v; }, get S() { return S; }, get screen() { return screen; }, set screen(v) { screen = v; }, newGame, update, doSpin, doUpgrade, upCost, spinCost, choosePick, openPick, buyMeta, TUNE, GRADES, get deck() { return TYPE_KEYS; }, get M() { return M; }, stats, cellCenter, store, stepFrame, synth, ctx, UPG, BTN };
+window.__game = { get paused() { return paused; }, set paused(v) { paused = v; }, get S() { return S; }, get screen() { return screen; }, set screen(v) { screen = v; }, newGame, update, doSpin, doUpgrade, upCost, spinCost, choosePick, openPick, buyMeta, TUNE, GRADES, canMerge, mergeAt, get deck() { return TYPE_KEYS; }, get M() { return M; }, stats, cellCenter, store, stepFrame, synth, ctx, UPG, BTN };
 </script>
 </body>
 </html>
