@@ -11,10 +11,6 @@ html,body{margin:0;height:100%;background:#1a1233;overflow:hidden;touch-action:n
 body{display:block}
 body.withbar{justify-content:flex-start}
 #adbar{position:fixed;left:0;right:0;bottom:0;display:none;flex-direction:column;align-items:center;padding-bottom:env(safe-area-inset-bottom);background:#1a1233}
-#gapinfo{position:fixed;left:0;right:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;font-family:Jua,sans-serif;text-align:center;padding:0 18px;box-sizing:border-box}
-#gapinfo .tipt{font-size:12px;color:#ffcf5a;letter-spacing:.5px}
-#gapinfo .tip{font-size:15px;color:rgba(255,255,255,.85);line-height:1.45;transition:opacity .4s}
-#gapinfo .best{font-size:12px;color:rgba(255,255,255,.45)}
 #adbar .lbl{font:10px sans-serif;color:rgba(255,255,255,.45);padding:2px 0}
 #adbar .ph{width:320px;height:50px;border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.5);font:12px sans-serif;display:flex;align-items:center;justify-content:center}
 canvas{display:block;touch-action:none}
@@ -22,7 +18,6 @@ canvas{display:block;touch-action:none}
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="gapinfo"><div class="tipt">TIP</div><div class="tip"></div><div class="best"></div></div>
 <div id="adbar"><div class="lbl">광고</div></div>
 <script>
 'use strict';
@@ -57,18 +52,9 @@ if (ADS.enabled) {
   document.head.appendChild(sc);
   adConfig({ preloadAdBreaks: 'on', sound: 'on', onReady: () => { ADS.ready = true; } });
 }
-const TIPS = ['같은 등급, 같은 직업 영웅 2명을 끌어서 겹치면 합체!', '별 3개가 나오면 0.1% 확률의 전설 영웅', '기사는 사거리가 짧아요. 길가 칸에 두세요', '얼음공주는 몬스터를 느리게 만들어요', '골드가 남으면 아래 강화 버튼으로 직업을 강화', '10웨이브마다 보스가 나와요. 미리 강하게!', '몬스터가 60마리 쌓이면 패배해요', '필요 없는 영웅은 왼쪽 아래로 끌어서 판매'];
-let tipIdx = Math.floor(Math.random() * 8), tipTimer = null;
-function showTip() {
-  const el = document.querySelector('#gapinfo .tip'), b = document.querySelector('#gapinfo .best'); if (!el) return;
-  el.textContent = TIPS[tipIdx % TIPS.length];
-  const best = +(localStorage.getItem('sd_best') || 0); b.textContent = best ? `최고 기록 WAVE ${best}` : '';
-  if (!tipTimer) tipTimer = setInterval(() => { el.style.opacity = 0; setTimeout(() => { tipIdx++; showTip(); el.style.opacity = 1; }, 400); }, 6000);
-}
 function layoutBanner() {
   // 게임은 화면을 꽉 채우고, 배너는 맨 아래에 붙인다
   const bar = document.getElementById('adbar');
-  document.getElementById('gapinfo').style.display = 'none';
   ADS.bannerOn = ADS.wantBanner; bar.style.display = ADS.bannerOn ? 'flex' : 'none';
   if (ADS.bannerOn && !ADS.bannerFilled) {
     ADS.bannerFilled = true;
@@ -180,6 +166,9 @@ const BTN = {
   sound: { x: 318, y: 50, w: 32, h: 26 },
   start: { x: 95,  y: 452, w: 170, h: 62 },
   revive:{ x: 70,  y: 372, w: 220, h: 54 },
+  shop:  { x: 95,  y: 528, w: 170, h: 48 },
+  home:  { x: 105, y: 502, w: 150, h: 36 },
+  back:  { x: 105, y: 590, w: 150, h: 40 },
   retry: { x: 70,  y: 438, w: 220, h: 54 },
   resume:{ x: 95,  y: 300, w: 170, h: 58 },
 };
@@ -196,6 +185,59 @@ const store = {
   get tut() { return +(localStorage.getItem('sd_tut') || 0); }, set tut(v) { localStorage.setItem('sd_tut', v); },
   get mute() { return localStorage.getItem('sd_mute') === '1'; }, set mute(v) { localStorage.setItem('sd_mute', v ? '1' : '0'); },
 };
+
+// ===== 영구 성장: 판이 끝나면 보석을 받고, 보석으로 영구 강화 =====
+const META_DEF = {
+  sword:  { icon: 'sword', name: '기사 단련',   max: 10, desc: l => `기사 공격력 +${l * 8}%` },
+  bow:    { icon: 'bow',   name: '궁수 단련',   max: 10, desc: l => `궁수 공격력 +${l * 8}%` },
+  magic:  { icon: 'magic', name: '마법사 단련', max: 10, desc: l => `마법사 공격력 +${l * 8}%` },
+  ice:    { icon: 'ice',   name: '얼음공주 단련', max: 10, desc: l => `얼음공주 공격력 +${l * 8}%` },
+  gold:   { icon: 'coin',  name: '두둑한 지갑', max: 5,  desc: l => `시작 골드 +${l * 25}` },
+  luck:   { icon: 'star',  name: '행운의 별',   max: 5,  desc: l => `별(와일드) 확률 +${l * 12}%` },
+  bounty: { icon: 'chest', name: '전리품',      max: 5,  desc: l => `처치 골드 +${l * 8}%` },
+  charge: { icon: 'bolt',  name: '빠른 충전',   max: 4,  desc: l => `무료 스핀 충전 -${l * 10}초` },
+};
+const META_KEYS = Object.keys(META_DEF);
+let M = (() => { try { return JSON.parse(localStorage.getItem('sd_meta')) || { gems: 0, lv: {} }; } catch (e) { return { gems: 0, lv: {} }; } })();
+if (!M.lv) M.lv = {};
+const saveMeta = () => localStorage.setItem('sd_meta', JSON.stringify(M));
+const metaLv = k => M.lv[k] || 0;
+const metaCost = k => (META_DEF[k].max === 10 ? 30 : 60) * (metaLv(k) + 1);
+function buyMeta(k) {
+  const d = META_DEF[k], c = metaCost(k);
+  if (metaLv(k) >= d.max) return;
+  if (M.gems < c) { sfx('error'); return; }
+  M.gems -= c; M.lv[k] = metaLv(k) + 1; saveMeta(); sfx('up'); buzz(10);
+  shopPop = { k, t: 0.4 };
+}
+let shopPop = null;
+// ===== 버프 카드: 5웨이브마다 3장 중 1장 =====
+const CARDS = [
+  { icon: 'sword', name: '기사의 분노',  desc: '기사 공격력 +40%',            apply: B => { B.dmg.sword *= 1.4; } },
+  { icon: 'bow',   name: '속사',         desc: '궁수 공격 속도 +30%',         apply: B => { B.spd.bow *= 1.3; } },
+  { icon: 'magic', name: '대폭발',       desc: '마법 폭발 범위 +35%, 공격력 +20%', apply: B => { B.splash *= 1.35; B.dmg.magic *= 1.2; } },
+  { icon: 'ice',   name: '혹한',         desc: '얼음 공격력 +60%, 감속 +1초',  apply: B => { B.dmg.ice *= 1.6; B.slowT += 1; } },
+  { icon: 'bolt',  name: '매의 눈',      desc: '모든 영웅 사거리 +15%',       apply: B => { B.range *= 1.15; } },
+  { icon: 'star',  name: '급소 공략',    desc: '치명타 확률 +10%',            apply: B => { B.crit += 0.1; } },
+  { icon: 'heart', name: '보스 사냥꾼',  desc: '보스에게 주는 피해 +60%',     apply: B => { B.boss *= 1.6; } },
+  { icon: 'coin',  name: '단골 할인',    desc: '스핀 비용 -20%',              apply: B => { B.spinCost *= 0.8; } },
+  { icon: 'coin',  name: '황금 사냥',    desc: '처치 골드 +35%',              apply: B => { B.gold *= 1.35; } },
+  { icon: 'star',  name: '행운의 별빛',  desc: '별(와일드) 확률 2배',         apply: B => { B.star *= 2; } },
+  { icon: 'chest', name: '보물상자',     desc: '지금 바로 골드 +150',         apply: () => { S.gold += 150; } },
+  { icon: 'chest', name: '공짜 스핀',    desc: '무료 스핀 +2회',              apply: () => { S.freeCharges += 2; S.adSpins += 2; } },
+  { icon: 'gem',   name: '전군 강화',    desc: '모든 영웅 공격력 +20%',       apply: B => { TYPE_KEYS.forEach(t => B.dmg[t] *= 1.2); } },
+];
+const newBuffs = () => ({ dmg: { sword: 1, bow: 1, magic: 1, ice: 1 }, spd: { sword: 1, bow: 1, magic: 1, ice: 1 }, splash: 1, slowT: 0, range: 1, crit: 0, boss: 1, spinCost: 1, gold: 1, star: 1 });
+function openPick() {
+  const pool = CARDS.slice(), cards = [];
+  while (cards.length < 3) cards.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  S.pick = { cards, t: 0 }; sfx('win');
+}
+function choosePick(i) {
+  const c = S.pick.cards[i]; c.apply(S.B); S.picked.push(c); S.pick = null;
+  flash(`${c.name}: ${c.desc}`, '#8fe3ff', 2.2); sfx('up'); buzz(15);
+}
+const freeRecharge = () => FREE_RECHARGE - 10 * metaLv('charge');
 
 // ===== 사운드 (WebAudio 합성, 외부 파일 없음) =====
 let AC = null, lastCoinSfx = 0;
@@ -266,9 +308,9 @@ const FREE_RECHARGE = 90, FREE_MAX = 3, REVIVE_WAIT = 8;
 let S, screen = 'loading', drag = null, selected = -1, ad = null, press = null, paused = false, T = 0;
 function newGame() {
   S = {
-    gold: 100, goldShown: 100, wave: 0, waveT: 3, spawnLeft: 0, spawnGap: 1, spawnT: 0,
+    gold: 100 + 25 * metaLv('gold'), goldShown: 100 + 25 * metaLv('gold'), B: newBuffs(), picked: [], pick: null, bossKills: 0, gemsGiven: 0, wave: 0, waveT: 3, spawnLeft: 0, spawnGap: 1, spawnT: 0,
     enemies: [], units: Array(COLS * ROWS).fill(null), fx: [], proj: [], dmg: [], parts: [], coins: [], dying: [], decals: [], hitstop: 0, hsCd: 0, flash: null, kick: null,
-    spins: 0, adSpins: MAX_AD_SPINS, freeCharges: 1, freeT: FREE_RECHARGE, lv: { sword: 0, bow: 0, magic: 0, ice: 0 }, lvPop: {},
+    spins: 0, adSpins: MAX_AD_SPINS, freeCharges: 1, freeT: freeRecharge(), lv: { sword: 0, bow: 0, magic: 0, ice: 0 }, lvPop: {},
     revived: false, speed: 1, kills: 0, time: 0, shake: 0,
     msg: '', msgT: 0, msgCol: '#fff', banner: null,
     reels: [0, 1, 2].map(i => ({ strip: [SYMS[i]], pos: 0, from: 0, to: 0, t: 0, dur: 0, done: true })),
@@ -280,7 +322,7 @@ newGame();
 
 function flash(txt, col = '#fff', t = 2.2) { S.msg = txt; S.msgCol = col; S.msgT = t; }
 function banner(text, sub, col = '#fff', t = 1.6) { S.banner = { text, sub, col, t, max: t }; }
-const spinCost = () => 20 + S.spins * 2;
+const spinCost = () => Math.round((20 + S.spins * 2) * S.B.spinCost);
 const upCost = t => 30 + S.lv[t] * 30;
 const enemyHP = () => Math.round(30 * Math.pow(1.17, S.wave - 1));
 function aliveWeight() { let w = 0; for (const e of S.enemies) w += e.boss ? 10 : 1; return w; }
@@ -289,6 +331,7 @@ function emptyCells() { const r = []; S.units.forEach((u, i) => { if (!u) r.push
 // ===== 웨이브 =====
 function startWave() {
   S.wave++; S.waveT = WAVE_LEN;
+  if (S.wave % 5 === 0) openPick();
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
   S.spawnGap = Math.min(1.2, 14 / Math.max(1, S.spawnLeft)); S.spawnT = 0;
@@ -308,7 +351,11 @@ function spawn(boss) {
 }
 
 // ===== 슬롯 =====
-function rollSym() { let r = Math.random() * 100, a = 0; for (let i = 0; i < SYMS.length; i++) { a += SYM_W[i]; if (r < a) return SYMS[i]; } return SYMS[0]; }
+function rollSym() {
+  const w = SYM_W.slice(); w[4] *= S.B.star * (1 + 0.12 * metaLv('luck'));
+  const tot = w.reduce((a, b) => a + b, 0); let r = Math.random() * tot, a = 0;
+  for (let i = 0; i < SYMS.length; i++) { a += w[i]; if (r < a) return SYMS[i]; } return SYMS[0];
+}
 function resolveSpin(r) {
   const stars = r.filter(s => s === 'star').length, ts = r.filter(s => s !== 'star');
   if (stars === 3) { const t = rnd(TYPE_KEYS); return { grade: 4, type: t, title: 'JACKPOT!!', txt: `전설 ${TYPES[t].name} 등장`, col: '#ffb020', lvl: 3 }; }
@@ -373,7 +420,8 @@ function doUpgrade(t) {
 // ===== 전투 =====
 function stats(u) {
   const t = TYPES[u.type], g = GRADES[u.grade];
-  return { range: t.range * (1 + 0.08 * (u.grade - 1)), dmg: t.dmg * g.m * (1 + 0.15 * S.lv[u.type]), rate: t.rate * (1 - 0.07 * (u.grade - 1)) };
+  const B = S.B;
+  return { range: t.range * (1 + 0.08 * (u.grade - 1)) * B.range, dmg: t.dmg * g.m * (1 + 0.15 * S.lv[u.type]) * (1 + 0.08 * metaLv(u.type)) * B.dmg[u.type], rate: t.rate * (1 - 0.07 * (u.grade - 1)) / B.spd[u.type] };
 }
 // ===== 타격감 도우미 =====
 const CRIT = { sword: 0.2, bow: 0.12, magic: 0.1, ice: 0.08 };
@@ -403,7 +451,8 @@ function burst(x, y, col, n = 8, spd = 90) {
 }
 function killEnemy(e) {
   e.dead = true; S.kills++;
-  const g = e.boss ? 60 + S.wave * 6 : 2 + Math.floor(S.wave / 4);
+  const g = Math.round((e.boss ? 60 + S.wave * 6 : 2 + Math.floor(S.wave / 4)) * S.B.gold * (1 + 0.08 * metaLv('bounty')));
+  if (e.boss) S.bossKills++;
   S.gold += g;
   if (e.boss) {
     flashScreen(0.38); addShake(0.6); S.hsCd = 0; hitstop(0.16); sfx('bigboom');
@@ -424,6 +473,7 @@ function killEnemy(e) {
 function damage(e, dmg, showNum, fx, fy, crit = false) {
   if (e.dead) return;
   if (crit) critFx(e, fx ?? e.x, fy ?? e.y);
+  if (e.boss) dmg *= S.B.boss;
   e.hp -= dmg; e.hurtT = 0.3;
   if (!(e.hitCd > 0)) { e.hit = 0.08; e.hitCd = 0.18; } // 연타에도 하얗게 덮이지 않게 번쩍임 간격 제한
   if (fx != null && !e.boss) { const d = Math.hypot(e.x - fx, e.y - fy) || 1, k = 3.5; e.kbx = (e.x - fx) / d * k; e.kby = (e.y - fy) / d * k; }
@@ -514,7 +564,7 @@ function update(dt) {
   if (S.flash) { S.flash.a -= dt * 4; if (S.flash.a <= 0) S.flash = null; }
   if (S.kick) { S.kick.t -= dt; if (S.kick.t <= 0) S.kick = null; }
   if (S.hsCd > 0) S.hsCd -= dt;
-  if (!adMode() && S.freeCharges < FREE_MAX) { S.freeT -= dt; if (S.freeT <= 0) { S.freeCharges++; S.freeT = FREE_RECHARGE; flash('무료 스핀 1회 충전!', '#8fd8ff', 1.4); } }
+  if (!adMode() && S.freeCharges < FREE_MAX) { S.freeT -= dt; if (S.freeT <= 0) { S.freeCharges++; S.freeT = freeRecharge(); flash('무료 스핀 1회 충전!', '#8fd8ff', 1.4); } }
   for (const c of S.coins) { c.t += dt; if (c.t >= c.dur && !c.done) { c.done = true; sfx('coin'); } } S.coins = S.coins.filter(c => c.t < c.dur);
   S.goldShown += (S.gold - S.goldShown) * Math.min(1, dt * 12); if (Math.abs(S.gold - S.goldShown) < 0.5) S.goldShown = S.gold;
   if (aliveWeight() >= LIMIT) gameOver();
@@ -531,7 +581,7 @@ function fireAttack(u, ux, uy) {
   if (!e || e.dead || Math.hypot(e.x - ux, e.y - uy) > st.range + e.r + 12) e = nearestTarget(ux, uy, st.range);
   if (!e) return;
   const f = u.face = e.x < ux ? -1 : 1;
-  const crit = Math.random() < CRIT[u.type];
+  const crit = Math.random() < CRIT[u.type] + S.B.crit;
   if (u.type === 'sword') {
     damage(e, st.dmg * (crit ? 2 : 1), true, ux, uy, crit);
     impactFx(e.x, e.y - 8, '#ffe27a', u.grade >= 3 ? 22 : 16, crit);
@@ -543,7 +593,7 @@ function fireAttack(u, ux, uy) {
     S.proj.push({ crit, k: 'arrow', x: ux + f * 16, y: uy - 16, tx: e.x, ty: e.y - 8, target: e, t: 0, dur: 0.14, dmg: st.dmg * (crit ? 2 : 1), show: u.grade >= 3, col: t.color });
     S.fx.push({ k: 'tip', x: ux + f * 15, y: uy - 16, t: 0.08, max: 0.08, col: '#fff' });
   } else if (u.type === 'magic') {
-    S.proj.push({ crit, k: 'orb', x: ux + f * 15, y: uy - 32, tx: e.x, ty: e.y - 8, target: e, t: 0, dur: 0.2, dmg: st.dmg * (crit ? 2 : 1), r: t.splash, show: true, col: t.color });
+    S.proj.push({ crit, k: 'orb', x: ux + f * 15, y: uy - 32, tx: e.x, ty: e.y - 8, target: e, t: 0, dur: 0.2, dmg: st.dmg * (crit ? 2 : 1), r: t.splash * S.B.splash, show: true, col: t.color });
     S.fx.push({ k: 'cast', x: ux, y: uy + 15, t: 0.35, max: 0.35, col: t.color });
     S.fx.push({ k: 'tip', x: ux + f * 15, y: uy - 32, t: 0.14, max: 0.14, col: '#e6c8ff' });
   } else {
@@ -564,7 +614,7 @@ function projHit(p) {
     return;
   }
   if (!e || e.dead) return;
-  if (p.slow) { e.slowT = 1.5; e.slowF = Math.max(0.5, Math.min(e.slowF, 1 - p.slow)); } // 최대 50%까지만 느려짐
+  if (p.slow) { e.slowT = 1.5 + S.B.slowT; e.slowF = Math.max(0.5, Math.min(e.slowF, 1 - p.slow)); } // 최대 50%까지만 느려짐
   damage(e, p.dmg, p.show, p.x, p.y, p.crit);
   if (p.k === 'shard') {
     impactFx(p.tx, p.ty, '#bfe9ff', 13, p.crit); shardsFx(p.tx, p.ty, p.crit ? 9 : 6); stars(p.tx, p.ty, 2, '#e8f8ff'); sfx('shatter');
@@ -583,6 +633,9 @@ function findPair() {
 function gameOver() {
   screen = 'over'; drag = null; selected = -1; sfx('lose'); buzz(120);
   if (S.wave > store.best) { store.best = S.wave; S.newBest = true; }
+  // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
+  const total = Math.round(S.wave * 2 + S.kills / 25 + S.bossKills * 5);
+  S.gemsEarned = total; M.gems += total - S.gemsGiven; S.gemsGiven = total; saveMeta();
 }
 function revive() {
   S.revived = true; screen = 'play';
@@ -781,6 +834,8 @@ function drawHUD() {
   const coinPulse = S.coins.some(c => c.done && c.t < c.dur) ? 1.15 : 1;
   icon('coin', 262, 30, 26 * coinPulse);
   text(Math.round(S.goldShown).toLocaleString(), 342, 31, 18, '#ffd166', 'right', 3);
+  // 이번 판 버프 아이콘
+  S.picked.slice(-8).forEach((c, i) => { rr(60 + i * 17, 50, 15, 15, 4); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); if (TYPES[c.icon]) sprite(c.icon, 67.5 + i * 17, 64, 14); else icon(c.icon, 67.5 + i * 17, 57.5, 12); });
   // 사운드
   const b = BTN.sound; ctx.globalAlpha = 0.8; drawSpeaker(b.x + 16, b.y + 13, store.mute); ctx.globalAlpha = 1;
 }
@@ -892,7 +947,7 @@ function drawSlot() {
       text('무료', cx + 14, cy - 8, 15, '#fff', 'center', 3);
       text(has ? `${S.freeCharges}/${FREE_MAX}` : mmss(S.freeT), cx + 14, cy + 11, 12, has ? '#cfe8ff' : '#ffe08a', 'center', 2.5);
       // 충전 게이지 (시계 대신 얇은 바)
-      if (S.freeCharges < FREE_MAX) { const p = 1 - S.freeT / FREE_RECHARGE; rr(cx - 36, cy + 21, 72, 4, 2); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill(); rr(cx - 36, cy + 21, 72 * p, 4, 2); ctx.fillStyle = '#8fe3ff'; ctx.fill(); }
+      if (S.freeCharges < FREE_MAX) { const p = 1 - S.freeT / freeRecharge(); rr(cx - 36, cy + 21, 72, 4, 2); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill(); rr(cx - 36, cy + 21, 72 * p, 4, 2); ctx.fillStyle = '#8fe3ff'; ctx.fill(); }
     }, 'ad');
   }
 }
@@ -1061,22 +1116,63 @@ function drawTitle() {
   ctx.save(); ctx.translate(BTN.start.x + BTN.start.w / 2, BTN.start.y + BTN.start.h / 2); ctx.scale(s, s); ctx.translate(-(BTN.start.x + BTN.start.w / 2), -(BTN.start.y + BTN.start.h / 2));
   button(BTN.start, '#ff4f72', true, (cx, cy) => text('게임 시작', cx, cy, 24, '#fff', 'center', 5, '#8a1f38'), 'start');
   ctx.restore();
-  if (store.best) { icon('chest', W / 2 - 62, 548, 24); text(`최고 기록  WAVE ${store.best}`, W / 2 + 10, 548, 15, '#ffd166', 'center', 3.5); }
-  for (let i = 0; i < 3; i++) icon('star', W / 2 - 112 + i * 15, 584, 16);
-  text('확률 0.1% 전설 영웅에 도전!', W / 2 + 12, 584, 13, 'rgba(255,255,255,.85)', 'center', 3);
-  text('v0.5 베타', W / 2, 620, 10, 'rgba(255,255,255,.4)');
+  button(BTN.shop, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 62, cy, 20); text('영웅 강화', cx - 12, cy - 1, 18, '#fff', 'center', 4); rr(cx + 34, cy - 11, 44, 22, 11); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill(); text(String(M.gems), cx + 56, cy, 13, '#8fe3ff', 'center', 2.5); }, 'shop');
+  if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(`최고 기록  WAVE ${store.best}`, W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
+  text('v0.6 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
 }
 function drawOver() {
   ctx.fillStyle = 'rgba(10,6,24,.75)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
-  panel(40, 130, 280, 380);
+  panel(40, 130, 280, 420);
   sprite('boss', W / 2, 238, 88);
   text('방어 실패', W / 2, 262, 32, '#ff6b6b', 'center', 6);
   text(`WAVE ${S.wave}`, W / 2, 302, 26, '#fff', 'center', 5);
-  text(`처치 ${S.kills.toLocaleString()}마리`, W / 2, 332, 14, 'rgba(255,255,255,.8)', 'center', 3);
-  if (S.newBest) text('최고 기록 갱신!', W / 2, 354, 14, '#ffd166', 'center', 3);
-  else text(`최고 기록 WAVE ${store.best}`, W / 2, 354, 13, 'rgba(255,255,255,.6)', 'center', 3);
+  text(`처치 ${S.kills.toLocaleString()}마리 · ${S.newBest ? '최고 기록 갱신!' : `최고 WAVE ${store.best}`}`, W / 2, 326, 13, S.newBest ? '#ffd166' : 'rgba(255,255,255,.75)', 'center', 3);
+  icon('gem', W / 2 - 70, 350, 18); text(`보석 +${S.gemsEarned || 0}`, W / 2 - 56, 350, 15, '#8fe3ff', 'left', 3); text(`보유 ${M.gems}`, W / 2 + 70, 350, 12, 'rgba(255,255,255,.6)', 'right', 2.5);
   if (!S.revived) button(BTN.revive, '#2f8ae0', true, (cx, cy) => { icon('heart', cx - 70, cy, 26); if (adMode()) { text('광고 보고 부활', cx + 10, cy, 19, '#fff', 'center', 4); rr(cx + 72, cy - 22, 24, 14, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 84, cy - 15, 9, '#5a3a00'); } else text(`${REVIVE_WAIT}초 쉬고 부활`, cx + 10, cy, 19, '#fff', 'center', 4); }, 'revive');
   button(BTN.retry, '#ff4f72', true, (cx, cy) => text('다시 하기', cx, cy, 20, '#fff', 'center', 4, '#8a1f38'), 'retry');
+  button(BTN.home, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 46, cy, 16); text('영웅 강화', cx + 8, cy, 15, '#fff', 'center', 3); }, 'home');
+}
+function pickRect(i) { return { x: 30, y: 190 + i * 104, w: 300, h: 92 }; }
+function drawPick() {
+  S.pick.t += 1 / 60;
+  ctx.fillStyle = 'rgba(10,6,24,.82)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
+  text(`WAVE ${S.wave} 보상`, W / 2, 128, 15, '#ffd166', 'center', 3);
+  text('버프 1개를 고르세요', W / 2, 158, 24, '#fff', 'center', 5);
+  S.pick.cards.forEach((c, i) => {
+    const b = pickRect(i), appear = Math.min(1, Math.max(0, S.pick.t * 4 - i * 0.4)), sc = appear < 1 ? easeOutBack(appear) : 1;
+    ctx.save(); ctx.globalAlpha = Math.min(1, appear * 2); ctx.translate(b.x + b.w / 2, b.y + b.h / 2); ctx.scale(sc, sc); ctx.translate(-(b.x + b.w / 2), -(b.y + b.h / 2));
+    const pressed = press && press.key === 'card_' + i;
+    rr(b.x, b.y + 4, b.w, b.h, 16); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill();
+    const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h); g.addColorStop(0, pressed ? '#5a46a8' : '#4a3888'); g.addColorStop(1, '#2c2058');
+    rr(b.x, b.y + (pressed ? 3 : 0), b.w, b.h, 16); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#ffcf5a'; ctx.stroke();
+    ctx.save(); rr(b.x + 10, b.y + 10, 72, 72, 12); ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.fill(); ctx.clip();
+    if (TYPES[c.icon]) { if (!drawAnim(c.icon, 'idle', (T * 12) % 20, b.x + 46, b.y + 86, 70)) sprite(c.icon, b.x + 46, b.y + 84, 66); } else icon(c.icon, b.x + 46, b.y + 46, 48);
+    ctx.restore();
+    text(c.name, b.x + 96, b.y + 32, 20, '#fff', 'left', 4);
+    text(c.desc, b.x + 96, b.y + 62, 13, '#cfe8ff', 'left', 3);
+    ctx.restore();
+  });
+}
+function shopBuyRect(i) { return { x: 252, y: 108 + i * 58 + 9, w: 92, h: 38 }; }
+function drawShop() {
+  ctx.fillStyle = 'rgba(14,8,32,.86)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
+  text('영웅 강화', W / 2, 46, 30, '#ffd166', 'center', 6);
+  icon('gem', W / 2 - 40, 82, 22); text(`보유 보석 ${M.gems}`, W / 2 + 8, 82, 16, '#8fe3ff', 'center', 3);
+  META_KEYS.forEach((k, i) => {
+    const d = META_DEF[k], l = metaLv(k), y = 108 + i * 58, maxed = l >= d.max, c = metaCost(k), ok = !maxed && M.gems >= c;
+    const pop = shopPop && shopPop.k === k ? shopPop.t : 0;
+    rr(12, y, 336, 52, 12); ctx.fillStyle = pop > 0 ? 'rgba(143,227,255,.18)' : 'rgba(255,255,255,.07)'; ctx.fill();
+    ctx.save(); rr(18, y + 4, 44, 44, 10); ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fill(); ctx.clip();
+    if (TYPES[k]) { if (!drawAnim(k, 'idle', (T * 12 + i * 3) % 20, 40, y + 52, 46)) sprite(k, 40, y + 50, 42); } else icon(d.icon, 40, y + 26, 30);
+    ctx.restore();
+    text(d.name, 72, y + 17, 15, '#fff', 'left', 3);
+    text(`Lv.${l}/${d.max}`, 240, y + 17, 11, maxed ? '#ffd166' : 'rgba(255,255,255,.6)', 'right', 2);
+    text(l > 0 ? d.desc(l) + (maxed ? '' : ` → ${d.desc(l + 1).replace(/^.*?([+-])/, '$1')}`) : d.desc(1), 72, y + 37, 11, '#cfe8ff', 'left', 2.5);
+    const b = shopBuyRect(i);
+    button(b, maxed ? '#5a5a6a' : '#2f8ae0', ok, (cx, cy) => { if (maxed) text('MAX', cx, cy, 15, '#ffd166', 'center', 3); else { icon('gem', cx - 22, cy, 16); text(String(c), cx + 8, cy, 15, '#fff', 'center', 3); } }, 'buy_' + k);
+  });
+  button(BTN.back, '#ff4f72', true, (cx, cy) => text('돌아가기', cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'back');
+  if (shopPop) { shopPop.t -= 1 / 60; if (shopPop.t <= 0) shopPop = null; }
 }
 function drawPause() {
   ctx.fillStyle = 'rgba(10,6,24,.7)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
@@ -1104,6 +1200,7 @@ function draw() {
   ctx.clearRect(0, 0, VW, VH);
   if (screen === 'loading') { ctx.fillStyle = '#1a1233'; ctx.fillRect(0, 0, VW, VH); text('불러오는 중...', VW / 2, VH / 2, 16, '#fff'); return; }
   if (screen === 'title') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawTitle(); ctx.restore(); return; }
+  if (screen === 'shop') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawShop(); ctx.restore(); return; }
   ctx.save();
   if (S.shake > 0) { const m = Math.min(1, S.shake / 0.4); ctx.translate((Math.random() - 0.5) * 10 * m, (Math.random() - 0.5) * 10 * m); }
   if (S.kick) { const q = S.kick.t / 0.12; ctx.translate(S.kick.x * q, S.kick.y * q); }
@@ -1118,6 +1215,7 @@ function draw() {
   ctx.restore();
   ctx.save(); ctx.translate(OX, EX / 2);
   if (screen === 'over') drawOver();
+  if (S.pick && screen === 'play') drawPick();
   if (paused && screen === 'play') drawPause();
   if (ad) drawAd();
   ctx.restore();
@@ -1142,12 +1240,14 @@ if (REC) {
 function rawPos(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / scale - OX, (e.clientY - r.top) / scale]; }
 function pos(e) {
   const [x, y] = rawPos(e);
-  if (screen !== 'play' || paused || ad) return [x, y - EX / 2];
+  if (screen !== 'play' || paused || ad || (S && S.pick)) return [x, y - EX / 2];
   return [x, y < SPLIT ? y : Math.max(SPLIT, y - EX)];
 }
 function hitKey(x, y) {
-  if (screen === 'title') return inRect(x, y, BTN.start) ? 'start' : null;
-  if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; return null; }
+  if (screen === 'title') return inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : null;
+  if (screen === 'shop') { if (inRect(x, y, BTN.back)) return 'back'; for (let i = 0; i < META_KEYS.length; i++) if (inRect(x, y, shopBuyRect(i))) return 'buy_' + META_KEYS[i]; return null; }
+  if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; return null; }
+  if (S.pick) { for (let i = 0; i < 3; i++) if (inRect(x, y, pickRect(i))) return 'card_' + i; return null; }
   if (paused) return inRect(x, y, BTN.resume) ? 'resume' : null;
   for (const k of ['spin', 'ad', 'speed', 'sound']) if (inRect(x, y, BTN[k])) return k;
   for (const b of UPG) if (inRect(x, y, b)) return 'up_' + b.t;
@@ -1156,6 +1256,9 @@ function hitKey(x, y) {
 function activate(key) {
   switch (key) {
     case 'start': newGame(); screen = 'play'; sfx('click'); break;
+    case 'shop': screen = 'shop'; sfx('click'); break;
+    case 'back': screen = 'title'; sfx('click'); break;
+    case 'home': screen = 'shop'; sfx('click'); break;
     case 'retry': sfx('click'); betweenGames(() => { newGame(); screen = 'play'; }); break;
     case 'revive': if (adMode()) showRewardAd(revive, 'revive'); else ad = { t: REVIVE_WAIT, max: REVIVE_WAIT, onReward: revive, kind: 'wait' }; break;
     case 'resume': paused = false; sfx('click'); break;
@@ -1166,9 +1269,12 @@ function activate(key) {
       if (!canSpin()) { flash('칸이 꽉 찼거나 슬롯이 도는 중이에요', '#ffb35c'); sfx('error'); }
       else if (adMode()) { if (S.adSpins <= 0) { flash('이번 판 무료 스핀을 다 썼어요', '#ffb35c'); sfx('error'); } else showRewardAd(() => { S.adSpins--; doSpin(true); }, 'free_spin'); }
       else if (S.freeCharges <= 0) { flash(`무료 스핀은 ${mmss(S.freeT)} 후에 충전돼요`, '#8fd8ff', 1.6); sfx('error'); }
-      else { if (S.freeCharges >= FREE_MAX) S.freeT = FREE_RECHARGE; S.freeCharges--; doSpin(true); }
+      else { if (S.freeCharges >= FREE_MAX) S.freeT = freeRecharge(); S.freeCharges--; doSpin(true); }
       break;
-    default: if (key && key.startsWith('up_')) doUpgrade(key.slice(3));
+    default:
+      if (key && key.startsWith('up_')) doUpgrade(key.slice(3));
+      else if (key && key.startsWith('buy_')) buyMeta(key.slice(4));
+      else if (key && key.startsWith('card_')) choosePick(+key.slice(5));
   }
 }
 cv.addEventListener('pointerdown', e => {
@@ -1229,7 +1335,7 @@ function stepFrame(dt, render = true) {
   T += dt;
   if (REC && !touch.down && touch.show > 0) touch.show -= dt;
   if (ad) { ad.t -= dt; if (ad.t <= 0) { const f = ad.onReward; ad = null; f(); } }
-  else if (screen === 'play' && !paused && !ADS.inAd) {
+  else if (screen === 'play' && !paused && !ADS.inAd && !S.pick) {
     if (S.hitstop > 0) { S.hitstop -= dt; if (S.shake > 0) S.shake -= dt * 0.5; }
     else for (let k = 0; k < S.speed; k++) { update(dt); if (screen !== 'play' || S.hitstop > 0) break; }
   }
@@ -1244,7 +1350,7 @@ loadAssets().then(() => { screen = 'title'; });
 requestAnimationFrame(loop);
 
 // 테스트용 훅
-window.__game = { get paused() { return paused; }, set paused(v) { paused = v; }, get S() { return S; }, get screen() { return screen; }, set screen(v) { screen = v; }, newGame, update, doSpin, doUpgrade, upCost, spinCost, stats, cellCenter, store, stepFrame, synth, ctx, UPG, BTN };
+window.__game = { get paused() { return paused; }, set paused(v) { paused = v; }, get S() { return S; }, get screen() { return screen; }, set screen(v) { screen = v; }, newGame, update, doSpin, doUpgrade, upCost, spinCost, choosePick, openPick, buyMeta, get M() { return M; }, stats, cellCenter, store, stepFrame, synth, ctx, UPG, BTN };
 </script>
 </body>
 </html>
