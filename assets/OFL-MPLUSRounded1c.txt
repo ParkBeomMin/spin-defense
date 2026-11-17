@@ -1,0 +1,4 @@
+M PLUS Rounded 1c (subset for Japanese UI text)
+Copyright 2021 The M+ FONTS Project Authors (https://github.com/coz-m/MPLUS_FONTS)
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+https://openfontlicense.org
