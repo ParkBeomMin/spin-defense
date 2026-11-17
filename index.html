@@ -43,6 +43,15 @@ ADS.ready = false; ADS.inAd = false; ADS.bannerOn = false; ADS.bannerFilled = fa
 window.adsbygoogle = window.adsbygoogle || [];
 function adBreak(o) { window.adsbygoogle.push(o); }
 function adConfig(o) { window.adsbygoogle.push(o); }
+// ===== Google Analytics 4 (실서비스 주소에서만, 광고 개인화·Google 신호 끔) =====
+const GA = { id: 'G-RGKGFFP9N5', on: ADS.prod && !/[?&](rec|noga)=1/.test(location.search) };
+window.dataLayer = window.dataLayer || [];
+function gtag() { window.dataLayer.push(arguments); }
+if (GA.on) {
+  const gs = document.createElement('script'); gs.async = true; gs.src = `https://www.googletagmanager.com/gtag/js?id=${GA.id}`; document.head.appendChild(gs);
+  gtag('js', new Date()); gtag('config', GA.id, { allow_google_signals: false, allow_ad_personalization_signals: false });
+}
+function track(name, params = {}) { if (GA.on) try { gtag('event', name, params); } catch (e) {} }
 if (ADS.enabled) {
   const sc = document.createElement('script'); sc.async = true; sc.crossOrigin = 'anonymous';
   sc.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADS.client}`;
@@ -224,7 +233,7 @@ if (!M.unlocked) M.unlocked = { sword: 1, bow: 1, magic: 1, ice: 1 };
 if (!M.deck || M.deck.length !== 4) M.deck = ['sword', 'bow', 'magic', 'ice'];
 const ABILITY_KEYS = ['gold', 'luck', 'bounty', 'charge'];
 let shopTab = 'hero';
-function unlockHero(t) { const c = UNLOCK_COST[t]; if (M.unlocked[t]) return; if (M.gems < c) { sfx('error'); return; } M.gems -= c; M.unlocked[t] = 1; saveMeta(); sfx('jackpot'); buzz([20, 30]); shopPop = { k: t, t: 0.6 }; shopMsg = { txt: `${TYPES[t].name} 해금! 덱에 넣어 보세요`, t: 2.5 }; }
+function unlockHero(t) { const c = UNLOCK_COST[t]; if (M.unlocked[t]) return; if (M.gems < c) { sfx('error'); return; } M.gems -= c; M.unlocked[t] = 1; saveMeta(); track('hero_unlock', { hero: t }); sfx('jackpot'); buzz([20, 30]); shopPop = { k: t, t: 0.6 }; shopMsg = { txt: `${TYPES[t].name} 해금! 덱에 넣어 보세요`, t: 2.5 }; }
 function toggleDeck(t) {
   if (!M.unlocked[t]) return;
   const i = M.deck.indexOf(t);
@@ -241,7 +250,7 @@ function buyMeta(k) {
   if (TYPES[k] && !M.unlocked[k]) return;
   if (metaLv(k) >= d.max) return;
   if (M.gems < c) { sfx('error'); return; }
-  M.gems -= c; M.lv[k] = metaLv(k) + 1; saveMeta(); sfx('up'); buzz(10);
+  M.gems -= c; M.lv[k] = metaLv(k) + 1; saveMeta(); sfx('up'); buzz(10); track('meta_upgrade', { item: k, level: M.lv[k] });
   shopPop = { k, t: 0.4 };
 }
 let shopPop = null;
@@ -271,7 +280,7 @@ function openPick() {
   S.pick = { cards, t: 0 }; sfx('win');
 }
 function choosePick(i) {
-  const c = S.pick.cards[i]; c.apply(S.B); S.picked.push(c); S.pick = null;
+  const c = S.pick.cards[i]; c.apply(S.B); S.picked.push(c); S.pick = null; track('card_pick', { card: c.name, wave: S.wave });
   flash(`${c.name}: ${c.desc}`, '#8fe3ff', 2.2); sfx('up'); buzz(15);
 }
 const freeRecharge = () => FREE_RECHARGE - 10 * metaLv('charge');
@@ -311,12 +320,12 @@ let gemPop = null;
 function claimAtt() {
   if (!canClaimAtt()) return;
   const r = ATT_REWARD[attDay()]; M.gems += r; saveMeta();
-  D.att = true; D.streak += 1; D.lastClaim = dayKey(); saveDaily();
+  D.att = true; D.streak += 1; D.lastClaim = dayKey(); saveDaily(); track('daily_claim', { streak: D.streak });
   gemPop = { amt: r, t: 1.4 }; sfx('jackpot'); buzz([20, 30]);
 }
 function claimMission(i) {
   const m = D.missions[i]; if (!m || m.claimed || m.p < m.n) return;
-  m.claimed = true; M.gems += m.r; saveMeta(); saveDaily(); gemPop = { amt: m.r, t: 1.4 }; sfx('win'); buzz(15);
+  m.claimed = true; track('mission_claim', { kind: m.k, target: m.n }); M.gems += m.r; saveMeta(); saveDaily(); gemPop = { amt: m.r, t: 1.4 }; sfx('win'); buzz(15);
 }
 ensureDaily();
 
@@ -447,7 +456,7 @@ function emptyCells() { const r = []; S.units.forEach((u, i) => { if (!u) r.push
 
 // ===== 웨이브 =====
 function startWave() {
-  S.wave++; S.waveT = WAVE_LEN; mission('wave', 0, S.wave);
+  S.wave++; S.waveT = WAVE_LEN; mission('wave', 0, S.wave); if (S.wave % 5 === 0) track('wave_reached', { wave: S.wave });
   if (S.wave % 5 === 0) openPick();
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
@@ -521,6 +530,7 @@ function finishSpin() {
   const [x, y] = cellCenter(i);
   S.fx.push({ k: 'ring', x, y, t: 0.6, max: 0.6, col: GRADES[out.grade].col });
   S.lastWin = out.lvl ? 1.2 : 0;
+  if (out.lvl >= 2) track('jackpot', { grade: out.grade, wave: S.wave });
   if (out.lvl >= 2) mission('jackpot'); if (out.grade === 4) mission('legend');
   if (out.lvl >= 2) { banner(out.title, out.txt, out.col, 2.2); burst(W / 2, 250, out.col, 26); S.shake = 0.35; sfx('jackpot'); buzz([30, 40, 60]); }
   else if (out.lvl === 1) { flash(`${out.title}! ${out.txt}`, out.col, 1.8); sfx('win'); }
@@ -810,12 +820,14 @@ function findPair() {
 function gameOver() {
   screen = 'over'; drag = null; selected = -1; sfx('lose'); buzz(120);
   if (!S.playCounted) { S.playCounted = true; mission('play'); }
+  track('game_over', { wave: S.wave, kills: S.kills, boss_fail: S.bossFail ? 1 : 0, revived: S.revived ? 1 : 0, cards: S.picked.length, spins: S.spins, play_sec: Math.round(S.time), deck: TYPE_KEYS.join(','), gems: S.gemsEarned || 0 });
   if (S.wave > store.best) { store.best = S.wave; S.newBest = true; }
   // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
   const total = Math.round(S.wave * 2 + S.kills / 25 + S.bossKills * 5);
   S.gemsEarned = total; M.gems += total - S.gemsGiven; S.gemsGiven = total; saveMeta();
 }
 function revive() {
+  track('revive', { wave: S.wave, mode: adMode() ? 'ad' : 'time' });
   S.revived = true; screen = 'play'; S.bossT = 0; S.bossFail = false;
   S.enemies.sort((a, b) => a.hp - b.hp);
   while (aliveWeight() > LIMIT / 3) { const e = S.enemies.pop(); burst(e.x, e.y, '#fff', 6); }
@@ -1393,7 +1405,7 @@ function drawTitle() {
   button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawSpeaker(cx - 2, cy, store.mute), 'tmute');
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(`최고 기록  WAVE ${store.best}`, W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text('v0.9.1 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text('v0.9.2 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -1611,7 +1623,7 @@ function hitKey(x, y) {
 }
 function activate(key) {
   switch (key) {
-    case 'start': if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: '덱에 영웅 4명을 골라주세요', t: 2.5 }; sfx('error'); break; } newGame(); screen = 'play'; sfx('click'); break;
+    case 'start': track('game_start', { deck: M.deck.join(','), best_wave: store.best, gems: M.gems }); if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: '덱에 영웅 4명을 골라주세요', t: 2.5 }; sfx('error'); break; } newGame(); screen = 'play'; sfx('click'); break;
     case 'shop': screen = 'shop'; sfx('click'); break;
     case 'reward': ensureDaily(); screen = 'missions'; sfx('click'); break;
     case 'attc': claimAtt(); break;
@@ -1619,7 +1631,7 @@ function activate(key) {
     case 'tmute': store.mute = !store.mute; sfx('click'); break;
     case 'back': screen = 'title'; sfx('click'); break;
     case 'home': screen = 'shop'; sfx('click'); break;
-    case 'retry': sfx('click'); betweenGames(() => { newGame(); screen = 'play'; }); break;
+    case 'retry': track('retry', { last_wave: S.wave }); sfx('click'); betweenGames(() => { newGame(); screen = 'play'; }); break;
     case 'revive': if (adMode()) showRewardAd(revive, 'revive'); else ad = { t: REVIVE_WAIT, max: REVIVE_WAIT, onReward: revive, kind: 'wait' }; break;
     case 'resume': paused = false; sfx('click'); break;
     case 'spin': doSpin(false); break;
@@ -1683,7 +1695,7 @@ cv.addEventListener('pointerup', e => {
     const { nt, ng } = mergeAt(d.idx, j);
     const [x2, y2] = cellCenter(j);
     S.fx.push({ k: 'ring', x: x2, y: y2, t: 0.6, max: 0.6, col: GRADES[ng].col }); burst(x2, y2, GRADES[ng].col, 14);
-    mission('merge'); if (ng === 4) mission('legend');
+    mission('merge'); if (ng === 4) mission('legend'); if (ng >= 4) track('high_merge', { grade: ng, wave: S.wave });
     if (ng === 6) { banner('초월!!!', `${TYPES[nt].name} · 6초마다 전체 심판`, '#ffe9a0', 3); S.shake = 0.6; flashScreen(0.45, '#fff6d6'); sfx('bigboom'); sfx('jackpot'); buzz([60, 40, 120]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
     else if (ng === 5) { banner('신화 탄생!!', `${TYPES[nt].name} · 주변 영웅 공격력 +15%`, '#ff4fd8', 2.6); S.shake = 0.45; flashScreen(0.3, '#ffd6f6'); sfx('jackpot'); buzz([40, 50, 80]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
     else if (ng >= 3) { banner(`${GRADES[ng].name}!`, `${TYPES[nt].name} 등장`, GRADES[ng].col, 1.6); S.shake = 0.2; }
