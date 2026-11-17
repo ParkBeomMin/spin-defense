@@ -1417,7 +1417,7 @@ function drawTitle() {
   shine(b);
   ctx.restore();
   // 영웅 강화 (살 수 있는 게 있으면 빨간 점)
-  button(BTN.shop, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 62, cy, 20); text(L('영웅 강화', 'ヒーロー強化'), cx - 12, cy - 1, 18, '#fff', 'center', 4); rr(cx + 34, cy - 11, 44, 22, 11); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill(); text(String(M.gems), cx + 56, cy, 13, '#8fe3ff', 'center', 2.5); }, 'shop');
+  button(BTN.shop, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 62, cy, 20); text(L('영웅 강화', 'ヒーロー強化'), L(cx - 12, cx - 16), cy - 1, L(18, 15), '#fff', 'center', 4); rr(cx + 34, cy - 11, 44, 22, 11); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill(); text(String(M.gems), cx + 56, cy, 13, '#8fe3ff', 'center', 2.5); }, 'shop');
   if (META_KEYS.some(k => (!TYPES[k] || M.unlocked[k]) && metaLv(k) < META_DEF[k].max && M.gems >= metaCost(k)) || Object.keys(UNLOCK_COST).some(k => !M.unlocked[k] && M.gems >= UNLOCK_COST[k])) redDot(BTN.shop.x + BTN.shop.w - 4, BTN.shop.y + 4);
   // 왼쪽 위: 오늘의 보상
   const rb = BTN.reward, rbn = (canClaimAtt() ? 1 : 0) + claimableMissions();
