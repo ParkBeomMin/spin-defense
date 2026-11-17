@@ -22,6 +22,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <style>
 @font-face{font-family:Jua;src:url(assets/Jua-Regular.ttf) format("truetype");font-display:block}
+@font-face{font-family:MPR;src:url(assets/MPLUSRounded1c-ja-subset.woff2) format("woff2");font-display:block}
 html,body{margin:0;height:100%;background:#1a1233;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 body{display:block}
 body.withbar{justify-content:flex-start}
@@ -35,6 +36,11 @@ canvas{display:block;touch-action:none}
 <canvas id="c"></canvas>
 <div id="adbar"><div class="lbl">광고</div></div>
 <script>
+// ===== 언어 (한국어 기본, 브라우저가 일본어면 일본어) =====
+const LANG = (() => { const q = new URLSearchParams(location.search).get('lang'); if (q === 'ja' || q === 'ko') return q; const ls = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']; for (const l of ls) { if (/^ja/i.test(l)) return 'ja'; if (/^ko/i.test(l)) return 'ko'; } return 'ko'; })();
+const L = (ko, ja) => LANG === 'ja' ? ja : ko;
+document.documentElement.lang = LANG;
+
 'use strict';
 // =====================================================================
 // 스핀 디펜스 : 영웅 소환 + 랜덤 디펜스
@@ -108,7 +114,7 @@ function resize() {
   ctx.imageSmoothingQuality = 'high';
 }
 addEventListener('resize', resize); resize();
-const FONT = 'Jua,"Apple SD Gothic Neo","Noto Sans KR",sans-serif';
+const FONT = 'Jua,MPR,"Hiragino Maru Gothic ProN","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
 
 // ===== 에셋 =====
 const IMG = {}, ANIM = {};
@@ -141,31 +147,32 @@ function loadAssets() {
     const im = new Image(); im.onload = () => { ANIM[k] = { im, ...meta[k] }; res(); }; im.onerror = res; im.src = `assets/anim_${k}.webp`;
   })))).catch(() => {}));
   ps.push(document.fonts ? document.fonts.load('20px Jua').catch(() => {}) : Promise.resolve());
+  if (LANG === 'ja' && document.fonts) ps.push(document.fonts.load('20px MPR', 'ヒーロー召喚').catch(() => {}));
   return Promise.all(ps);
 }
 
 // ===== 데이터 =====
 const TYPES = {
-  sword: { name: '기사',     range: 78,  dmg: 34, rate: 0.75, color: '#ffcf5a' },
-  bow:   { name: '여우궁수', range: 125, dmg: 13, rate: 0.33, color: '#9be36d' },
-  magic: { name: '대마법사', range: 100, dmg: 15, rate: 1.0, splash: 44, color: '#c792ff' },
-  ice:   { name: '얼음공주', range: 105, dmg: 7,  rate: 0.7, slow: 0.45, color: '#8fd8ff' },
+  sword: { name: L('기사', 'ナイト'),     range: 78,  dmg: 34, rate: 0.75, color: '#ffcf5a' },
+  bow:   { name: L('여우궁수', 'キツネ弓使い'), range: 125, dmg: 13, rate: 0.33, color: '#9be36d' },
+  magic: { name: L('대마법사', '大魔法使い'), range: 100, dmg: 15, rate: 1.0, splash: 44, color: '#c792ff' },
+  ice:   { name: L('얼음공주', '氷の姫'), range: 105, dmg: 7,  rate: 0.7, slow: 0.45, color: '#8fd8ff' },
   // 새 영웅 (보석으로 해금)
-  bard:  { name: '음유시인', range: 95,  dmg: 9,  rate: 0.85, aura: 0.10, color: '#ff8fb1', role: '주변 8칸 영웅 공격 속도 증가' },
-  ninja: { name: '닌자',     range: 74,  dmg: 19, rate: 0.5,  critMul: 2.5, color: '#c084fc', role: '치명타 35%, 처치 시 골드 추가' },
-  storm: { name: '번개술사', range: 112, dmg: 17, rate: 1.05, chain: 3, color: '#ffe066', role: '번개가 적 여러 마리를 연쇄 타격' },
+  bard:  { name: L('음유시인', '吟遊詩人'), range: 95,  dmg: 9,  rate: 0.85, aura: 0.10, color: '#ff8fb1', role: L('주변 8칸 영웅 공격 속도 증가', '周囲の攻撃速度アップ') },
+  ninja: { name: L('닌자', '忍者'),     range: 74,  dmg: 19, rate: 0.5,  critMul: 2.5, color: '#c084fc', role: L('치명타 35%, 처치 시 골드 추가', '会心35%・撃破でG追加') },
+  storm: { name: L('번개술사', '雷術師'), range: 112, dmg: 17, rate: 1.05, chain: 3, color: '#ffe066', role: L('번개가 적 여러 마리를 연쇄 타격', '雷が敵に連鎖') },
 };
-TYPES.sword.role = '근접 강타, 사거리 짧음'; TYPES.bow.role = '빠른 원거리 연사'; TYPES.magic.role = '범위 폭발'; TYPES.ice.role = '적을 느리게';
+TYPES.sword.role = L('근접 강타, 사거리 짧음', '近接の強打、射程は短め'); TYPES.bow.role = L('빠른 원거리 연사', '素早い遠距離連射'); TYPES.magic.role = L('범위 폭발', '範囲爆発'); TYPES.ice.role = L('적을 느리게', '敵をスローに');
 const ALL_TYPES = Object.keys(TYPES);
 const UNLOCK_COST = { bard: 150, ninja: 250, storm: 400 };
 let TYPE_KEYS = ['sword', 'bow', 'magic', 'ice'];   // 이번 판 덱 (newGame에서 M.deck으로 바뀜)
 const GRADES = [null,
-  { name: '일반', col: '#c9ced6', m: 1 },
-  { name: '희귀', col: '#4fa3ff', m: 3.2 },
-  { name: '영웅', col: '#c070ff', m: 12 },
-  { name: '전설', col: '#ffb020', m: 55 },
-  { name: '신화', col: '#ff4fd8', m: 150 },
-  { name: '초월', col: '#ffe9a0', m: 400 },
+  { name: L('일반', 'ノーマル'), col: '#c9ced6', m: 1 },
+  { name: L('희귀', 'レア'), col: '#4fa3ff', m: 3.2 },
+  { name: L('영웅', 'エピック'), col: '#c070ff', m: 12 },
+  { name: L('전설', 'レジェンド'), col: '#ffb020', m: 55 },
+  { name: L('신화', 'ミシック'), col: '#ff4fd8', m: 150 },
+  { name: L('초월', '超越'), col: '#ffe9a0', m: 400 },
 ];
 const SELL = [0, 10, 30, 90, 270, 810, 2400];
 // 합체에 필요한 같은 영웅 수: 희귀→영웅, 영웅→전설은 3명, 나머지는 2명. 최고 등급은 초월(6)
@@ -229,17 +236,17 @@ const store = {
 
 // ===== 영구 성장: 판이 끝나면 보석을 받고, 보석으로 영구 강화 =====
 const META_DEF = {
-  sword:  { icon: 'sword', name: '기사 단련',   max: 10, desc: l => `기사 공격력 +${l * 8}%` },
-  bow:    { icon: 'bow',   name: '궁수 단련',   max: 10, desc: l => `궁수 공격력 +${l * 8}%` },
-  magic:  { icon: 'magic', name: '마법사 단련', max: 10, desc: l => `마법사 공격력 +${l * 8}%` },
-  ice:    { icon: 'ice',   name: '얼음공주 단련', max: 10, desc: l => `얼음공주 공격력 +${l * 8}%` },
-  bard:   { icon: 'bard',  name: '음유시인 단련', max: 10, desc: l => `음유시인 공격력 +${l * 8}%` },
-  ninja:  { icon: 'ninja', name: '닌자 단련',     max: 10, desc: l => `닌자 공격력 +${l * 8}%` },
-  storm:  { icon: 'storm', name: '번개술사 단련', max: 10, desc: l => `번개술사 공격력 +${l * 8}%` },
-  gold:   { icon: 'coin',  name: '두둑한 지갑', max: 5,  desc: l => `시작 골드 +${l * 25}` },
-  luck:   { icon: 'star',  name: '행운의 별',   max: 5,  desc: l => `별(와일드) 확률 +${l * 8}%` },
-  bounty: { icon: 'chest', name: '전리품',      max: 5,  desc: l => `처치 골드 +${l * 8}%` },
-  charge: { icon: 'bolt',  name: '빠른 충전',   max: 4,  desc: l => `무료 소환 충전 -${l * 10}초` },
+  sword:  { icon: 'sword', name: L('기사 단련', 'ナイト修練'),   max: 10, desc: l => L(`기사 공격력 +${l * 8}%`, `ナイト攻撃力 +${l * 8}%`) },
+  bow:    { icon: 'bow',   name: L('궁수 단련', '弓使い修練'),   max: 10, desc: l => L(`궁수 공격력 +${l * 8}%`, `弓使い攻撃力 +${l * 8}%`) },
+  magic:  { icon: 'magic', name: L('마법사 단련', '魔法使い修練'), max: 10, desc: l => L(`마법사 공격력 +${l * 8}%`, `魔法使い攻撃力 +${l * 8}%`) },
+  ice:    { icon: 'ice',   name: L('얼음공주 단련', '氷の姫修練'), max: 10, desc: l => L(`얼음공주 공격력 +${l * 8}%`, `氷の姫攻撃力 +${l * 8}%`) },
+  bard:   { icon: 'bard',  name: L('음유시인 단련', '吟遊詩人修練'), max: 10, desc: l => L(`음유시인 공격력 +${l * 8}%`, `吟遊詩人攻撃力 +${l * 8}%`) },
+  ninja:  { icon: 'ninja', name: L('닌자 단련', '忍者修練'),     max: 10, desc: l => L(`닌자 공격력 +${l * 8}%`, `忍者攻撃力 +${l * 8}%`) },
+  storm:  { icon: 'storm', name: L('번개술사 단련', '雷術師修練'), max: 10, desc: l => L(`번개술사 공격력 +${l * 8}%`, `雷術師攻撃力 +${l * 8}%`) },
+  gold:   { icon: 'coin',  name: L('두둑한 지갑', 'ふくらむ財布'), max: 5,  desc: l => L(`시작 골드 +${l * 25}`, `開始ゴールド +${l * 25}`) },
+  luck:   { icon: 'star',  name: L('행운의 별', '幸運の星'),   max: 5,  desc: l => L(`별(와일드) 확률 +${l * 8}%`, `星(ワイルド)確率 +${l * 8}%`) },
+  bounty: { icon: 'chest', name: L('전리품', '戦利品'),      max: 5,  desc: l => L(`처치 골드 +${l * 8}%`, `撃破ゴールド +${l * 8}%`) },
+  charge: { icon: 'bolt',  name: L('빠른 충전', '高速チャージ'),   max: 4,  desc: l => L(`무료 소환 충전 -${l * 10}초`, `無料召喚チャージ -${l * 10}秒`) },
 };
 const META_KEYS = Object.keys(META_DEF);
 let M = (() => { try { return JSON.parse(localStorage.getItem('sd_meta')) || { gems: 0, lv: {} }; } catch (e) { return { gems: 0, lv: {} }; } })();
@@ -248,12 +255,12 @@ if (!M.unlocked) M.unlocked = { sword: 1, bow: 1, magic: 1, ice: 1 };
 if (!M.deck || M.deck.length !== 4) M.deck = ['sword', 'bow', 'magic', 'ice'];
 const ABILITY_KEYS = ['gold', 'luck', 'bounty', 'charge'];
 let shopTab = 'hero';
-function unlockHero(t) { const c = UNLOCK_COST[t]; if (M.unlocked[t]) return; if (M.gems < c) { sfx('error'); return; } M.gems -= c; M.unlocked[t] = 1; saveMeta(); track('hero_unlock', { hero: t }); sfx('jackpot'); buzz([20, 30]); shopPop = { k: t, t: 0.6 }; shopMsg = { txt: `${TYPES[t].name} 해금! 덱에 넣어 보세요`, t: 2.5 }; }
+function unlockHero(t) { const c = UNLOCK_COST[t]; if (M.unlocked[t]) return; if (M.gems < c) { sfx('error'); return; } M.gems -= c; M.unlocked[t] = 1; saveMeta(); track('hero_unlock', { hero: t }); sfx('jackpot'); buzz([20, 30]); shopPop = { k: t, t: 0.6 }; shopMsg = { txt: L(`${TYPES[t].name} 해금! 덱에 넣어 보세요`, `${TYPES[t].name} 解放！デッキに入れてみよう`), t: 2.5 }; }
 function toggleDeck(t) {
   if (!M.unlocked[t]) return;
   const i = M.deck.indexOf(t);
   if (i >= 0) { if (M.deck.length <= 1) return; M.deck.splice(i, 1); }
-  else { if (M.deck.length >= 4) { shopMsg = { txt: '덱은 4명이에요. 먼저 한 명을 빼주세요', t: 2 }; sfx('error'); return; } M.deck.push(t); }
+  else { if (M.deck.length >= 4) { shopMsg = { txt: L('덱은 4명이에요. 먼저 한 명을 빼주세요', 'デッキは4人まで。先に1人外してね'), t: 2 }; sfx('error'); return; } M.deck.push(t); }
   saveMeta(); sfx('click');
 }
 let shopMsg = null;
@@ -271,22 +278,22 @@ function buyMeta(k) {
 let shopPop = null;
 // ===== 버프 카드: 5웨이브마다 3장 중 1장 =====
 const CARDS = [
-  { t: 'sword', icon: 'sword', name: '기사의 분노',  desc: '기사 공격력 +40%',            apply: B => { B.dmg.sword *= 1.4; } },
-  { t: 'bow', icon: 'bow',   name: '속사',         desc: '궁수 공격 속도 +30%',         apply: B => { B.spd.bow *= 1.3; } },
-  { t: 'magic', icon: 'magic', name: '대폭발',       desc: '마법 폭발 범위 +35%, 공격력 +20%', apply: B => { B.splash *= 1.35; B.dmg.magic *= 1.2; } },
-  { t: 'ice', icon: 'ice',   name: '혹한',         desc: '얼음 공격력 +60%, 감속 +1초',  apply: B => { B.dmg.ice *= 1.6; B.slowT += 1; } },
-  { icon: 'bolt',  name: '매의 눈',      desc: '모든 영웅 사거리 +15%',       apply: B => { B.range *= 1.15; } },
-  { icon: 'star',  name: '급소 공략',    desc: '치명타 확률 +10%',            apply: B => { B.crit += 0.1; } },
-  { icon: 'heart', name: '보스 사냥꾼',  desc: '보스에게 주는 피해 +60%',     apply: B => { B.boss *= 1.6; } },
-  { icon: 'coin',  name: '단골 할인',    desc: '소환 비용 -20%',              apply: B => { B.spinCost *= 0.8; } },
-  { icon: 'coin',  name: '황금 사냥',    desc: '처치 골드 +35%',              apply: B => { B.gold *= 1.35; } },
-  { icon: 'star',  name: '행운의 별빛',  desc: '별(와일드) 확률 1.5배',       apply: B => { B.star *= 1.5; } },
-  { icon: 'chest', name: '보물상자',     desc: '지금 바로 골드 +150',         apply: () => { S.gold += 150; } },
-  { icon: 'chest', name: '공짜 소환',    desc: '무료 소환 +2회',              apply: () => { S.freeCharges += 2; S.adSpins += 2; } },
-  { icon: 'gem',   name: '전군 강화',    desc: '모든 영웅 공격력 +20%',       apply: B => { ALL_TYPES.forEach(t => B.dmg[t] *= 1.2); } },
-  { t: 'bard', icon: 'bard',  name: '앙코르',       desc: '음유시인 공속 오라 +60%',     apply: B => { B.aura *= 1.6; } },
-  { t: 'ninja', icon: 'ninja', name: '그림자 일격', desc: '닌자 치명타 피해 +100%',      apply: B => { B.ninjaCrit += 1; } },
-  { t: 'storm', icon: 'storm', name: '과부하',      desc: '번개 연쇄 +2마리',            apply: B => { B.chain += 2; } },
+  { t: 'sword', icon: 'sword', name: L('기사의 분노', 'ナイトの怒り'),  desc: L('기사 공격력 +40%', 'ナイト攻撃力 +40%'),            apply: B => { B.dmg.sword *= 1.4; } },
+  { t: 'bow', icon: 'bow',   name: L('속사', '速射'),         desc: L('궁수 공격 속도 +30%', '弓使い攻撃速度 +30%'),         apply: B => { B.spd.bow *= 1.3; } },
+  { t: 'magic', icon: 'magic', name: L('대폭발', '大爆発'),       desc: L('마법 폭발 범위 +35%, 공격력 +20%', '魔法爆発範囲 +35%、攻撃力 +20%'), apply: B => { B.splash *= 1.35; B.dmg.magic *= 1.2; } },
+  { t: 'ice', icon: 'ice',   name: L('혹한', '極寒'),         desc: L('얼음 공격력 +60%, 감속 +1초', '氷攻撃力 +60%、スロー +1秒'),  apply: B => { B.dmg.ice *= 1.6; B.slowT += 1; } },
+  { icon: 'bolt',  name: L('매의 눈', '鷹の目'),      desc: L('모든 영웅 사거리 +15%', '全ヒーロー射程 +15%'),       apply: B => { B.range *= 1.15; } },
+  { icon: 'star',  name: L('급소 공략', '急所狙い'),    desc: L('치명타 확률 +10%', '会心率 +10%'),            apply: B => { B.crit += 0.1; } },
+  { icon: 'heart', name: L('보스 사냥꾼', 'ボスハンター'),  desc: L('보스에게 주는 피해 +60%', 'ボスへのダメージ +60%'),     apply: B => { B.boss *= 1.6; } },
+  { icon: 'coin',  name: L('단골 할인', '常連割引'),    desc: L('소환 비용 -20%', '召喚コスト -20%'),              apply: B => { B.spinCost *= 0.8; } },
+  { icon: 'coin',  name: L('황금 사냥', '黄金狩り'),    desc: L('처치 골드 +35%', '撃破ゴールド +35%'),              apply: B => { B.gold *= 1.35; } },
+  { icon: 'star',  name: L('행운의 별빛', '幸運の星明かり'),  desc: L('별(와일드) 확률 1.5배', '星(ワイルド)確率 1.5倍'),       apply: B => { B.star *= 1.5; } },
+  { icon: 'chest', name: L('보물상자', '宝箱'),     desc: L('지금 바로 골드 +150', '今すぐゴールド +150'),         apply: () => { S.gold += 150; } },
+  { icon: 'chest', name: L('공짜 소환', 'タダ召喚'),    desc: L('무료 소환 +2회', '無料召喚 +2回'),              apply: () => { S.freeCharges += 2; S.adSpins += 2; } },
+  { icon: 'gem',   name: L('전군 강화', '全軍強化'),    desc: L('모든 영웅 공격력 +20%', '全ヒーロー攻撃力 +20%'),       apply: B => { ALL_TYPES.forEach(t => B.dmg[t] *= 1.2); } },
+  { t: 'bard', icon: 'bard',  name: L('앙코르', 'アンコール'),       desc: L('음유시인 공속 오라 +60%', '吟遊詩人の攻速オーラ +60%'),     apply: B => { B.aura *= 1.6; } },
+  { t: 'ninja', icon: 'ninja', name: L('그림자 일격', '影の一撃'), desc: L('닌자 치명타 피해 +100%', '忍者の会心ダメージ +100%'),      apply: B => { B.ninjaCrit += 1; } },
+  { t: 'storm', icon: 'storm', name: L('과부하', 'オーバーロード'),      desc: L('번개 연쇄 +2마리', '雷の連鎖 +2体'),            apply: B => { B.chain += 2; } },
 ];
 const newBuffs = () => ({ dmg: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), spd: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), aura: 1, ninjaCrit: 0, chain: 0, splash: 1, slowT: 0, range: 1, crit: 0, boss: 1, spinCost: 1, gold: 1, star: 1 });
 function openPick() {
@@ -303,14 +310,14 @@ const freeRecharge = () => FREE_RECHARGE - 10 * metaLv('charge');
 // ===== 매일: 출석 보상 + 오늘의 미션 3개 =====
 const ATT_REWARD = [20, 25, 30, 35, 40, 50, 100];
 const MISSION_POOL = [
-  { k: 'wave',    ns: [12, 16, 20], rs: [30, 45, 60], label: n => `웨이브 ${n} 도달`, icon: 'bolt' },
-  { k: 'merge',   ns: [8, 15],      rs: [25, 40],     label: n => `합체 ${n}회`, icon: 'magic' },
-  { k: 'kill',    ns: [300, 600],   rs: [25, 45],     label: n => `몬스터 ${n}마리 처치`, icon: 'sword' },
-  { k: 'boss',    ns: [1, 2],       rs: [30, 50],     label: n => `보스 ${n}마리 처치`, icon: 'heart' },
-  { k: 'jackpot', ns: [2, 4],       rs: [30, 50],     label: n => `대성공 소환 ${n}회`, icon: 'star' },
-  { k: 'upgrade', ns: [5, 10],      rs: [20, 35],     label: n => `직업 강화 ${n}회`, icon: 'coin' },
-  { k: 'legend',  ns: [1],          rs: [50],         label: () => '전설 영웅 만들기', icon: 'gem' },
-  { k: 'play',    ns: [2, 3],       rs: [20, 30],     label: n => `게임 ${n}판 하기`, icon: 'chest' },
+  { k: 'wave',    ns: [12, 16, 20], rs: [30, 45, 60], label: n => L(`웨이브 ${n} 도달`, `ウェーブ ${n} 到達`), icon: 'bolt' },
+  { k: 'merge',   ns: [8, 15],      rs: [25, 40],     label: n => L(`합체 ${n}회`, `合体 ${n}回`), icon: 'magic' },
+  { k: 'kill',    ns: [300, 600],   rs: [25, 45],     label: n => L(`몬스터 ${n}마리 처치`, `モンスター ${n}体撃破`), icon: 'sword' },
+  { k: 'boss',    ns: [1, 2],       rs: [30, 50],     label: n => L(`보스 ${n}마리 처치`, `ボス ${n}体撃破`), icon: 'heart' },
+  { k: 'jackpot', ns: [2, 4],       rs: [30, 50],     label: n => L(`대성공 소환 ${n}회`, `大成功召喚 ${n}回`), icon: 'star' },
+  { k: 'upgrade', ns: [5, 10],      rs: [20, 35],     label: n => L(`직업 강화 ${n}회`, `職業強化 ${n}回`), icon: 'coin' },
+  { k: 'legend',  ns: [1],          rs: [50],         label: () => L('전설 영웅 만들기', 'レジェンドを作る'), icon: 'gem' },
+  { k: 'play',    ns: [2, 3],       rs: [20, 30],     label: n => L(`게임 ${n}판 하기`, `${n}回プレイする`), icon: 'chest' },
 ];
 const dayKey = (off = 0) => new Date(Date.now() - off * 86400000).toLocaleDateString('sv');
 let D = (() => { try { return JSON.parse(localStorage.getItem('sd_daily')); } catch (e) { return null; } })();
@@ -325,7 +332,7 @@ function ensureDaily() {
 const saveDaily = () => localStorage.setItem('sd_daily', JSON.stringify(D));
 function mission(k, add = 1, val = 0) {
   if (!D) return; let ch = false;
-  for (const m of D.missions) { if (m.k !== k || m.claimed) continue; const before = m.p; m.p = k === 'wave' ? Math.max(m.p, val) : m.p + add; m.p = Math.min(m.p, m.n); if (m.p !== before) { ch = true; if (m.p >= m.n && before < m.n && screen === 'play') flash(`미션 완료! ${MISSION_POOL.find(q => q.k === k).label(m.n)}`, '#8fe3ff', 2); } }
+  for (const m of D.missions) { if (m.k !== k || m.claimed) continue; const before = m.p; m.p = k === 'wave' ? Math.max(m.p, val) : m.p + add; m.p = Math.min(m.p, m.n); if (m.p !== before) { ch = true; if (m.p >= m.n && before < m.n && screen === 'play') flash(L(`미션 완료! ${MISSION_POOL.find(q => q.k === k).label(m.n)}`, `ミッション達成！ ${MISSION_POOL.find(q => q.k === k).label(m.n)}`), '#8fe3ff', 2); } }
   if (ch) saveDaily();
 }
 const attDay = () => (D.streak % 7);   // 오늘 받을 출석 칸 (0~6)
@@ -476,8 +483,8 @@ function startWave() {
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
   S.spawnGap = Math.min(1.2, 14 / Math.max(1, S.spawnLeft)); S.spawnT = 0;
-  if (boss) { spawn(true); S.bossT = TUNE.bossTime; banner('BOSS', `${TUNE.bossTime}초 안에 처치!`, '#ff5d5d', 2); sfx('boss'); S.shake = 0.4; buzz(60); }
-  else { banner(`WAVE ${S.wave}`, S.wave === 1 ? '몬스터가 몰려와요!' : `+${10 + S.wave} 골드 보너스`, '#fff', 1.3); sfx('wave'); }
+  if (boss) { spawn(true); S.bossT = TUNE.bossTime; banner('BOSS', L(`${TUNE.bossTime}초 안에 처치!`, `${TUNE.bossTime}秒以内に倒せ！`), '#ff5d5d', 2); sfx('boss'); S.shake = 0.4; buzz(60); }
+  else { banner(`WAVE ${S.wave}`, S.wave === 1 ? L('몬스터가 몰려와요!', 'モンスターが来るよ！') : L(`+${10 + S.wave} 골드 보너스`, `+${10 + S.wave} ゴールドボーナス`), '#fff', 1.3); sfx('wave'); }
   if (S.wave > 1) S.gold += 10 + S.wave;
 }
 function enemyKind() {
@@ -499,20 +506,20 @@ function rollSym() {
 }
 function resolveSpin(r) {
   const stars = r.filter(s => s === 'star').length, ts = r.filter(s => s !== 'star');
-  if (stars === 3) { const t = rnd(TYPE_KEYS); return { grade: 4, type: t, title: '전설 소환!!', txt: `전설 ${TYPES[t].name} 등장`, col: '#ffb020', lvl: 3 }; }
+  if (stars === 3) { const t = rnd(TYPE_KEYS); return { grade: 4, type: t, title: L('전설 소환!!', 'レジェンド召喚!!'), txt: L(`전설 ${TYPES[t].name} 등장`, `レジェンド ${TYPES[t].name} 登場`), col: '#ffb020', lvl: 3 }; }
   const cnt = {}; ts.forEach(t => cnt[t] = (cnt[t] || 0) + 1);
   let bestT = null, bc = 0; for (const k in cnt) if (cnt[k] > bc) { bc = cnt[k]; bestT = k; }
   const total = bc + stars;
-  if (total >= 3) return { grade: 2, type: bestT, title: '대성공!', txt: `희귀 ${TYPES[bestT].name} 등장`, col: '#4fa3ff', lvl: 2 };
-  if (total === 2) return { grade: 1, type: bestT, refund: true, title: 'PAIR', txt: `${TYPES[bestT].name} + 골드 절반 환급`, col: '#9be36d', lvl: 1 };
-  const t = rnd(ts); return { grade: 1, type: t, txt: `${TYPES[t].name} 소환`, col: '#fff', lvl: 0 };
+  if (total >= 3) return { grade: 2, type: bestT, title: L('대성공!', '大成功！'), txt: L(`희귀 ${TYPES[bestT].name} 등장`, `レア ${TYPES[bestT].name} 登場`), col: '#4fa3ff', lvl: 2 };
+  if (total === 2) return { grade: 1, type: bestT, refund: true, title: 'PAIR', txt: L(`${TYPES[bestT].name} + 골드 절반 환급`, `${TYPES[bestT].name} + ゴールド半分返却`), col: '#9be36d', lvl: 1 };
+  const t = rnd(ts); return { grade: 1, type: t, txt: L(`${TYPES[t].name} 소환`, `${TYPES[t].name} 召喚`), col: '#fff', lvl: 0 };
 }
 const canSpin = () => !S.spinning && emptyCells().length > 0;
 function doSpin(free) {
   if (S.spinning) return;
-  if (!emptyCells().length) { flash('칸이 꽉 찼어요! 합체하거나 판매하세요', '#ffb35c'); sfx('error'); return; }
+  if (!emptyCells().length) { flash(L('칸이 꽉 찼어요! 합체하거나 판매하세요', 'マスがいっぱい！合体か売却をしよう'), '#ffb35c'); sfx('error'); return; }
   const cost = spinCost();
-  if (!free) { if (S.gold < cost) { flash('골드가 부족해요', '#ffb35c', 1.2); sfx('error'); return; } S.gold -= cost; S.spins++; }
+  if (!free) { if (S.gold < cost) { flash(L('골드가 부족해요', 'ゴールドが足りません'), '#ffb35c', 1.2); sfx('error'); return; } S.gold -= cost; S.spins++; }
   S.spinning = true; S.spinRes = [rollSym(), rollSym(), rollSym()]; S.spinPaid = free ? 0 : cost;
   S.reels.forEach((r, i) => {
     const cur = r.strip[Math.round(r.pos)] || r.strip[r.strip.length - 1];
@@ -537,7 +544,7 @@ function updateReels(dt) {
 function finishSpin() {
   S.spinning = false;
   const out = resolveSpin(S.spinRes), empt = emptyCells();
-  if (!empt.length) { S.gold += S.spinPaid; flash('칸이 없어 골드를 돌려받았어요', '#ffb35c'); return; }
+  if (!empt.length) { S.gold += S.spinPaid; flash(L('칸이 없어 골드를 돌려받았어요', '空きマスがないのでゴールドを返却しました'), '#ffb35c'); return; }
   const i = rnd(empt);
   S.units[i] = { type: out.type, grade: out.grade, cd: 0, anim: 0, born: 0.5, cheer: CHEER_T };
   if (out.lvl >= 2) S.units.forEach(u => { if (u) u.cheer = CHEER_T; });
@@ -554,9 +561,9 @@ function finishSpin() {
 }
 function doUpgrade(t) {
   const c = upCost(t);
-  if (S.gold < c) { flash('골드가 부족해요', '#ffb35c', 1.2); sfx('error'); return; }
+  if (S.gold < c) { flash(L('골드가 부족해요', 'ゴールドが足りません'), '#ffb35c', 1.2); sfx('error'); return; }
   S.gold -= c; S.lv[t]++; S.lvPop[t] = 0.4; mission('upgrade');
-  flash(`${TYPES[t].name} 강화 Lv${S.lv[t]} · 공격력 +${Math.round(S.lv[t] * TUNE.upPct * 100)}%`, TYPES[t].color, 1.6); sfx('up'); buzz(10);
+  flash(L(`${TYPES[t].name} 강화 Lv${S.lv[t]} · 공격력 +${Math.round(S.lv[t] * TUNE.upPct * 100)}%`, `${TYPES[t].name} 強化 Lv${S.lv[t]} · 攻撃力 +${Math.round(S.lv[t] * TUNE.upPct * 100)}%`), TYPES[t].color, 1.6); sfx('up'); buzz(10);
   if (store.tut === 2) store.tut = 3;
 }
 
@@ -613,7 +620,7 @@ function killEnemy(e) {
   }
   S.dying.push({ k: e.boss ? 'boss' : e.kind, x: e.x + (e.kbx || 0), y: e.y + (e.kby || 0), dir: e.dir, h: e.boss ? 46 : ENEMY[e.kind].h, t: e.boss ? 0.6 : 0.32, max: e.boss ? 0.6 : 0.32 });
   if (S.coins.length < 14) S.coins.push({ x: e.x, y: e.y, sx: e.x, sy: e.y, t: 0, dur: 0.55 + Math.random() * 0.15 });
-  if (e.boss) { banner('BOSS 처치!', `+${g} 골드`, '#ffd166', 2); S.shake = 0.3; sfx('jackpot'); S.units.forEach(u => { if (u) u.cheer = CHEER_T; }); }
+  if (e.boss) { banner(L('BOSS 처치!', 'BOSS撃破！'), L(`+${g} 골드`, `+${g} ゴールド`), '#ffd166', 2); S.shake = 0.3; sfx('jackpot'); S.units.forEach(u => { if (u) u.cheer = CHEER_T; }); }
 }
 function damage(e, dmg, showNum, fx, fy, crit = false) {
   if (e.dead) return;
@@ -710,7 +717,7 @@ function update(dt) {
   if (S.flash) { S.flash.a -= dt * 4; if (S.flash.a <= 0) S.flash = null; }
   if (S.kick) { S.kick.t -= dt; if (S.kick.t <= 0) S.kick = null; }
   if (S.hsCd > 0) S.hsCd -= dt;
-  if (!adMode() && S.freeCharges < FREE_MAX) { S.freeT -= dt; if (S.freeT <= 0) { S.freeCharges++; S.freeT = freeRecharge(); flash('무료 소환 1회 충전!', '#8fd8ff', 1.4); } }
+  if (!adMode() && S.freeCharges < FREE_MAX) { S.freeT -= dt; if (S.freeT <= 0) { S.freeCharges++; S.freeT = freeRecharge(); flash(L('무료 소환 1회 충전!', '無料召喚 1回チャージ！'), '#8fd8ff', 1.4); } }
   for (const c of S.coins) { c.t += dt; if (c.t >= c.dur && !c.done) { c.done = true; sfx('coin'); } } S.coins = S.coins.filter(c => c.t < c.dur);
   S.goldShown += (S.gold - S.goldShown) * Math.min(1, dt * 12); if (Math.abs(S.gold - S.goldShown) < 0.5) S.goldShown = S.gold;
   // 보스 제한시간: 시간 안에 못 잡으면 패배
@@ -826,7 +833,7 @@ function sellUnit(i) {
   const u = S.units[i]; if (!u) return;
   const v = SELL[u.grade]; S.gold += v; S.units[i] = null; if (selected === i) selected = -1;
   const [x, y] = cellCenter(i); puffs(x, y, 5); for (let k = 0; k < Math.min(6, 1 + u.grade); k++) if (S.coins.length < 14) S.coins.push({ x, y, sx: x + (Math.random() - 0.5) * 20, sy: y, t: 0, dur: 0.5 + k * 0.05 });
-  flash(`${GRADES[u.grade].name} ${TYPES[u.type].name} 판매 +${v} 골드`, '#ffd166', 1.6); sfx('sell'); buzz(10);
+  flash(L(`${GRADES[u.grade].name} ${TYPES[u.type].name} 판매 +${v} 골드`, `${GRADES[u.grade].name} ${TYPES[u.type].name} 売却 +${v} ゴールド`), '#ffd166', 1.6); sfx('sell'); buzz(10);
 }
 function findPair() {
   for (let i = 0; i < S.units.length; i++) for (let j = i + 1; j < S.units.length; j++) if (canMerge(i, j)) return [i, j];
@@ -846,7 +853,7 @@ function revive() {
   S.revived = true; screen = 'play'; S.bossT = 0; S.bossFail = false;
   S.enemies.sort((a, b) => a.hp - b.hp);
   while (aliveWeight() > LIMIT / 3) { const e = S.enemies.pop(); burst(e.x, e.y, '#fff', 6); }
-  banner('부활!', '몬스터 일부를 쓸어냈어요', '#9be36d', 2); sfx('jackpot');
+  banner(L('부활!', '復活！'), L('몬스터 일부를 쓸어냈어요', 'モンスターを一部なぎ払った！'), '#9be36d', 2); sfx('jackpot');
 }
 // 실제 앱에서는 AdMob 보상형 광고로 교체
 // 보상형 광고: 실제 광고(H5 Games Ads)가 준비되면 그걸 쓰고, 아니면 테스트용 가짜 광고
@@ -861,9 +868,9 @@ function showRewardAd(onReward, name = 'reward') {
     beforeAd() { ADS.inAd = true; },
     afterAd() { ADS.inAd = false; paused = false; },
     beforeReward(showAdFn) { showAdFn(); },
-    adDismissed() { flash('광고를 끝까지 보면 보상을 받아요', '#ffb35c'); },
+    adDismissed() { flash(L('광고를 끝까지 보면 보상을 받아요', '広告を最後まで見ると報酬がもらえます'), '#ffb35c'); },
     adViewed() { got = true; },
-    adBreakDone(info) { ADS.inAd = false; paused = false; if (got) onReward(); else if (info && info.breakStatus !== 'dismissed') flash('지금은 보여줄 광고가 없어요. 잠시 후 다시 눌러주세요', '#ffb35c', 2.5); },
+    adBreakDone(info) { ADS.inAd = false; paused = false; if (got) onReward(); else if (info && info.breakStatus !== 'dismissed') flash(L('지금은 보여줄 광고가 없어요. 잠시 후 다시 눌러주세요', '今は表示できる広告がありません。少し待ってから押してね'), '#ffb35c', 2.5); },
   });
 }
 // 전면 광고: 판과 판 사이(다시 하기)에만. 빈도는 구글이 조절
@@ -1032,7 +1039,7 @@ function drawHUD() {
   text(String(S.wave), 32, 38, 18, '#fff', 'center', 3);
   // 몬스터 게이지
   const aw = aliveWeight(), ratio = Math.min(1, aw / LIMIT), danger = ratio > 0.75;
-  text(`몬스터 ${aw} / ${LIMIT}`, 150, 19, 13, danger ? '#ff8a8a' : '#fff', 'center', 3);
+  text(L(`몬스터 ${aw} / ${LIMIT}`, `モンスター ${aw} / ${LIMIT}`), 150, 19, 13, danger ? '#ff8a8a' : '#fff', 'center', 3);
   rr(70, 30, 160, 14, 7); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill();
   const bg = ctx.createLinearGradient(70, 0, 230, 0); bg.addColorStop(0, '#7be36d'); bg.addColorStop(0.55, '#ffcf5a'); bg.addColorStop(1, '#ff5d5d');
   ctx.save(); rr(72, 32, 156 * ratio, 10, 5); ctx.clip(); ctx.fillStyle = bg; ctx.fillRect(72, 32, 156, 10); ctx.restore();
@@ -1048,7 +1055,7 @@ function drawHUD() {
     const hpR = Math.max(0, bs.hp / bs.max), tR = Math.max(0, S.bossT / TUNE.bossTime), urgent = S.bossT < 8;
     rr(70, 64, 220, 16, 8); ctx.fillStyle = 'rgba(20,10,30,.85)'; ctx.fill();
     rr(72, 66, 216 * hpR, 12, 6); ctx.fillStyle = '#ff5d5d'; ctx.fill();
-    text(`BOSS  ${Math.ceil(S.bossT)}초`, 180, 72, 11, urgent && Math.sin(T * 12) > 0 ? '#ffd166' : '#fff', 'center', 3);
+    text(L(`BOSS  ${Math.ceil(S.bossT)}초`, `BOSS  ${Math.ceil(S.bossT)}秒`), 180, 72, 11, urgent && Math.sin(T * 12) > 0 ? '#ffd166' : '#fff', 'center', 3);
     rr(72, 79, 216 * tR, 3, 1.5); ctx.fillStyle = urgent ? '#ffd166' : 'rgba(255,255,255,.6)'; ctx.fill();
   }
   // 이번 판 버프 아이콘
@@ -1135,27 +1142,27 @@ function drawSlot() {
   const glow = can && afford && !S.spinning;
   if (glow) { ctx.save(); ctx.shadowColor = '#ff5e7e'; ctx.shadowBlur = 12 + 8 * Math.sin(T * 5); rr(BTN.spin.x, BTN.spin.y, BTN.spin.w, BTN.spin.h, 16); ctx.fillStyle = '#ff5e7e'; ctx.fill(); ctx.restore(); }
   button(BTN.spin, '#ff4f72', can && afford, (cx, cy) => {
-    text(S.spinning ? '소환 중' : '영웅 소환', cx, cy - 9, S.spinning ? 18 : 20, '#fff', 'center', 4, '#8a1f38');
+    text(S.spinning ? L('소환 중', '召喚中') : L('영웅 소환', 'ヒーロー召喚'), cx, cy - 9, S.spinning ? 18 : 20, '#fff', 'center', 4, '#8a1f38');
     icon('coin', cx - 18, cy + 15, 16); text(String(cost), cx - 7, cy + 15, 15, afford ? '#fff2b0' : '#ffb0b0', 'left', 3, '#8a1f38');
   }, 'spin');
   if (drag && drag.moved) {
     const over = inRect(drag.x, drag.y, BTN.speed), u = S.units[drag.idx];
     button(BTN.speed, over ? '#e0443c' : '#7a3a3a', true, (cx, cy) => {
-      text(over ? '놓으면 판매' : '여기로 판매', cx, cy - 8, 13, '#fff', 'center', 3);
+      text(over ? L('놓으면 판매', '離すと売却') : L('여기로 판매', 'ここで売却'), cx, cy - 8, 13, '#fff', 'center', 3);
       icon('coin', cx - 14, cy + 11, 13); text(`+${SELL[u.grade]}`, cx - 5, cy + 11, 13, '#ffd166', 'left', 3);
     }, 'speed');
   } else {
     button(BTN.speed, '#5a49a8', true, (cx, cy) => {
       icon('bolt', cx - 20, cy, 26);
       text(S.speed === 1 ? 'x1' : 'x2', cx + 12, cy - 6, 20, S.speed === 2 ? '#ffd166' : '#fff', 'center', 3);
-      text('배속', cx + 12, cy + 13, 11, 'rgba(255,255,255,.75)', 'center', 2);
+      text(L('배속', '倍速'), cx + 12, cy + 13, 11, 'rgba(255,255,255,.75)', 'center', 2);
     }, 'speed');
   }
   if (adMode()) {
     const adOk = S.adSpins > 0 && can;
     button(BTN.ad, '#2f8ae0', adOk, (cx, cy) => {
       icon('chest', cx - 22, cy + 1, 30);
-      text('무료', cx + 14, cy - 8, 15, '#fff', 'center', 3);
+      text(L('무료', '無料'), cx + 14, cy - 8, 15, '#fff', 'center', 3);
       text(`${S.adSpins}/${MAX_AD_SPINS}`, cx + 14, cy + 11, 12, '#cfe8ff', 'center', 2.5);
       rr(cx + 22, cy - 30, 22, 13, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 33, cy - 23, 9, '#5a3a00');
     }, 'ad');
@@ -1163,7 +1170,7 @@ function drawSlot() {
     const has = S.freeCharges > 0;
     button(BTN.ad, '#2f8ae0', has && can, (cx, cy) => {
       icon('chest', cx - 22, cy + 1, 30);
-      text('무료', cx + 14, cy - 8, 15, '#fff', 'center', 3);
+      text(L('무료', '無料'), cx + 14, cy - 8, 15, '#fff', 'center', 3);
       text(has ? `${S.freeCharges}/${FREE_MAX}` : mmss(S.freeT), cx + 14, cy + 11, 12, has ? '#cfe8ff' : '#ffe08a', 'center', 2.5);
       // 충전 게이지 (시계 대신 얇은 바)
       if (S.freeCharges < FREE_MAX) { const p = 1 - S.freeT / freeRecharge(); rr(cx - 36, cy + 21, 72, 4, 2); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill(); rr(cx - 36, cy + 21, 72 * p, 4, 2); ctx.fillStyle = '#8fe3ff'; ctx.fill(); }
@@ -1210,7 +1217,7 @@ function drawField() {
     rr(sr.x, sr.y + 3, sr.w, sr.h, 12); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill();
     rr(sr.x, sr.y, sr.w, sr.h, 12); ctx.fillStyle = '#e0443c'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sr.x + sr.w / 2 - 5, sr.y + sr.h); ctx.lineTo(sr.x + sr.w / 2 + 5, sr.y + sr.h); ctx.lineTo(sr.x + sr.w / 2, sr.y + sr.h + 6); ctx.closePath(); ctx.fillStyle = '#e0443c'; ctx.fill();
-    text('판매', sr.x + 20, sr.y + sr.h / 2, 12, '#fff', 'center', 2.5); icon('coin', sr.x + 40, sr.y + sr.h / 2, 12); text(`+${SELL[su.grade]}`, sr.x + 48, sr.y + sr.h / 2, 11, '#fff2b0', 'left', 2.5);
+    text(L('판매', '売却'), sr.x + 20, sr.y + sr.h / 2, 12, '#fff', 'center', 2.5); icon('coin', sr.x + 40, sr.y + sr.h / 2, 12); text(`+${SELL[su.grade]}`, sr.x + 48, sr.y + sr.h / 2, 11, '#fff2b0', 'left', 2.5);
     ctx.restore();
   }
   // 죽는 연출: 하얗게 번적이며 부풀었다가 사라짐
@@ -1313,16 +1320,16 @@ function drawBanner() {
 function drawTutorial() {
   const tut = store.tut; if (tut >= 3 || drag) return;
   let tx, ty, label, box = null;
-  if (tut === 0 && !S.spinning) { box = BTN.spin; tx = box.x + box.w / 2; ty = box.y + 4; label = '눌러서 영웅 뽑기!'; }
+  if (tut === 0 && !S.spinning) { box = BTN.spin; tx = box.x + box.w / 2; ty = box.y + 4; label = L('눌러서 영웅 뽑기!', '押してヒーロー召喚！'); }
   else if (tut === 1) {
     const pr = findPair(); if (!pr) return;
     const [ax, ay] = cellCenter(pr[0]), [bx, by] = cellCenter(pr[1]);
     const q = (T * 0.8) % 1, e = q < 0.7 ? q / 0.7 : 1;
-    tx = ax + (bx - ax) * e; ty = ay + (by - ay) * e; label = '같은 유닛끼리 끌어서 합체!';
+    tx = ax + (bx - ax) * e; ty = ay + (by - ay) * e; label = L('같은 유닛끼리 끌어서 합체!', '同じユニットをドラッグで合体！');
     ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
   } else if (tut === 2) {
     const b = UPG.find(b => S.gold >= upCost(b.t)); if (!b) return;
-    box = b; tx = b.x + b.w / 2; ty = b.y + 2; label = '골드로 직업 강화!';
+    box = b; tx = b.x + b.w / 2; ty = b.y + 2; label = L('골드로 직업 강화!', 'ゴールドで職業強化！');
   } else return;
   const pulse = (T * 1.6) % 1;
   if (box) {
@@ -1390,39 +1397,39 @@ function drawTitle() {
   // 로고: 둥실 + 빛 반사
   const ly = 128 + Math.sin(T * 2) * 3, ls = 1 + Math.sin(T * 2.4) * 0.015;
   ctx.save(); ctx.translate(W / 2, ly); ctx.rotate(-0.04); ctx.scale(ls, ls);
-  text('스핀', -2, -34, 46, '#fff', 'center', 10, '#3a1a6a');
+  text(L('스핀', 'スピン'), -2, -34, 46, '#fff', 'center', 10, '#3a1a6a');
   const lg = ctx.createLinearGradient(0, -10, 0, 60); lg.addColorStop(0, '#fff6c0'); lg.addColorStop(0.5, '#ffc63a'); lg.addColorStop(1, '#ff8a1f');
-  ctx.font = `66px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-  ctx.lineWidth = 15; ctx.strokeStyle = '#3a1a6a'; ctx.strokeText('디펜스', 0, 24);
-  ctx.lineWidth = 6; ctx.strokeStyle = '#a2481a'; ctx.strokeText('디펜스', 0, 24);
-  ctx.fillStyle = lg; ctx.fillText('디펜스', 0, 22);
-  const sp = (T % 3) / 3; if (sp < 0.5) { const sx = -150 + 300 * (sp / 0.5); const sg = ctx.createLinearGradient(sx - 25, 0, sx + 25, 0); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,.85)'); sg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = sg; ctx.fillText('디펜스', 0, 22); }
+  ctx.font = `${L(66, 50)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  ctx.lineWidth = 15; ctx.strokeStyle = '#3a1a6a'; ctx.strokeText(L('디펜스', 'ディフェンス'), 0, 24);
+  ctx.lineWidth = 6; ctx.strokeStyle = '#a2481a'; ctx.strokeText(L('디펜스', 'ディフェンス'), 0, 24);
+  ctx.fillStyle = lg; ctx.fillText(L('디펜스', 'ディフェンス'), 0, 22);
+  const sp = (T % 3) / 3; if (sp < 0.5) { const sx = -150 + 300 * (sp / 0.5); const sg = ctx.createLinearGradient(sx - 25, 0, sx + 25, 0); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,.85)'); sg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = sg; ctx.fillText(L('디펜스', 'ディフェンス'), 0, 22); }
   ctx.restore();
   icon('star', 64 + Math.sin(T * 2) * 3, 96, 34 + Math.sin(T * 3) * 3); icon('coin', 300, 168 + Math.sin(T * 2.2) * 4, 30);
   // 한 줄 소개 (리본)
   rr(W / 2 - 150, 194, 300, 30, 15); ctx.fillStyle = 'rgba(30,14,60,.65)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,207,90,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
-  text('영웅을 소환하고, 합체해서 막아라!', W / 2, 209, 14, '#fff', 'center', 3);
+  text(L('영웅을 소환하고, 합체해서 막아라!', 'ヒーローを召喚して、合体して守り抜け！'), W / 2, 209, 14, '#fff', 'center', 3);
   // 게임 시작 버튼 (빛나는 테두리 + 반사)
   const b = BTN.start, s0 = 1 + Math.sin(T * 4) * 0.03;
   ctx.save(); ctx.translate(b.x + b.w / 2, b.y + b.h / 2); ctx.scale(s0, s0); ctx.translate(-(b.x + b.w / 2), -(b.y + b.h / 2));
   ctx.save(); ctx.shadowColor = '#ff5e7e'; ctx.shadowBlur = 18 + 10 * Math.sin(T * 4); rr(b.x, b.y, b.w, b.h, 16); ctx.fillStyle = '#ff4f72'; ctx.fill(); ctx.restore();
-  button(b, '#ff4f72', true, (cx, cy) => text('게임 시작', cx, cy, 25, '#fff', 'center', 5, '#8a1f38'), 'start');
+  button(b, '#ff4f72', true, (cx, cy) => text(L('게임 시작', 'ゲームスタート'), cx, cy, 25, '#fff', 'center', 5, '#8a1f38'), 'start');
   shine(b);
   ctx.restore();
   // 영웅 강화 (살 수 있는 게 있으면 빨간 점)
-  button(BTN.shop, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 62, cy, 20); text('영웅 강화', cx - 12, cy - 1, 18, '#fff', 'center', 4); rr(cx + 34, cy - 11, 44, 22, 11); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill(); text(String(M.gems), cx + 56, cy, 13, '#8fe3ff', 'center', 2.5); }, 'shop');
+  button(BTN.shop, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 62, cy, 20); text(L('영웅 강화', 'ヒーロー強化'), cx - 12, cy - 1, 18, '#fff', 'center', 4); rr(cx + 34, cy - 11, 44, 22, 11); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill(); text(String(M.gems), cx + 56, cy, 13, '#8fe3ff', 'center', 2.5); }, 'shop');
   if (META_KEYS.some(k => (!TYPES[k] || M.unlocked[k]) && metaLv(k) < META_DEF[k].max && M.gems >= metaCost(k)) || Object.keys(UNLOCK_COST).some(k => !M.unlocked[k] && M.gems >= UNLOCK_COST[k])) redDot(BTN.shop.x + BTN.shop.w - 4, BTN.shop.y + 4);
   // 왼쪽 위: 오늘의 보상
   const rb = BTN.reward, rbn = (canClaimAtt() ? 1 : 0) + claimableMissions();
   ctx.save(); if (rbn) { ctx.translate(rb.x + rb.w / 2, rb.y + rb.h / 2); ctx.rotate(Math.sin(T * 8) * 0.08 * (Math.sin(T * 1.5) > 0.6 ? 1 : 0)); ctx.translate(-(rb.x + rb.w / 2), -(rb.y + rb.h / 2)); }
-  button(rb, '#2f8ae0', true, (cx, cy) => { icon('chest', cx, cy - 5, 30); text('보상', cx, cy + 17, 11, '#fff', 'center', 2.5); }, 'reward');
+  button(rb, '#2f8ae0', true, (cx, cy) => { icon('chest', cx, cy - 5, 30); text(L('보상', '報酬'), cx, cy + 17, 11, '#fff', 'center', 2.5); }, 'reward');
   ctx.restore();
   if (rbn) { redDot(rb.x + rb.w - 4, rb.y + 4); text(String(rbn), rb.x + rb.w - 4, rb.y + 4, 10, '#fff', 'center', 0); }
   // 오른쪽 위: 소리
   button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawSpeaker(cx - 2, cy, store.mute), 'tmute');
   // 아래 정보
-  if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(`최고 기록  WAVE ${store.best}`, W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text('v0.9.3 베타', W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
+  text(L('v0.9.4 베타', 'v0.9.4 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -1437,23 +1444,23 @@ function drawGemPop() {
 function missionClaimRect(i) { return { x: 254, y: 300 + i * 88 + 24, w: 92, h: 38 }; }
 function drawMissions() {
   ctx.fillStyle = 'rgba(14,8,32,.88)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
-  text('오늘의 보상', W / 2, 46, 30, '#ffd166', 'center', 6);
-  icon('gem', W / 2 - 40, 82, 22); text(`보유 보석 ${M.gems}`, W / 2 + 8, 82, 16, '#8fe3ff', 'center', 3);
+  text(L('오늘의 보상', '今日の報酬'), W / 2, 46, 30, '#ffd166', 'center', 6);
+  icon('gem', W / 2 - 40, 82, 22); text(L(`보유 보석 ${M.gems}`, `所持ジェム ${M.gems}`), W / 2 + 8, 82, 16, '#8fe3ff', 'center', 3);
   // 출석
   panel(12, 104, 336, 160, 16);
-  text(`출석 보상 · ${D.streak}일 연속`, 28, 126, 15, '#fff', 'left', 3);
+  text(L(`출석 보상 · ${D.streak}일 연속`, `ログインボーナス · ${D.streak}日連続`), 28, 126, 15, '#fff', 'left', 3);
   const today = D.att ? (D.streak - 1) % 7 : attDay();
   for (let i = 0; i < 7; i++) {
     const x = 22 + i * 46, y = 142, got = D.att ? i <= today : i < today, cur = i === today && !D.att;
     rr(x, y, 42, 58, 8); ctx.fillStyle = got ? 'rgba(143,227,255,.25)' : cur ? 'rgba(255,207,90,.25)' : 'rgba(255,255,255,.07)'; ctx.fill();
     if (cur) { ctx.strokeStyle = `rgba(255,207,90,${0.6 + 0.4 * Math.sin(T * 6)})`; ctx.lineWidth = 2; ctx.stroke(); }
-    text(`${i + 1}일`, x + 21, y + 11, 10, 'rgba(255,255,255,.7)', 'center', 0);
+    text(L(`${i + 1}일`, `${i + 1}日目`), x + 21, y + 11, 10, 'rgba(255,255,255,.7)', 'center', 0);
     icon(i === 6 ? 'chest' : 'gem', x + 21, y + 30, i === 6 ? 24 : 18);
     text(got ? '✓' : String(ATT_REWARD[i]), x + 21, y + 49, 11, got ? '#7be36d' : '#8fe3ff', 'center', 2);
   }
-  button(BTN.attc, D.att ? '#5a5a6a' : '#ff4f72', !D.att, (cx, cy) => text(D.att ? '내일 또 와요' : '출석 보상 받기', cx, cy, 15, '#fff', 'center', 3), 'attc');
+  button(BTN.attc, D.att ? '#5a5a6a' : '#ff4f72', !D.att, (cx, cy) => text(D.att ? L('내일 또 와요', 'また明日ね') : L('출석 보상 받기', 'ログインボーナスを受け取る'), cx, cy, 15, '#fff', 'center', 3), 'attc');
   // 미션
-  text('오늘의 미션', 24, 286, 16, '#fff', 'left', 3);
+  text(L('오늘의 미션', '今日のミッション'), 24, 286, 16, '#fff', 'left', 3);
   D.missions.forEach((m, i) => {
     const def = MISSION_POOL.find(q => q.k === m.k), y = 300 + i * 88, done = m.p >= m.n;
     rr(12, y, 336, 80, 14); ctx.fillStyle = m.claimed ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.09)'; ctx.fill();
@@ -1465,29 +1472,29 @@ function drawMissions() {
     rr(84, y + 44, 158 * Math.min(1, m.p / m.n), 10, 5); ctx.fillStyle = done ? '#7be36d' : '#8fe3ff'; ctx.fill();
     text(`${Math.min(m.p, m.n)} / ${m.n}`, 84, y + 66, 11, 'rgba(255,255,255,.7)', 'left', 2);
     const b2 = missionClaimRect(i);
-    button(b2, m.claimed ? '#5a5a6a' : done ? '#2f8ae0' : '#4a4466', done && !m.claimed, (cx, cy) => { if (m.claimed) text('완료', cx, cy, 14, '#fff', 'center', 3); else { icon('gem', cx - 20, cy, 16); text(String(m.r), cx + 10, cy, 15, '#fff', 'center', 3); } }, 'mc_' + i);
+    button(b2, m.claimed ? '#5a5a6a' : done ? '#2f8ae0' : '#4a4466', done && !m.claimed, (cx, cy) => { if (m.claimed) text(L('완료', '完了'), cx, cy, 14, '#fff', 'center', 3); else { icon('gem', cx - 20, cy, 16); text(String(m.r), cx + 10, cy, 15, '#fff', 'center', 3); } }, 'mc_' + i);
   });
-  button(BTN.back, '#ff4f72', true, (cx, cy) => text('돌아가기', cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'back');
+  button(BTN.back, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る'), cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'back');
   drawGemPop();
 }
 function drawOver() {
   ctx.fillStyle = 'rgba(10,6,24,.75)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   panel(40, 130, 280, 420);
   sprite('boss', W / 2, 238, 88);
-  text(S.bossFail ? '보스를 못 잡았어요' : '방어 실패', W / 2, 262, S.bossFail ? 26 : 32, '#ff6b6b', 'center', 6);
+  text(S.bossFail ? L('보스를 못 잡았어요', 'ボスを倒せなかった…') : L('방어 실패', '防衛失敗'), W / 2, 262, S.bossFail ? 26 : 32, '#ff6b6b', 'center', 6);
   text(`WAVE ${S.wave}`, W / 2, 302, 26, '#fff', 'center', 5);
-  text(`처치 ${S.kills.toLocaleString()}마리 · ${S.newBest ? '최고 기록 갱신!' : `최고 WAVE ${store.best}`}`, W / 2, 326, 13, S.newBest ? '#ffd166' : 'rgba(255,255,255,.75)', 'center', 3);
-  icon('gem', W / 2 - 70, 350, 18); text(`보석 +${S.gemsEarned || 0}`, W / 2 - 56, 350, 15, '#8fe3ff', 'left', 3); text(`보유 ${M.gems}`, W / 2 + 70, 350, 12, 'rgba(255,255,255,.6)', 'right', 2.5);
-  if (!S.revived) button(BTN.revive, '#2f8ae0', true, (cx, cy) => { icon('heart', cx - 70, cy, 26); if (adMode()) { text('광고 보고 부활', cx + 10, cy, 19, '#fff', 'center', 4); rr(cx + 72, cy - 22, 24, 14, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 84, cy - 15, 9, '#5a3a00'); } else text(`${REVIVE_WAIT}초 쉬고 부활`, cx + 10, cy, 19, '#fff', 'center', 4); }, 'revive');
-  button(BTN.retry, '#ff4f72', true, (cx, cy) => text('다시 하기', cx, cy, 20, '#fff', 'center', 4, '#8a1f38'), 'retry');
-  button(BTN.home, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 46, cy, 16); text('영웅 강화', cx + 8, cy, 15, '#fff', 'center', 3); }, 'home');
+  text(L(`처치 ${S.kills.toLocaleString()}마리 · ${S.newBest ? '최고 기록 갱신!' : `최고 WAVE ${store.best}`}`, `撃破 ${S.kills.toLocaleString()}体 · ${S.newBest ? '最高記録更新！' : `最高 WAVE ${store.best}`}`), W / 2, 326, 13, S.newBest ? '#ffd166' : 'rgba(255,255,255,.75)', 'center', 3);
+  icon('gem', W / 2 - 70, 350, 18); text(L(`보석 +${S.gemsEarned || 0}`, `ジェム +${S.gemsEarned || 0}`), W / 2 - 56, 350, 15, '#8fe3ff', 'left', 3); text(L(`보유 ${M.gems}`, `所持 ${M.gems}`), W / 2 + 70, 350, 12, 'rgba(255,255,255,.6)', 'right', 2.5);
+  if (!S.revived) button(BTN.revive, '#2f8ae0', true, (cx, cy) => { icon('heart', cx - 70, cy, 26); if (adMode()) { text(L('광고 보고 부활', '広告を見て復活'), cx + 10, cy, 19, '#fff', 'center', 4); rr(cx + 72, cy - 22, 24, 14, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 84, cy - 15, 9, '#5a3a00'); } else text(L(`${REVIVE_WAIT}초 쉬고 부활`, `${REVIVE_WAIT}秒休んで復活`), cx + 10, cy, 19, '#fff', 'center', 4); }, 'revive');
+  button(BTN.retry, '#ff4f72', true, (cx, cy) => text(L('다시 하기', 'もう一度'), cx, cy, 20, '#fff', 'center', 4, '#8a1f38'), 'retry');
+  button(BTN.home, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 46, cy, 16); text(L('영웅 강화', 'ヒーロー強化'), cx + 8, cy, 15, '#fff', 'center', 3); }, 'home');
 }
 function pickRect(i) { return { x: 30, y: 190 + i * 104, w: 300, h: 92 }; }
 function drawPick() {
   S.pick.t += 1 / 60;
   ctx.fillStyle = 'rgba(10,6,24,.82)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
-  text(`WAVE ${S.wave} 보상`, W / 2, 128, 15, '#ffd166', 'center', 3);
-  text('버프 1개를 고르세요', W / 2, 158, 24, '#fff', 'center', 5);
+  text(L(`WAVE ${S.wave} 보상`, `WAVE ${S.wave} 報酬`), W / 2, 128, 15, '#ffd166', 'center', 3);
+  text(L('버프 1개를 고르세요', 'バフを1つ選んでね'), W / 2, 158, 24, '#fff', 'center', 5);
   S.pick.cards.forEach((c, i) => {
     const b = pickRect(i), appear = Math.min(1, Math.max(0, S.pick.t * 4 - i * 0.4)), sc = appear < 1 ? easeOutBack(appear) : 1;
     ctx.save(); ctx.globalAlpha = Math.min(1, appear * 2); ctx.translate(b.x + b.w / 2, b.y + b.h / 2); ctx.scale(sc, sc); ctx.translate(-(b.x + b.w / 2), -(b.y + b.h / 2));
@@ -1511,12 +1518,12 @@ function shopBuyRect(i) { return { x: 262, y: shopRowY(i) + 10, w: 86, h: 38 }; 
 function shopDeckRect(i) { return { x: 196, y: shopRowY(i) + 10, w: 60, h: 38 }; }
 function drawShop() {
   ctx.fillStyle = 'rgba(14,8,32,.88)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
-  text('영웅 강화', W / 2, 36, 28, '#ffd166', 'center', 6);
-  icon('gem', W / 2 - 40, 70, 20); text(`보유 보석 ${M.gems}`, W / 2 + 8, 70, 15, '#8fe3ff', 'center', 3);
+  text(L('영웅 강화', 'ヒーロー強化'), W / 2, 36, 28, '#ffd166', 'center', 6);
+  icon('gem', W / 2 - 40, 70, 20); text(L(`보유 보석 ${M.gems}`, `所持ジェム ${M.gems}`), W / 2 + 8, 70, 15, '#8fe3ff', 'center', 3);
   for (const [k, b] of Object.entries(SHOP_TAB)) {
     const on = shopTab === k; rr(b.x, b.y, b.w, b.h, 12); ctx.fillStyle = on ? '#6b5bb8' : 'rgba(255,255,255,.08)'; ctx.fill();
     if (on) { ctx.strokeStyle = '#ffcf5a'; ctx.lineWidth = 2; ctx.stroke(); }
-    text(k === 'hero' ? `영웅 · 덱 ${M.deck.length}/4` : '능력', b.x + b.w / 2, b.y + b.h / 2, 15, on ? '#fff' : 'rgba(255,255,255,.6)', 'center', 3);
+    text(k === 'hero' ? L(`영웅 · 덱 ${M.deck.length}/4`, `デッキ ${M.deck.length}/4`) : L('능력', '能力'), b.x + b.w / 2, b.y + b.h / 2, 15, on ? '#fff' : 'rgba(255,255,255,.6)', 'center', 3);
   }
   shopRows().forEach((k, i) => {
     const d = META_DEF[k], l = metaLv(k), y = shopRowY(i), maxed = l >= d.max, c = metaCost(k);
@@ -1531,47 +1538,47 @@ function drawShop() {
     if (locked) { ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(30, y + 18, 22, 20, 5); ctx.fill(); text('🔒', 41, y + 28, 12, '#fff', 'center', 0); }
     text(isHero ? TYPES[k].name : d.name, 72, y + 16, 15, locked ? 'rgba(255,255,255,.6)' : '#fff', 'left', 3);
     if (!locked) text(`Lv.${l}`, 72 + ctx.measureText(isHero ? TYPES[k].name : d.name).width + 8, y + 17, 11, maxed ? '#ffd166' : 'rgba(255,255,255,.55)', 'left', 2);
-    const sub = isHero ? (locked ? TYPES[k].role : (l > 0 ? `공격력 +${l * 8}%` + (maxed ? '' : ` → +${(l + 1) * 8}%`) : TYPES[k].role)) : (l > 0 ? d.desc(l) + (maxed ? '' : ` → ${d.desc(l + 1).replace(/^.*?([+-])/, '$1')}`) : d.desc(1));
+    const sub = isHero ? (locked ? TYPES[k].role : (l > 0 ? L(`공격력 +${l * 8}%`, `攻撃力 +${l * 8}%`) + (maxed ? '' : ` → +${(l + 1) * 8}%`) : TYPES[k].role)) : (l > 0 ? d.desc(l) + (maxed ? '' : ` → ${d.desc(l + 1).replace(/^.*?([+-])/, '$1')}`) : d.desc(1));
     ctx.save(); ctx.beginPath(); ctx.rect(70, y, isHero ? 124 : 188, 56); ctx.clip(); text(sub, 72, y + 38, 11, '#cfe8ff', 'left', 2.5); ctx.restore();
     const b = shopBuyRect(i);
     if (locked) {
       const ok = M.gems >= UNLOCK_COST[k];
-      button({ x: 196, y: y + 10, w: 152, h: 38 }, '#ff4f72', ok, (cx, cy) => { text('해금', cx - 26, cy, 15, '#fff', 'center', 3); icon('gem', cx + 12, cy, 15); text(String(UNLOCK_COST[k]), cx + 38, cy, 14, '#fff', 'center', 3); }, 'unl_' + k);
+      button({ x: 196, y: y + 10, w: 152, h: 38 }, '#ff4f72', ok, (cx, cy) => { text(L('해금', '解放'), cx - 26, cy, 15, '#fff', 'center', 3); icon('gem', cx + 12, cy, 15); text(String(UNLOCK_COST[k]), cx + 38, cy, 14, '#fff', 'center', 3); }, 'unl_' + k);
     } else {
-      if (isHero) { const db = shopDeckRect(i); button(db, inDeck ? '#e0a020' : '#4a4466', true, (cx, cy) => text(inDeck ? '덱 ✓' : '덱 +', cx, cy, 13, '#fff', 'center', 3), 'deck_' + k); }
+      if (isHero) { const db = shopDeckRect(i); button(db, inDeck ? '#e0a020' : '#4a4466', true, (cx, cy) => text(inDeck ? L('덱 ✓', 'デッキ ✓') : L('덱 +', 'デッキ +'), cx, cy, 13, '#fff', 'center', 3), 'deck_' + k); }
       const ok = !maxed && M.gems >= c;
       button(b, maxed ? '#5a5a6a' : '#2f8ae0', ok, (cx, cy) => { if (maxed) text('MAX', cx, cy, 15, '#ffd166', 'center', 3); else { icon('gem', cx - 20, cy, 15); text(String(c), cx + 9, cy, 14, '#fff', 'center', 3); } }, 'buy_' + k);
     }
   });
   if (shopMsg) { shopMsg.t -= 1 / 60; ctx.globalAlpha = Math.min(1, shopMsg.t * 2); text(shopMsg.txt, W / 2, 573, 13, '#ffd166', 'center', 3); ctx.globalAlpha = 1; if (shopMsg.t <= 0) shopMsg = null; }
-  button(BTN.back, '#ff4f72', true, (cx, cy) => text('돌아가기', cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'back');
+  button(BTN.back, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る'), cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'back');
   if (shopPop) { shopPop.t -= 1 / 60; if (shopPop.t <= 0) shopPop = null; }
 }
 function drawPause() {
   ctx.fillStyle = 'rgba(10,6,24,.7)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
-  text('일시정지', W / 2, 250, 32, '#fff', 'center', 6);
-  button(BTN.resume, '#ff4f72', true, (cx, cy) => text('계속하기', cx, cy, 22, '#fff', 'center', 4, '#8a1f38'), 'resume');
+  text(L('일시정지', '一時停止'), W / 2, 250, 32, '#fff', 'center', 6);
+  button(BTN.resume, '#ff4f72', true, (cx, cy) => text(L('계속하기', 'つづける'), cx, cy, 22, '#fff', 'center', 4, '#8a1f38'), 'resume');
 }
 function drawAd() {
   if (ad.kind === 'wait') {
     ctx.fillStyle = 'rgba(10,6,24,.96)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
     const p = 1 - ad.t / ad.max, pulse = 1 + Math.sin(T * 6) * 0.06;
     ctx.save(); ctx.translate(W / 2, 250); ctx.scale(pulse, pulse); icon('heart', 0, 0, 72); ctx.restore();
-    text('영웅들이 숨을 고르는 중...', W / 2, 315, 18, '#fff', 'center', 3);
+    text(L('영웅들이 숨을 고르는 중...', 'ヒーローたちが息を整えています...'), W / 2, 315, 18, '#fff', 'center', 3);
     text(String(Math.ceil(ad.t)), W / 2, 365, 40, '#ff8fa3', 'center', 6);
     rr(W / 2 - 90, 400, 180, 8, 4); ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fill(); rr(W / 2 - 90, 400, 180 * p, 8, 4); ctx.fillStyle = '#ff8fa3'; ctx.fill();
     return;
   }
   ctx.fillStyle = 'rgba(0,0,0,.92)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   icon('chest', W / 2, 250, 70);
-  text('광고 재생 중 (테스트)', W / 2, 310, 18, '#fff', 'center', 3);
-  text(`${Math.ceil(ad.t)}초 후 보상 지급`, W / 2, 340, 14, 'rgba(255,255,255,.7)');
-  text('실제 서비스에서는 구글 광고가 나와요', W / 2, 380, 11, 'rgba(255,255,255,.4)');
+  text(L('광고 재생 중 (테스트)', '広告再生中（テスト）'), W / 2, 310, 18, '#fff', 'center', 3);
+  text(L(`${Math.ceil(ad.t)}초 후 보상 지급`, `${Math.ceil(ad.t)}秒後に報酬`), W / 2, 340, 14, 'rgba(255,255,255,.7)');
+  text(L('실제 서비스에서는 구글 광고가 나와요', '本番ではGoogle広告が表示されます'), W / 2, 380, 11, 'rgba(255,255,255,.4)');
 }
 function draw() {
   ctx.setTransform(...BASE_T);
   ctx.clearRect(0, 0, VW, VH);
-  if (screen === 'loading') { ctx.fillStyle = '#1a1233'; ctx.fillRect(0, 0, VW, VH); text('불러오는 중...', VW / 2, VH / 2, 16, '#fff'); return; }
+  if (screen === 'loading') { ctx.fillStyle = '#1a1233'; ctx.fillRect(0, 0, VW, VH); text(L('불러오는 중...', '読み込み中...'), VW / 2, VH / 2, 16, '#fff'); return; }
   if (screen === 'title') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawTitle(); ctx.restore(); return; }
   if (screen === 'shop') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawShop(); ctx.restore(); return; }
   if (screen === 'missions') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawMissions(); ctx.restore(); return; }
@@ -1640,7 +1647,7 @@ function hitKey(x, y) {
 }
 function activate(key) {
   switch (key) {
-    case 'start': track('game_start', { deck: M.deck.join(','), best_wave: store.best, gems: M.gems }); if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: '덱에 영웅 4명을 골라주세요', t: 2.5 }; sfx('error'); break; } newGame(); screen = 'play'; sfx('click'); break;
+    case 'start': track('game_start', { deck: M.deck.join(','), best_wave: store.best, gems: M.gems, lang: LANG }); if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: L('덱에 영웅 4명을 골라주세요', 'デッキにヒーローを4人選んでね'), t: 2.5 }; sfx('error'); break; } newGame(); screen = 'play'; sfx('click'); break;
     case 'shop': screen = 'shop'; sfx('click'); break;
     case 'reward': ensureDaily(); screen = 'missions'; sfx('click'); break;
     case 'attc': claimAtt(); break;
@@ -1655,9 +1662,9 @@ function activate(key) {
     case 'speed': S.speed = S.speed === 1 ? 2 : 1; sfx('click'); break;
     case 'sound': store.mute = !store.mute; sfx('click'); break;
     case 'ad':
-      if (!canSpin()) { flash('칸이 꽉 찼거나 소환 중이에요', '#ffb35c'); sfx('error'); }
-      else if (adMode()) { if (S.adSpins <= 0) { flash('이번 판 무료 소환을 다 썼어요', '#ffb35c'); sfx('error'); } else showRewardAd(() => { S.adSpins--; doSpin(true); }, 'free_spin'); }
-      else if (S.freeCharges <= 0) { flash(`무료 소환은 ${mmss(S.freeT)} 후에 충전돼요`, '#8fd8ff', 1.6); sfx('error'); }
+      if (!canSpin()) { flash(L('칸이 꽉 찼거나 소환 중이에요', 'マスがいっぱいか、召喚中です'), '#ffb35c'); sfx('error'); }
+      else if (adMode()) { if (S.adSpins <= 0) { flash(L('이번 판 무료 소환을 다 썼어요', 'このゲームの無料召喚は使い切りました'), '#ffb35c'); sfx('error'); } else showRewardAd(() => { S.adSpins--; doSpin(true); }, 'free_spin'); }
+      else if (S.freeCharges <= 0) { flash(L(`무료 소환은 ${mmss(S.freeT)} 후에 충전돼요`, `無料召喚は ${mmss(S.freeT)} 後にチャージされます`), '#8fd8ff', 1.6); sfx('error'); }
       else { if (S.freeCharges >= FREE_MAX) S.freeT = freeRecharge(); S.freeCharges--; doSpin(true); }
       break;
     default:
@@ -1696,7 +1703,7 @@ cv.addEventListener('pointerup', e => {
   if (!S.units[d.idx]) return;
   if (!d.moved) {
     selected = selected === d.idx ? -1 : d.idx;
-    if (selected >= 0) { const su = S.units[selected], st = stats(su); flash(`${GRADES[su.grade].name} ${TYPES[su.type].name} · 공격력 ${Math.round(st.dmg)}` + (su.grade < MAX_GRADE ? ` · ${GRADES[su.grade + 1].name}까지 같은 영웅 ${MERGE_NEED(su.grade)}명` : ' · 최고 등급!'), GRADES[su.grade].col, 2.8); sfx('click'); }
+    if (selected >= 0) { const su = S.units[selected], st = stats(su); flash(L(`${GRADES[su.grade].name} ${TYPES[su.type].name} · 공격력 ${Math.round(st.dmg)}`, `${GRADES[su.grade].name} ${TYPES[su.type].name} · 攻撃力 ${Math.round(st.dmg)}`) + (su.grade < MAX_GRADE ? L(` · ${GRADES[su.grade + 1].name}까지 같은 영웅 ${MERGE_NEED(su.grade)}명`, ` · ${GRADES[su.grade + 1].name}まで同じヒーロー${MERGE_NEED(su.grade)}人`) : L(' · 최고 등급!', ' · 最高ランク！')), GRADES[su.grade].col, 2.8); sfx('click'); }
     return;
   }
   const u = S.units[d.idx];
@@ -1706,17 +1713,17 @@ cv.addEventListener('pointerup', e => {
   const v = S.units[j];
   if (!v) { S.units[j] = u; S.units[d.idx] = null; sfx('click'); return; }
   if (v.type === u.type && v.grade === u.grade && u.grade < MAX_GRADE && !canMerge(d.idx, j)) {
-    flash(`${GRADES[u.grade].name} ${MERGE_NEED(u.grade)}명이 모여야 ${GRADES[u.grade + 1].name}이 돼요 (지금 2명)`, GRADES[u.grade + 1].col, 2.2); sfx('error'); return;
+    flash(L(`${GRADES[u.grade].name} ${MERGE_NEED(u.grade)}명이 모여야 ${GRADES[u.grade + 1].name}이 돼요 (지금 2명)`, `${GRADES[u.grade].name}が${MERGE_NEED(u.grade)}人そろうと${GRADES[u.grade + 1].name}になるよ（今2人）`), GRADES[u.grade + 1].col, 2.2); sfx('error'); return;
   }
   if (canMerge(d.idx, j)) {
     const { nt, ng } = mergeAt(d.idx, j);
     const [x2, y2] = cellCenter(j);
     S.fx.push({ k: 'ring', x: x2, y: y2, t: 0.6, max: 0.6, col: GRADES[ng].col }); burst(x2, y2, GRADES[ng].col, 14);
     mission('merge'); if (ng === 4) mission('legend'); if (ng >= 4) track('high_merge', { grade: ng, wave: S.wave });
-    if (ng === 6) { banner('초월!!!', `${TYPES[nt].name} · 6초마다 전체 심판`, '#ffe9a0', 3); S.shake = 0.6; flashScreen(0.45, '#fff6d6'); sfx('bigboom'); sfx('jackpot'); buzz([60, 40, 120]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
-    else if (ng === 5) { banner('신화 탄생!!', `${TYPES[nt].name} · 주변 영웅 공격력 +15%`, '#ff4fd8', 2.6); S.shake = 0.45; flashScreen(0.3, '#ffd6f6'); sfx('jackpot'); buzz([40, 50, 80]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
-    else if (ng >= 3) { banner(`${GRADES[ng].name}!`, `${TYPES[nt].name} 등장`, GRADES[ng].col, 1.6); S.shake = 0.2; }
-    else flash(`합체! ${GRADES[ng].name} ${TYPES[nt].name}`, GRADES[ng].col, 1.8);
+    if (ng === 6) { banner(L('초월!!!', '超越!!!'), L(`${TYPES[nt].name} · 6초마다 전체 심판`, `${TYPES[nt].name} · 6秒ごとに全体ジャッジメント`), '#ffe9a0', 3); S.shake = 0.6; flashScreen(0.45, '#fff6d6'); sfx('bigboom'); sfx('jackpot'); buzz([60, 40, 120]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
+    else if (ng === 5) { banner(L('신화 탄생!!', 'ミシック誕生!!'), L(`${TYPES[nt].name} · 주변 영웅 공격력 +15%`, `${TYPES[nt].name} · 周囲のヒーロー攻撃力 +15%`), '#ff4fd8', 2.6); S.shake = 0.45; flashScreen(0.3, '#ffd6f6'); sfx('jackpot'); buzz([40, 50, 80]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
+    else if (ng >= 3) { banner(`${GRADES[ng].name}!`, L(`${TYPES[nt].name} 등장`, `${TYPES[nt].name} 登場`), GRADES[ng].col, 1.6); S.shake = 0.2; }
+    else flash(L(`합체! ${GRADES[ng].name} ${TYPES[nt].name}`, `合体！ ${GRADES[ng].name} ${TYPES[nt].name}`), GRADES[ng].col, 1.8);
     sfx('merge'); buzz(20);
     if (store.tut === 1) store.tut = 2;
     return;
