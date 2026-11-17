@@ -56,7 +56,7 @@ const ADS = {
   BANNER_H: 64, GAP: 160, GAP_MIN: 100,                 // 구글 권장: 게임 영역에서 150px 이상 떨어뜨리기
 };
 ADS.prod = ADS.prodHosts.includes(location.hostname);
-ADS.enabled = !/[?&](rec|noads)=1/.test(location.search);
+ADS.enabled = !/[?&](rec|noads|embed)=1/.test(location.search); // embed=1: 다른 사이트 iframe 게재용 (광고 없음)
 ADS.test = !ADS.prod || /[?&]adtest=1/.test(location.search);
 ADS.preview = /[?&]adpreview=1/.test(location.search);   // 로컬에서 배너 자리 미리보기
 ADS.wantBanner = ADS.enabled && (!!ADS.bannerSlot || ADS.preview);
