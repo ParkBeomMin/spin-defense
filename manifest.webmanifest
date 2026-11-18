@@ -1,0 +1,17 @@
+{
+  "name": "스핀 디펜스",
+  "short_name": "스핀디펜스",
+  "description": "영웅을 소환하고 합체해서 몬스터를 막는 무료 디펜스 게임",
+  "start_url": "./?src=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1233",
+  "theme_color": "#1a1233",
+  "lang": "ko",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
