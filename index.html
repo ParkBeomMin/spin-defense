@@ -145,12 +145,13 @@ function drawAnim(type, anim, p, x, foot, h, flip = false, alpha = 1, sc = 1, wh
 // 발 위치 기준점 (스프라이트 폭 대비). 공격 포즈는 이펙트 때문에 폭이 넓어서 따로 지정
 const ANCH = { sword: 0.435, bow: 0.435, magic: 0.441, ice: 0.395, bard: 0.485, ninja: 0.536, storm: 0.463, dwarf: 0.532, alch: 0.419, sniper: 0.438, cat: 0.537, slimeking: 0.486, lich: 0.431, sword_atk: 0.34, bow_atk: 0.386, magic_atk: 0.367, ice_atk: 0.343 };
 const IMG_NAMES = ['slimeking', 'lich', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
+const ASSET_V = 12; // 그림 파일을 바꿔 배포할 때 올림 (서비스워커 저장본 갱신용)
 function loadAssets() {
-  const ps = IMG_NAMES.map(n => new Promise(res => { const im = new Image(); im.onload = () => res(); im.onerror = () => res(); im.src = `assets/${n}.png`; IMG[n] = im; }));
+  const ps = IMG_NAMES.map(n => new Promise(res => { const im = new Image(); im.onload = () => res(); im.onerror = () => res(); im.src = `assets/${n}.png?v=${ASSET_V}`; IMG[n] = im; }));
   ps.push(new Promise(res => { const im = new Image(); im.onload = res; im.onerror = res; im.src = 'assets/bg.jpg'; IMG.bg = im; }));
   // 뼈대 애니메이션 스프라이트 시트 (tools/rig.js로 구움)
   const need = new Set(['sword', 'bow', 'magic', 'ice', 'goblin', 'skeleton', 'boss', ...(M.deck || [])]);
-  const loadAnim = (meta, k) => new Promise(res => { const im = new Image(); im.onload = () => { ANIM[k] = { im, ...meta[k] }; res(); }; im.onerror = res; im.src = `assets/anim_${k}.webp`; });
+  const loadAnim = (meta, k) => new Promise(res => { const im = new Image(); im.onload = () => { ANIM[k] = { im, ...meta[k] }; res(); }; im.onerror = res; im.src = `assets/anim_${k}.webp?v=${ASSET_V}`; });
   ps.push(fetch('assets/anim.json').then(r => r.json()).then(meta => {
     const later = Object.keys(meta).filter(k => !need.has(k));
     return Promise.all(Object.keys(meta).filter(k => need.has(k)).map(k => loadAnim(meta, k))).then(() => { setTimeout(() => later.forEach(k => loadAnim(meta, k)), 300); });
@@ -499,7 +500,7 @@ const THEMES = [
   { id: 'lava',   bg: 'bg_lava',   name: L('불의 화산', '炎の火山'),  path: ['#3e2a26', '#5e4640', 'rgba(255,120,40,.45)'] },
 ];
 const themeIdx = w => w < 1 ? 0 : Math.floor((w - 1) / 10) % THEMES.length;
-setTimeout(() => { for (const t of THEMES) if (!IMG[t.bg]) { const im = new Image(); im.src = `assets/${t.bg}.jpg`; IMG[t.bg] = im; } }, 2500);
+setTimeout(() => { for (const t of THEMES) if (!IMG[t.bg]) { const im = new Image(); im.src = `assets/${t.bg}.jpg?v=${ASSET_V}`; IMG[t.bg] = im; } }, 2500);
 // ===== 배경 음악 (WebAudio로 직접 연주, 파일 없음) =====
 const MUSIC = { on: false, next: 0, step: 0, gain: null, timer: null };
 const mf = n => 440 * Math.pow(2, (n - 69) / 12);
