@@ -137,15 +137,18 @@ function drawAnim(type, anim, p, x, foot, h, flip = false, alpha = 1, sc = 1, wh
   ctx.restore(); return true;
 }
 // 발 위치 기준점 (스프라이트 폭 대비). 공격 포즈는 이펙트 때문에 폭이 넓어서 따로 지정
-const ANCH = { sword: 0.435, bow: 0.435, magic: 0.441, ice: 0.395, bard: 0.485, ninja: 0.536, storm: 0.463, sword_atk: 0.34, bow_atk: 0.386, magic_atk: 0.367, ice_atk: 0.343 };
-const IMG_NAMES = ['sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
+const ANCH = { sword: 0.435, bow: 0.435, magic: 0.441, ice: 0.395, bard: 0.485, ninja: 0.536, storm: 0.463, dwarf: 0.532, alch: 0.419, sniper: 0.438, cat: 0.537, sword_atk: 0.34, bow_atk: 0.386, magic_atk: 0.367, ice_atk: 0.343 };
+const IMG_NAMES = ['sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
 function loadAssets() {
   const ps = IMG_NAMES.map(n => new Promise(res => { const im = new Image(); im.onload = () => res(); im.onerror = () => res(); im.src = `assets/${n}.png`; IMG[n] = im; }));
   ps.push(new Promise(res => { const im = new Image(); im.onload = res; im.onerror = res; im.src = 'assets/bg.jpg'; IMG.bg = im; }));
   // 뼈대 애니메이션 스프라이트 시트 (tools/rig.js로 구움)
-  ps.push(fetch('assets/anim.json').then(r => r.json()).then(meta => Promise.all(Object.keys(meta).map(k => new Promise(res => {
-    const im = new Image(); im.onload = () => { ANIM[k] = { im, ...meta[k] }; res(); }; im.onerror = res; im.src = `assets/anim_${k}.webp`;
-  })))).catch(() => {}));
+  const need = new Set(['sword', 'bow', 'magic', 'ice', 'goblin', 'skeleton', 'boss', ...(M.deck || [])]);
+  const loadAnim = (meta, k) => new Promise(res => { const im = new Image(); im.onload = () => { ANIM[k] = { im, ...meta[k] }; res(); }; im.onerror = res; im.src = `assets/anim_${k}.webp`; });
+  ps.push(fetch('assets/anim.json').then(r => r.json()).then(meta => {
+    const later = Object.keys(meta).filter(k => !need.has(k));
+    return Promise.all(Object.keys(meta).filter(k => need.has(k)).map(k => loadAnim(meta, k))).then(() => { setTimeout(() => later.forEach(k => loadAnim(meta, k)), 300); });
+  }).catch(() => {}));
   ps.push(document.fonts ? document.fonts.load('20px Jua').catch(() => {}) : Promise.resolve());
   if (LANG === 'ja' && document.fonts) ps.push(document.fonts.load('20px MPR', 'ヒーロー召喚').catch(() => {}));
   return Promise.all(ps);
@@ -161,10 +164,15 @@ const TYPES = {
   bard:  { name: L('음유시인', '吟遊詩人'), range: 95,  dmg: 9,  rate: 0.85, aura: 0.10, color: '#ff8fb1', role: L('주변 8칸 영웅 공격 속도 증가', '周囲の攻撃速度アップ') },
   ninja: { name: L('닌자', '忍者'),     range: 74,  dmg: 19, rate: 0.5,  critMul: 2.5, color: '#c084fc', role: L('치명타 35%, 처치 시 골드 추가', '会心35%・撃破でG追加') },
   storm: { name: L('번개술사', '雷術師'), range: 112, dmg: 17, rate: 1.05, chain: 3, color: '#ffe066', role: L('번개가 적 여러 마리를 연쇄 타격', '雷が敵に連鎖') },
+  // v1.0 새 영웅
+  dwarf: { name: L('드워프 망치병', 'ドワーフ'), range: 72, dmg: 30, rate: 1.0, stun: 0.22, color: '#ffb35c', role: L('내려치면 확률로 적 기절', '叩きつけで確率スタン') },
+  alch:  { name: L('연금술사', '錬金術師'), range: 100, dmg: 6, rate: 1.15, pool: 0.4, color: '#7ee36a', role: L('독 장판으로 지속 피해', '毒の沼で継続ダメージ') },
+  sniper:{ name: L('석궁 저격수', '狙撃手'), range: 175, dmg: 72, rate: 2.2, color: '#d9f99d', role: L('느리지만 강한 한 방, 보스 특효', '遅いが強力な一撃・ボス特効') },
+  cat:   { name: L('냥상인', 'ネコ商人'), range: 86, dmg: 7, rate: 0.95, income: 3, color: '#ffd166', role: L('몇 초마다 골드를 벌어와요', '数秒ごとにゴールドを稼ぐ') },
 };
 TYPES.sword.role = L('근접 강타, 사거리 짧음', '近接の強打、射程は短め'); TYPES.bow.role = L('빠른 원거리 연사', '素早い遠距離連射'); TYPES.magic.role = L('범위 폭발', '範囲爆発'); TYPES.ice.role = L('적을 느리게', '敵をスローに');
 const ALL_TYPES = Object.keys(TYPES);
-const UNLOCK_COST = { bard: 150, ninja: 250, storm: 400 };
+const UNLOCK_COST = { bard: 150, ninja: 250, storm: 400, dwarf: 200, alch: 300, sniper: 450, cat: 550 };
 let TYPE_KEYS = ['sword', 'bow', 'magic', 'ice'];   // 이번 판 덱 (newGame에서 M.deck으로 바뀜)
 const GRADES = [null,
   { name: L('일반', 'ノーマル'), col: '#c9ced6', m: 1 },
@@ -213,7 +221,8 @@ const BTN = {
   reward:{ x: 12,  y: 14,  w: 58,  h: 58 },
   tmute: { x: 296, y: 18,  w: 50,  h: 50 },
   attc:  { x: 110, y: 214, w: 140, h: 40 },
-  home:  { x: 105, y: 502, w: 150, h: 36 },
+  home:  { x: 50,  y: 502, w: 126, h: 36 },
+  share: { x: 184, y: 502, w: 126, h: 36 },
   back:  { x: 105, y: 590, w: 150, h: 40 },
   retry: { x: 70,  y: 438, w: 220, h: 54 },
   resume:{ x: 95,  y: 300, w: 170, h: 58 },
@@ -243,6 +252,10 @@ const META_DEF = {
   bard:   { icon: 'bard',  name: L('음유시인 단련', '吟遊詩人修練'), max: 10, desc: l => L(`음유시인 공격력 +${l * 8}%`, `吟遊詩人攻撃力 +${l * 8}%`) },
   ninja:  { icon: 'ninja', name: L('닌자 단련', '忍者修練'),     max: 10, desc: l => L(`닌자 공격력 +${l * 8}%`, `忍者攻撃力 +${l * 8}%`) },
   storm:  { icon: 'storm', name: L('번개술사 단련', '雷術師修練'), max: 10, desc: l => L(`번개술사 공격력 +${l * 8}%`, `雷術師攻撃力 +${l * 8}%`) },
+  dwarf:  { icon: 'dwarf', name: L('드워프 단련', 'ドワーフ修練'), max: 10, desc: l => L(`드워프 공격력 +${l * 8}%`, `ドワーフ攻撃力 +${l * 8}%`) },
+  alch:   { icon: 'alch',  name: L('연금술사 단련', '錬金術師修練'), max: 10, desc: l => L(`연금술사 공격력 +${l * 8}%`, `錬金術師攻撃力 +${l * 8}%`) },
+  sniper: { icon: 'sniper', name: L('저격수 단련', '狙撃手修練'), max: 10, desc: l => L(`저격수 공격력 +${l * 8}%`, `狙撃手攻撃力 +${l * 8}%`) },
+  cat:    { icon: 'cat',   name: L('냥상인 단련', 'ネコ商人修練'), max: 10, desc: l => L(`냥상인 공격력 +${l * 8}%`, `ネコ商人攻撃力 +${l * 8}%`) },
   gold:   { icon: 'coin',  name: L('두둑한 지갑', 'ふくらむ財布'), max: 5,  desc: l => L(`시작 골드 +${l * 25}`, `開始ゴールド +${l * 25}`) },
   luck:   { icon: 'star',  name: L('행운의 별', '幸運の星'),   max: 5,  desc: l => L(`별(와일드) 확률 +${l * 8}%`, `星(ワイルド)確率 +${l * 8}%`) },
   bounty: { icon: 'chest', name: L('전리품', '戦利品'),      max: 5,  desc: l => L(`처치 골드 +${l * 8}%`, `撃破ゴールド +${l * 8}%`) },
@@ -294,8 +307,12 @@ const CARDS = [
   { t: 'bard', icon: 'bard',  name: L('앙코르', 'アンコール'),       desc: L('음유시인 공속 오라 +60%', '吟遊詩人の攻速オーラ +60%'),     apply: B => { B.aura *= 1.6; } },
   { t: 'ninja', icon: 'ninja', name: L('그림자 일격', '影の一撃'), desc: L('닌자 치명타 피해 +100%', '忍者の会心ダメージ +100%'),      apply: B => { B.ninjaCrit += 1; } },
   { t: 'storm', icon: 'storm', name: L('과부하', 'オーバーロード'),      desc: L('번개 연쇄 +2마리', '雷の連鎖 +2体'),            apply: B => { B.chain += 2; } },
+  { t: 'dwarf', icon: 'dwarf', name: L('대지 진동', '大地の震え'),   desc: L('기절 확률 +15%, 기절 시간 +0.4초', 'スタン率 +15%、スタン +0.4秒'), apply: B => { B.stun += 0.15; B.stunT += 0.4; } },
+  { t: 'alch', icon: 'alch',  name: L('맹독', '猛毒'),           desc: L('독 장판 피해 +60%, 지속 +1초', '毒の沼ダメージ +60%、持続 +1秒'),   apply: B => { B.poison *= 1.6; B.poisonT += 1; } },
+  { t: 'sniper', icon: 'sniper', name: L('헤드샷', 'ヘッドショット'), desc: L('저격수 치명타 확률 +20%', '狙撃手の会心率 +20%'),          apply: B => { B.snipeCrit += 0.2; } },
+  { t: 'cat', icon: 'cat',   name: L('큰손 손님', '太客'),        desc: L('냥상인 골드 수입 2배', 'ネコ商人の稼ぎ 2倍'),               apply: B => { B.income *= 2; } },
 ];
-const newBuffs = () => ({ dmg: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), spd: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), aura: 1, ninjaCrit: 0, chain: 0, splash: 1, slowT: 0, range: 1, crit: 0, boss: 1, spinCost: 1, gold: 1, star: 1 });
+const newBuffs = () => ({ dmg: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), spd: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), aura: 1, ninjaCrit: 0, chain: 0, splash: 1, slowT: 0, range: 1, crit: 0, boss: 1, spinCost: 1, gold: 1, star: 1, stun: 0, stunT: 0, poison: 1, poisonT: 0, snipeCrit: 0, income: 1 });
 function openPick() {
   const pool = CARDS.filter(c => !c.t || TYPE_KEYS.includes(c.t)), cards = [];
   while (cards.length < 3) cards.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
@@ -455,7 +472,7 @@ function newGame() {
   TYPE_KEYS = M.deck.slice(); SYMS = [...TYPE_KEYS, 'star']; buildUPG();
   S = {
     gold: 100 + 25 * metaLv('gold'), goldShown: 100 + 25 * metaLv('gold'), B: newBuffs(), picked: [], pick: null, bossKills: 0, gemsGiven: 0, wave: 0, waveT: 3, spawnLeft: 0, spawnGap: 1, spawnT: 0,
-    enemies: [], units: Array(COLS * ROWS).fill(null), fx: [], proj: [], dmg: [], parts: [], coins: [], dying: [], decals: [], hitstop: 0, hsCd: 0, flash: null, kick: null,
+    enemies: [], units: Array(COLS * ROWS).fill(null), fx: [], proj: [], dmg: [], parts: [], coins: [], dying: [], decals: [], pools: [], hitstop: 0, hsCd: 0, flash: null, kick: null,
     spins: 0, adSpins: MAX_AD_SPINS, freeCharges: 1, freeT: freeRecharge(), lv: Object.fromEntries(ALL_TYPES.map(t => [t, 0])), lvPop: {},
     revived: false, speed: 1, kills: 0, time: 0, shake: 0,
     msg: '', msgT: 0, msgCol: '#fff', banner: null,
@@ -576,7 +593,7 @@ function stats(u) {
   return { range: t.range * (1 + 0.08 * (u.grade - 1)) * B.range, dmg: t.dmg * g.m * (1 + TUNE.upPct * S.lv[u.type]) * (1 + 0.08 * metaLv(u.type)) * B.dmg[u.type] * aura, rate: t.rate * (1 - 0.07 * (u.grade - 1)) / B.spd[u.type] / spdAura };
 }
 // ===== 타격감 도우미 =====
-const CRIT = { sword: 0.2, bow: 0.12, magic: 0.1, ice: 0.08, bard: 0.05, ninja: 0.35, storm: 0.1 };
+const CRIT = { sword: 0.2, bow: 0.12, magic: 0.1, ice: 0.08, bard: 0.05, ninja: 0.35, storm: 0.1, dwarf: 0.12, alch: 0.06, sniper: 0.25, cat: 0.08 };
 const PMAX = 280;
 function addShake(a) { S.shake = Math.max(S.shake, a); }
 function kick(dx, dy, a = 4) { const L = Math.hypot(dx, dy) || 1; S.kick = { x: dx / L * a, y: dy / L * a, t: 0.12 }; }
@@ -645,11 +662,12 @@ function update(dt) {
   if (S.spawnLeft > 0) { S.spawnT -= dt; if (S.spawnT <= 0) { spawn(false); S.spawnLeft--; S.spawnT = S.spawnGap; } }
   for (const e of S.enemies) {
     if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowF = 1; }
+    if (e.stunT > 0) { e.stunT -= dt; e.hurtT = Math.max(e.hurtT || 0, 0.05); }
     if (e.hurtT > 0) e.hurtT -= dt;
     if (e.roarT > 0) {
       const before = e.roarT; e.roarT -= dt;
       for (const th of [0.95, 0.7, 0.45]) if (before > th && e.roarT <= th) { S.fx.push({ k: 'shock', x: e.x, y: e.y - 28, col: '#ff8a6a', r0: 8, r1: 60, w: 4, t: 0.4, max: 0.4 }); addShake(0.18); }
-    } else {
+    } else if (!(e.stunT > 0)) {
       e.d += e.spd * e.slowF * dt; e.bob += dt * 8 * e.slowF;
       if (e.boss) { const st = Math.floor(e.bob / Math.PI); if (st !== e.step) { e.step = st; puffs(e.x + (st % 2 ? 8 : -8), e.y + 6, 3, '190,160,120', 5); addShake(0.07); sfx('thud'); } }
     }
@@ -674,6 +692,7 @@ function update(dt) {
     if (u.born > 0) u.born -= dt;
     if (u.cheer > 0) u.cheer -= dt;
     if (u.grade === 6) { u.judgT = (u.judgT ?? 3) - dt; if (u.judgT <= 0 && S.enemies.length) { u.judgT = 6; judgment(u, i); } }
+    if (u.type === 'cat') { u.incT = (u.incT ?? 5) - dt; if (u.incT <= 0) { u.incT = 5; const [cx0, cy0] = cellCenter(i), g = Math.round((TYPES.cat.income + 1.5 * (u.grade - 1) + Math.floor(S.wave / 6)) * S.B.income); S.gold += g; S.dmg.push({ x: cx0, y: cy0 - 30, v: '+' + g, t: 0.9, max: 0.9, gold: true, vx: 0 }); if (S.coins.length < 14) S.coins.push({ x: cx0, y: cy0 - 20, sx: cx0, sy: cy0 - 20, t: 0, dur: 0.55 }); u.cheer = Math.max(u.cheer || 0, 0.25); } }
     // 눈 깜빡임: 2~5초마다 0.13초
     if (u.blinkT == null) u.blinkT = 1 + Math.random() * 3;
     u.blinkT -= dt; if (u.blinkT <= 0) { u.blink = 0.13; u.blinkT = 2 + Math.random() * 3; }
@@ -692,6 +711,11 @@ function update(dt) {
     if (!target) return;
     u.cd = stats(u).rate; u.atk = 0; u.fired = false; u.tgt = target; u.face = target.x < ux ? -1 : 1;
   });
+  for (const pl of S.pools) {
+    pl.t -= dt; pl.tick -= dt;
+    if (pl.tick <= 0) { pl.tick = 0.25; for (const e of S.enemies) if (!e.dead && Math.hypot(e.x - pl.x, (e.y - pl.y) * 1.6) <= pl.r) { damage(e, pl.dps * 0.25, false, null, null); e.poisonT = 0.4; } }
+  }
+  S.pools = S.pools.filter(pl => pl.t > 0);
   S.enemies = S.enemies.filter(e => !e.dead);
   for (const p of S.proj) {
     p.t += dt;
@@ -709,7 +733,7 @@ function update(dt) {
     if (k === 'smoke') { p.vx *= Math.pow(0.05, dt); p.vy *= Math.pow(0.05, dt); p.r += dt * 14; }
     else if (k === 'streak') { p.vx *= Math.pow(0.02, dt); p.vy *= Math.pow(0.02, dt); p.vy += 60 * dt; }
     else if (k === 'star') { p.vx *= Math.pow(0.1, dt); p.vy *= Math.pow(0.1, dt); }
-    else p.vy += (k === 'shard' || k === 'bone' || k === 'goo' ? 380 : 220) * dt;
+    else p.vy += (k === 'shard' || k === 'bone' || k === 'goo' || k === 'rock' ? 380 : 220) * dt;
     if (p.vr) p.rot += p.vr * dt;
   }
   S.parts = S.parts.filter(p => p.t > 0);
@@ -769,6 +793,26 @@ function fireAttack(u, ux, uy) {
     S.fx.push({ k: 'bolt', pts, t: 0.18, max: 0.18, seed: Math.random() * 100 });
     hit.forEach(o => { impactFx(o.x, o.y - 10, '#fff3a0', 10, false); sparks(o.x, o.y - 10, '#ffe066', 3, 120); });
     S.fx.push({ k: 'cast', x: ux, y: uy + 15, t: 0.3, max: 0.3, col: t.color }); sfx('zap');
+  } else if (u.type === 'dwarf') {
+    const dm = st.dmg * (crit ? 2 : 1);
+    damage(e, dm, true, ux, uy, crit);
+    for (const o of S.enemies) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < 30) damage(o, dm * 0.4, false, e.x, e.y);
+    const chance = t.stun + 0.03 * (u.grade - 1) + S.B.stun;
+    if (!e.dead && Math.random() < chance) { e.stunT = Math.max(e.stunT || 0, (0.8 + S.B.stunT) * (e.boss ? 0.35 : 1)); S.fx.push({ k: 'stunring', x: e.x, y: e.y, t: 0.3, max: 0.3 }); }
+    impactFx(e.x, e.y - 4, '#ffcf8a', u.grade >= 3 ? 24 : 18, crit);
+    S.fx.push({ k: 'shock', x: e.x, y: e.y + 2, col: '#ffd7a0', r0: 6, r1: 34, w: 5, t: 0.28, max: 0.28 });
+    puffs(e.x, e.y + 4, 4, '190,160,120', 7); debris('rock', e.x, e.y, 4, '#a08a70'); addShake(crit ? 0.14 : 0.06); sfx('thud'); sfx('hit');
+  } else if (u.type === 'alch') {
+    S.proj.push({ crit, k: 'flask', x: ux + f * 14, y: uy - 30, tx: e.x, ty: e.y - 4, target: e, t: 0, dur: 0.32, dmg: st.dmg * (crit ? 2 : 1), show: u.grade >= 3, col: t.color, pdps: st.dmg * (t.pool * 4 + 0.6 * (u.grade - 1)) * S.B.poison, pT: 2.6 + 0.3 * (u.grade - 1) + S.B.poisonT, pr: 30 + 2 * u.grade });
+  } else if (u.type === 'sniper') {
+    let tg = e; for (const o of S.enemies) { if (o.dead || Math.hypot(o.x - ux, o.y - uy) > st.range + o.r) continue; if (o.boss && !tg.boss) tg = o; else if (o.boss === tg.boss && o.hp > tg.hp) tg = o; }
+    const sc = Math.random() < CRIT.sniper + S.B.crit + S.B.snipeCrit;
+    S.proj.push({ crit: sc, k: 'bolt2', x: ux + f * 22, y: uy - 18, tx: tg.x, ty: tg.y - 8, target: tg, t: 0, dur: 0.09, dmg: st.dmg * (sc ? 2.5 : 1) * (tg.boss ? 1.6 : 1), show: true, col: t.color });
+    S.fx.push({ k: 'tip', x: ux + f * 22, y: uy - 18, t: 0.12, max: 0.12, col: '#fffbe0' }); addShake(0.04); sfx('crit');
+    u.face = tg.x < ux ? -1 : 1;
+  } else if (u.type === 'cat') {
+    S.proj.push({ crit, k: 'coinshot', x: ux + f * 12, y: uy - 26, tx: e.x, ty: e.y - 8, target: e, t: 0, dur: 0.2, dmg: st.dmg * (crit ? 2 : 1), show: u.grade >= 3, col: t.color });
+    sfx('coin');
   } else {
     S.proj.push({ crit, k: 'shard', x: ux + f * 22, y: uy - 20, tx: e.x, ty: e.y - 8, target: e, t: 0, dur: 0.15, dmg: st.dmg * (crit ? 2 : 1), slow: t.slow * (1 + 0.1 * (u.grade - 1)), show: true, col: t.color });
     S.fx.push({ k: 'cast', x: ux, y: uy + 15, t: 0.3, max: 0.3, col: t.color });
@@ -777,6 +821,13 @@ function fireAttack(u, ux, uy) {
 }
 function projHit(p) {
   const e = p.target;
+  if (p.k === 'flask') {
+    if (S.pools.length > 10) S.pools.shift();
+    S.pools.push({ x: p.tx, y: p.ty + 6, r: p.pr, dps: p.pdps, t: p.pT, max: p.pT, tick: 0, seed: Math.random() * 10 });
+    if (e && !e.dead) damage(e, p.dmg, p.show, p.x, p.y, p.crit);
+    sparks(p.tx, p.ty, '#b6ff8a', 8, 150); puffs(p.tx, p.ty, 4, '140,220,110', 8); impactFx(p.tx, p.ty, '#c8ffa8', 12, p.crit); sfx('shatter');
+    return;
+  }
   if (p.k === 'orb') {
     for (const o of S.enemies) if (!o.dead && Math.hypot(o.x - p.tx, o.y - 8 - p.ty) <= p.r) damage(o, p.dmg, o === e, p.tx, p.ty + 20, p.crit && o === e);
     S.fx.push({ k: 'boom', x: p.tx, y: p.ty, r: p.r * (p.crit ? 1.3 : 1), t: 0.32, max: 0.32, col: p.col });
@@ -790,6 +841,8 @@ function projHit(p) {
   if (p.slow) { e.slowT = 1.5 + S.B.slowT; e.slowF = Math.max(0.5, Math.min(e.slowF, 1 - p.slow)); } // 최대 50%까지만 느려짐
   damage(e, p.dmg, p.show, p.x, p.y, p.crit);
   if (p.k === 'note') { impactFx(p.tx, p.ty, '#ffc2d6', 10, p.crit); stars(p.tx, p.ty, 2, '#ffd0e0'); return; }
+  if (p.k === 'bolt2') { impactFx(p.tx, p.ty, '#fffbe0', p.crit ? 22 : 15, p.crit); sparks(p.tx, p.ty, '#fff3b0', p.crit ? 12 : 6, 220, Math.atan2(p.ty - p.y, p.tx - p.x), 0.9); hitstop(p.crit ? 0.05 : 0.02); sfx('hit'); return; }
+  if (p.k === 'coinshot') { impactFx(p.tx, p.ty, '#ffe08a', 9, p.crit); stars(p.tx, p.ty, 2, '#ffe9a0'); return; }
   if (p.k === 'shard') {
     impactFx(p.tx, p.ty, '#bfe9ff', 13, p.crit); shardsFx(p.tx, p.ty, p.crit ? 9 : 6); stars(p.tx, p.ty, 2, '#e8f8ff'); sfx('shatter');
   } else {
@@ -1020,6 +1073,8 @@ function drawEnemy(e) {
   else sprite(e.hurtT > 0 && IMG[k + '_hurt'] ? k + '_hurt' : k, ex, ey + 7 - hop, h, e.dir < 0, 1, 1 + squash + hitP * 0.1, 1 - squash - hitP * 0.08, 0, hitP * 0.85);
   if (e.slowF < 1) { if (!EA) { ctx.globalAlpha = 0.3; sprite(k, ex, ey + 7 - hop, h, e.dir < 0, 1, 1 + squash, 1 - squash, 0, 0); } ctx.globalAlpha = EA ? 0.16 : 0.3; ctx.fillStyle = '#9fdcff'; ctx.beginPath(); ctx.ellipse(ex, ey - h / 2 + 7, h * 0.42, h * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff'; for (let s = 0; s < 3; s++) { const a = T * 2 + s * 2.1; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * h * 0.35, ey - h / 2 + 7 + Math.sin(a) * h * 0.3, 1.3, 0, Math.PI * 2); ctx.fill(); } }
   ctx.restore();
+  if (e.stunT > 0) { for (let k = 0; k < 3; k++) { const ang = T * 6 + k * 2.09; icon('star', e.x + Math.cos(ang) * (e.boss ? 14 : 9), e.y - h + 2 + Math.sin(ang) * 3, e.boss ? 9 : 7); } }
+  if (e.poisonT > 0) { e.poisonT -= 1 / 60; ctx.save(); ctx.globalAlpha = 0.7; ctx.fillStyle = '#a8f07c'; for (let k = 0; k < 2; k++) { const ph = (T * 1.4 + k * 0.5 + e.bob * 0.05) % 1; ctx.beginPath(); ctx.arc(e.x - 4 + k * 8, e.y - h * 0.6 - ph * 10, 1.5 + ph * 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
   if (e.hp < e.max || e.boss) {
     const bw = e.boss ? 44 : 22, by = e.y - h + 2;
     rr(e.x - bw / 2 - 1, by - 1, bw + 2, 6, 3); ctx.fillStyle = 'rgba(20,10,30,.8)'; ctx.fill();
@@ -1198,6 +1253,15 @@ function drawField() {
   }
   // 바닥 자국 (그을음, 젤리)
   for (const d of S.decals) { const a = Math.min(1, d.t / d.max * 1.5) * 0.45; ctx.fillStyle = `rgba(${d.col},${a})`; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.45, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(d.x + Math.sin(d.seed) * d.r * 0.7, d.y + Math.cos(d.seed) * d.r * 0.2, d.r * 0.35, d.r * 0.16, 0, 0, Math.PI * 2); ctx.fill(); }
+  for (const pl of S.pools) {
+    const a = Math.min(1, pl.t / 0.4, (pl.max - pl.t) / 0.15 + 0.2), wob = Math.sin(T * 3 + pl.seed) * 1.5;
+    ctx.save(); ctx.globalAlpha = 0.55 * a;
+    const g = ctx.createRadialGradient(pl.x, pl.y, 2, pl.x, pl.y, pl.r); g.addColorStop(0, 'rgba(150,255,110,.9)'); g.addColorStop(0.7, 'rgba(70,190,60,.75)'); g.addColorStop(1, 'rgba(40,120,30,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(pl.x, pl.y, pl.r + wob, (pl.r + wob) * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.8 * a; ctx.fillStyle = '#d4ffb8';
+    for (let k = 0; k < 4; k++) { const ph = (T * 0.9 + k * 0.27 + pl.seed) % 1, bx = pl.x + Math.cos(k * 1.7 + pl.seed) * pl.r * 0.55, by = pl.y + Math.sin(k * 2.3 + pl.seed) * pl.r * 0.25 - ph * 10; ctx.globalAlpha = 0.8 * a * (1 - ph); ctx.beginPath(); ctx.arc(bx, by, 1.5 + ph * 2, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
   // 적 (위쪽 먼저)
   const es = S.enemies.slice().sort((a, b) => a.y - b.y);
   for (const e of es) if (e.y < GY) drawEnemy(e);
@@ -1239,6 +1303,18 @@ function drawField() {
       ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = p.col; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha = 1;
       const g = ctx.createRadialGradient(x, y, 0, x, y, 10); g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, '#e2bfff'); g.addColorStop(0.7, p.col); g.addColorStop(1, 'rgba(160,90,255,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    } else if (p.k === 'flask') {
+      const yy = p.y + (p.ty - p.y) * q - Math.sin(q * Math.PI) * 34;
+      ctx.save(); ctx.translate(x, yy); ctx.rotate(p.t * 14);
+      ctx.fillStyle = '#7ee36a'; ctx.strokeStyle = '#2f5a24'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(0, 2, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e8fff0'; ctx.fillRect(-1.6, -6, 3.2, 4); ctx.strokeRect(-1.6, -6, 3.2, 4); ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(-1.8, 0.5, 1.4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    } else if (p.k === 'bolt2') {
+      const a2 = Math.atan2(p.ty - p.y, p.tx - p.x);
+      ctx.save(); ctx.globalAlpha = 0.6; ctx.strokeStyle = '#fff6c8'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(x, p.y + (p.ty - p.y) * q); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.translate(x, p.y + (p.ty - p.y) * q); ctx.rotate(a2); ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(6, 0); ctx.stroke();
+      ctx.fillStyle = '#e8e8f0'; ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(4, -3.5); ctx.lineTo(4, 3.5); ctx.fill(); ctx.restore();
+    } else if (p.k === 'coinshot') {
+      ctx.save(); ctx.translate(x, y); ctx.scale(Math.abs(Math.cos(p.t * 30)) * 0.8 + 0.2, 1); icon('coin', 0, 0, 12); ctx.restore();
     } else if (p.k === 'note') {
       ctx.save(); ctx.translate(x, y + Math.sin(p.t * 40) * 3); ctx.rotate(Math.sin(p.t * 20) * 0.3);
       ctx.shadowColor = '#ff8fb1'; ctx.shadowBlur = 8; ctx.fillStyle = '#ffe3ee'; ctx.strokeStyle = '#d6336c'; ctx.lineWidth = 1.5;
@@ -1261,6 +1337,7 @@ function drawField() {
     }
     else if (f.k === 'swoosh') { const p = 1 - a; ctx.globalAlpha = a * 0.8; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.translate(f.x, f.y); ctx.scale(f.f, 1); ctx.beginPath(); ctx.arc(-6, 0, 16, -1.3 + p * 0.9, 0.1 + p * 0.9); ctx.stroke(); }
     else if (f.k === 'impact') { const p = 1 - a; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.translate(f.x, f.y); ctx.rotate(f.rot); const R = f.size * (0.45 + p * 0.75); ctx.fillStyle = f.col; ctx.beginPath(); for (let i = 0; i < 16; i++) { const rr2 = i % 2 ? R * 0.32 : R * (i % 4 ? 0.8 : 1); ctx.lineTo(Math.cos(i * Math.PI / 8) * rr2, Math.sin(i * Math.PI / 8) * rr2); } ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, R * 0.35, 0, 7); ctx.fill(); }
+    else if (f.k === 'stunring') { const p = 1 - a; ctx.globalAlpha = a; ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 3 * a + 1; ctx.beginPath(); ctx.ellipse(f.x, f.y - 24, 6 + p * 14, (6 + p * 14) * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); }
     else if (f.k === 'shock') { const p = 1 - a, e2 = 1 - Math.pow(1 - p, 3); ctx.globalAlpha = a; ctx.strokeStyle = f.col; ctx.lineWidth = f.w * a + 0.5; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r0 + (f.r1 - f.r0) * e2, (f.r0 + (f.r1 - f.r0) * e2) * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); }
     else if (f.k === 'absorb') { const q = 1 - a, e2 = q * q; ctx.globalAlpha = 1 - q * 0.3; ctx.fillStyle = f.col; ctx.shadowColor = f.col; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(f.x1 + (f.x2 - f.x1) * e2, f.y1 + (f.y2 - f.y1) * e2 - Math.sin(q * Math.PI) * 20, 7 * (1 - q * 0.5), 0, 7); ctx.fill(); }
     else if (f.k === 'pillar') { const q = 1 - a; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; const w2 = 14 * (1 - q * 0.6); const g = ctx.createLinearGradient(0, f.y - 140, 0, f.y); g.addColorStop(0, 'rgba(255,240,180,0)'); g.addColorStop(1, 'rgba(255,240,180,.95)'); ctx.fillStyle = g; ctx.fillRect(f.x - w2 / 2, f.y - 140, w2, 140); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(f.x, f.y, 14 * (1 + q), 5 * (1 + q), 0, 0, 7); ctx.fill(); }
@@ -1286,6 +1363,7 @@ function drawField() {
     if (p.kind === 'streak') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = p.w * (0.5 + a); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035); ctx.stroke(); ctx.restore(); continue; }
     if (p.kind === 'star') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.translate(p.x, p.y); ctx.rotate(T * 6); const r = p.r * (0.6 + 0.4 * Math.sin(T * 30 + p.r * 9)); ctx.beginPath(); for (let i = 0; i < 8; i++) { const rr2 = i % 2 ? r * 0.3 : r; ctx.lineTo(Math.cos(i * Math.PI / 4) * rr2, Math.sin(i * Math.PI / 4) * rr2); } ctx.fill(); ctx.restore(); continue; }
     if (p.kind === 'shard') { ctx.save(); ctx.globalAlpha = Math.min(1, a * 1.5); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.strokeStyle = '#4aa8e8'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, -p.r * 1.4); ctx.lineTo(p.r * 0.6, 0); ctx.lineTo(0, p.r * 1.4); ctx.lineTo(-p.r * 0.6, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); continue; }
+    if (p.kind === 'rock') { ctx.save(); ctx.globalAlpha = Math.min(1, a * 1.5); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.strokeStyle = '#5a4630'; ctx.lineWidth = 0.8; ctx.fillRect(-p.r, -p.r * 0.8, p.r * 2, p.r * 1.6); ctx.strokeRect(-p.r, -p.r * 0.8, p.r * 2, p.r * 1.6); ctx.restore(); continue; }
     if (p.kind === 'bone') { ctx.save(); ctx.globalAlpha = Math.min(1, a * 1.5); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.strokeStyle = '#6b5a40'; ctx.lineWidth = 0.8; rr(-p.r * 1.3, -p.r * 0.35, p.r * 2.6, p.r * 0.7, 1); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(-p.r * 1.3, 0, p.r * 0.45, 0, 7); ctx.arc(p.r * 1.3, 0, p.r * 0.45, 0, 7); ctx.fill(); ctx.restore(); continue; }
     if (p.kind === 'goo') { ctx.globalAlpha = Math.min(1, a * 1.5); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(p.x - p.r * 0.3, p.y - p.r * 0.3, p.r * 0.3, 0, 7); ctx.fill(); continue; }
     ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
@@ -1296,7 +1374,8 @@ function drawField() {
     const age = 1 - d.t / (d.max || 0.75), a = Math.min(1, d.t * 4);
     const sc = d.crit ? (age < 0.12 ? 0.5 + age / 0.12 * 1.3 : 1.8 - Math.min(0.45, (age - 0.12) * 2)) : (age < 0.1 ? 0.6 + age / 0.1 * 0.7 : 1.3 - Math.min(0.3, (age - 0.1) * 2));
     ctx.save(); ctx.globalAlpha = a; ctx.translate(d.x, d.y); ctx.scale(sc, sc);
-    if (d.crit) { text(d.v + '!', 0, 0, 13, '#ffd23f', 'center', 4, '#7a1d00'); }
+    if (d.gold) { icon('coin', -12, 0, 12); text(String(d.v), 4, 0, 12, '#ffd166', 'center', 3, '#5a3a00'); }
+    else if (d.crit) { text(d.v + '!', 0, 0, 13, '#ffd23f', 'center', 4, '#7a1d00'); }
     else text(String(d.v), 0, 0, 11, '#fff', 'center', 3);
     ctx.restore();
   }
@@ -1429,7 +1508,7 @@ function drawTitle() {
   button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawSpeaker(cx - 2, cy, store.mute), 'tmute');
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v0.9.4 베타', 'v0.9.4 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v1.0 베타', 'v1.0 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -1487,7 +1566,42 @@ function drawOver() {
   icon('gem', W / 2 - 70, 350, 18); text(L(`보석 +${S.gemsEarned || 0}`, `ジェム +${S.gemsEarned || 0}`), W / 2 - 56, 350, 15, '#8fe3ff', 'left', 3); text(L(`보유 ${M.gems}`, `所持 ${M.gems}`), W / 2 + 70, 350, 12, 'rgba(255,255,255,.6)', 'right', 2.5);
   if (!S.revived) button(BTN.revive, '#2f8ae0', true, (cx, cy) => { icon('heart', cx - 70, cy, 26); if (adMode()) { text(L('광고 보고 부활', '広告を見て復活'), cx + 10, cy, 19, '#fff', 'center', 4); rr(cx + 72, cy - 22, 24, 14, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 84, cy - 15, 9, '#5a3a00'); } else text(L(`${REVIVE_WAIT}초 쉬고 부활`, `${REVIVE_WAIT}秒休んで復活`), cx + 10, cy, 19, '#fff', 'center', 4); }, 'revive');
   button(BTN.retry, '#ff4f72', true, (cx, cy) => text(L('다시 하기', 'もう一度'), cx, cy, 20, '#fff', 'center', 4, '#8a1f38'), 'retry');
-  button(BTN.home, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 46, cy, 16); text(L('영웅 강화', 'ヒーロー強化'), cx + 8, cy, 15, '#fff', 'center', 3); }, 'home');
+  button(BTN.home, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 42, cy, 15); text(L('영웅 강화', 'ヒーロー強化'), cx + 8, cy, L(15, 12), '#fff', 'center', 3); }, 'home');
+  button(BTN.share, '#1f9d6b', true, (cx, cy) => { shareIcon(cx - 40, cy); text(L('기록 공유', '記録をシェア'), cx + 10, cy, L(15, 12), '#fff', 'center', 3); }, 'share');
+  if (S.msgT > 0) { S.msgT -= 1 / 60; ctx.globalAlpha = Math.min(1, S.msgT * 2); text(S.msg, W / 2, 568, 13, S.msgCol, 'center', 3); ctx.globalAlpha = 1; }
+}
+function shareIcon(x, y) { ctx.save(); ctx.strokeStyle = '#fff'; ctx.fillStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 5, y + 1); ctx.lineTo(x + 5, y - 5); ctx.moveTo(x - 5, y + 1); ctx.lineTo(x + 5, y + 6); ctx.stroke(); for (const [a, b] of [[x - 5, y + 1], [x + 5, y - 5], [x + 5, y + 6]]) { ctx.beginPath(); ctx.arc(a, b, 3, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+// ===== 기록 공유: 결과 카드 이미지 + 시스템 공유 시트 (없으면 링크 복사) =====
+async function makeShareCard() {
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1080; const x = c.getContext('2d');
+  const bg = IMG.bg; if (bg && bg.width) { const s2 = Math.max(1080 / bg.width, 1080 / bg.height); x.drawImage(bg, (1080 - bg.width * s2) / 2, (1080 - bg.height * s2) / 2, bg.width * s2, bg.height * s2); }
+  x.fillStyle = 'rgba(16,8,40,.55)'; x.fillRect(0, 0, 1080, 1080);
+  const T2 = (t, X, Y, size, col, stroke = 0) => { x.font = `${size}px ${FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'; if (stroke) { x.lineWidth = stroke; x.strokeStyle = '#2a1050'; x.strokeText(t, X, Y); } x.fillStyle = col; x.fillText(t, X, Y); };
+  T2(L('스핀 디펜스', 'スピンディフェンス'), 540, 120, 84, '#ffd166', 18);
+  T2(L('내 기록', 'わたしの記録'), 540, 250, 52, '#ffffff', 12);
+  T2(`WAVE ${S.wave}`, 540, 370, 170, '#ffffff', 26);
+  T2(L(`몬스터 ${S.kills.toLocaleString()}마리 처치`, `モンスター ${S.kills.toLocaleString()}体 撃破`), 540, 500, 46, '#cfe8ff', 10);
+  // 덱 영웅
+  TYPE_KEYS.forEach((t, i) => { const im = IMG[t]; if (!im || !im.width) return; const h = 230, w = h * im.width / im.height, cx = 540 + (i - 1.5) * 220; x.fillStyle = 'rgba(0,0,0,.3)'; x.beginPath(); x.ellipse(cx, 840, 80, 20, 0, 0, Math.PI * 2); x.fill(); x.drawImage(im, cx - w / 2, 840 - h, w, h); });
+  T2(L('너는 몇 웨이브까지 갈 수 있어?', 'あなたは何ウェーブまで行ける？'), 540, 920, 44, '#ffd166', 10);
+  T2('parkbeommin.github.io/spin-defense', 540, 1010, 38, '#ffffff', 8);
+  return new Promise(res => c.toBlob(b => res(b), 'image/png'));
+}
+async function shareRecord() {
+  const url = LANG === 'ja' ? 'https://parkbeommin.github.io/spin-defense/ja/' : 'https://parkbeommin.github.io/spin-defense/';
+  const txt = L(`스핀 디펜스 웨이브 ${S.wave} 달성! 너는 몇 웨이브까지 가?`, `スピンディフェンスでウェーブ${S.wave}到達！あなたは何ウェーブまで行ける？`);
+  let method = 'none';
+  try {
+    const blob = await makeShareCard();
+    const file = blob && new File([blob], `spin-defense-wave${S.wave}.png`, { type: 'image/png' });
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: `${txt}\n${url}` }); method = 'file'; }
+    else if (navigator.share) { await navigator.share({ text: txt, url }); method = 'link'; }
+    else { await navigator.clipboard.writeText(`${txt} ${url}`); method = 'copy'; flash(L('링크를 복사했어요! 친구에게 붙여넣어 보세요', 'リンクをコピーしました！'), '#9be36d', 2); }
+  } catch (e) {
+    if (e && e.name === 'AbortError') method = 'cancel';
+    else { try { await navigator.clipboard.writeText(`${txt} ${url}`); method = 'copy'; flash(L('링크를 복사했어요! 친구에게 붙여넣어 보세요', 'リンクをコピーしました！'), '#9be36d', 2); } catch (_) {} }
+  }
+  track('share', { wave: S.wave, method });
 }
 function pickRect(i) { return { x: 30, y: 190 + i * 104, w: 300, h: 92 }; }
 function drawPick() {
@@ -1513,7 +1627,10 @@ function drawPick() {
 // 상점: [영웅] 탭은 해금·덱·단련, [능력] 탭은 공통 강화
 const SHOP_TAB = { hero: { x: 30, y: 98, w: 145, h: 36 }, ability: { x: 185, y: 98, w: 145, h: 36 } };
 function shopRows() { return shopTab === 'hero' ? ALL_TYPES : ABILITY_KEYS; }
-function shopRowY(i) { return 144 + i * 60; }
+let shopScroll = 0, shopDrag = null;
+const SHOP_TOP = 140, SHOP_BOT = 582;
+const shopMaxScroll = () => Math.max(0, 144 + shopRows().length * 60 - 4 - SHOP_BOT);
+function shopRowY(i) { return 144 + i * 60 - shopScroll; }
 function shopBuyRect(i) { return { x: 262, y: shopRowY(i) + 10, w: 86, h: 38 }; }
 function shopDeckRect(i) { return { x: 196, y: shopRowY(i) + 10, w: 60, h: 38 }; }
 function drawShop() {
@@ -1525,8 +1642,11 @@ function drawShop() {
     if (on) { ctx.strokeStyle = '#ffcf5a'; ctx.lineWidth = 2; ctx.stroke(); }
     text(k === 'hero' ? L(`영웅 · 덱 ${M.deck.length}/4`, `デッキ ${M.deck.length}/4`) : L('능력', '能力'), b.x + b.w / 2, b.y + b.h / 2, 15, on ? '#fff' : 'rgba(255,255,255,.6)', 'center', 3);
   }
+  shopScroll = clamp(shopScroll, 0, shopMaxScroll());
+  ctx.save(); ctx.beginPath(); ctx.rect(-OX, SHOP_TOP, VW, SHOP_BOT - SHOP_TOP); ctx.clip();
   shopRows().forEach((k, i) => {
     const d = META_DEF[k], l = metaLv(k), y = shopRowY(i), maxed = l >= d.max, c = metaCost(k);
+    if (y > SHOP_BOT || y + 56 < SHOP_TOP) return;
     const isHero = !!TYPES[k], locked = isHero && !M.unlocked[k], inDeck = isHero && M.deck.includes(k);
     const pop = shopPop && shopPop.k === k ? shopPop.t : 0;
     rr(12, y, 336, 54, 12); ctx.fillStyle = pop > 0 ? 'rgba(143,227,255,.2)' : inDeck ? 'rgba(255,207,90,.1)' : 'rgba(255,255,255,.07)'; ctx.fill();
@@ -1550,6 +1670,14 @@ function drawShop() {
       button(b, maxed ? '#5a5a6a' : '#2f8ae0', ok, (cx, cy) => { if (maxed) text('MAX', cx, cy, 15, '#ffd166', 'center', 3); else { icon('gem', cx - 20, cy, 15); text(String(c), cx + 9, cy, 14, '#fff', 'center', 3); } }, 'buy_' + k);
     }
   });
+  ctx.restore();
+  const msx = shopMaxScroll();
+  if (msx > 0) {
+    if (shopScroll < msx - 2) { const g = ctx.createLinearGradient(0, SHOP_BOT - 34, 0, SHOP_BOT); g.addColorStop(0, 'rgba(14,8,32,0)'); g.addColorStop(1, 'rgba(14,8,32,.95)'); ctx.fillStyle = g; ctx.fillRect(-OX, SHOP_BOT - 34, VW, 34); text(L('▼ 아래로 밀어서 더 보기', '▼ スクロールでもっと見る'), W / 2, SHOP_BOT - 8, 11, 'rgba(255,255,255,.75)', 'center', 2.5); }
+    if (shopScroll > 2) { const g = ctx.createLinearGradient(0, SHOP_TOP, 0, SHOP_TOP + 24); g.addColorStop(0, 'rgba(14,8,32,.95)'); g.addColorStop(1, 'rgba(14,8,32,0)'); ctx.fillStyle = g; ctx.fillRect(-OX, SHOP_TOP, VW, 24); }
+    const th = (SHOP_BOT - SHOP_TOP) * (SHOP_BOT - SHOP_TOP) / (SHOP_BOT - SHOP_TOP + msx), ty = SHOP_TOP + (SHOP_BOT - SHOP_TOP - th) * (shopScroll / msx);
+    rr(352, ty, 4, th, 2); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fill();
+  }
   if (shopMsg) { shopMsg.t -= 1 / 60; ctx.globalAlpha = Math.min(1, shopMsg.t * 2); text(shopMsg.txt, W / 2, 573, 13, '#ffd166', 'center', 3); ctx.globalAlpha = 1; if (shopMsg.t <= 0) shopMsg = null; }
   button(BTN.back, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る'), cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'back');
   if (shopPop) { shopPop.t -= 1 / 60; if (shopPop.t <= 0) shopPop = null; }
@@ -1631,13 +1759,14 @@ function hitKey(x, y) {
     if (inRect(x, y, BTN.back)) return 'back';
     for (const k of Object.keys(SHOP_TAB)) if (inRect(x, y, SHOP_TAB[k])) return 'tab_' + k;
     const rows = shopRows();
+    if (y < SHOP_TOP || y > SHOP_BOT) return null;
     for (let i = 0; i < rows.length; i++) { const k = rows[i];
       if (TYPES[k] && !M.unlocked[k]) { if (inRect(x, y, { x: 196, y: shopRowY(i) + 10, w: 152, h: 38 })) return 'unl_' + k; continue; }
       if (inRect(x, y, shopBuyRect(i))) return 'buy_' + k;
       if (TYPES[k] && inRect(x, y, shopDeckRect(i))) return 'deck_' + k; }
     return null;
   }
-  if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; return null; }
+  if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; if (inRect(x, y, BTN.share)) return 'share'; return null; }
   if (S.pick) { for (let i = 0; i < 3; i++) if (inRect(x, y, pickRect(i))) return 'card_' + i; return null; }
   { const sr = sellRect(); if (sr && inRect(x, y, sr)) return 'sellsel'; }
   if (paused) return inRect(x, y, BTN.resume) ? 'resume' : null;
@@ -1655,6 +1784,7 @@ function activate(key) {
     case 'tmute': store.mute = !store.mute; sfx('click'); break;
     case 'back': screen = 'title'; sfx('click'); break;
     case 'home': screen = 'shop'; sfx('click'); break;
+    case 'share': sfx('click'); shareRecord(); break;
     case 'retry': track('retry', { last_wave: S.wave }); sfx('click'); betweenGames(() => { newGame(); screen = 'play'; }); break;
     case 'revive': if (adMode()) showRewardAd(revive, 'revive'); else ad = { t: REVIVE_WAIT, max: REVIVE_WAIT, onReward: revive, kind: 'wait' }; break;
     case 'resume': paused = false; sfx('click'); break;
@@ -1672,7 +1802,7 @@ function activate(key) {
       else if (key && key.startsWith('buy_')) buyMeta(key.slice(4));
       else if (key && key.startsWith('unl_')) unlockHero(key.slice(4));
       else if (key && key.startsWith('deck_')) toggleDeck(key.slice(5));
-      else if (key && key.startsWith('tab_')) { shopTab = key.slice(4); sfx('click'); }
+      else if (key && key.startsWith('tab_')) { shopTab = key.slice(4); shopScroll = 0; sfx('click'); }
       else if (key && key.startsWith('card_')) choosePick(+key.slice(5));
       else if (key && key.startsWith('mc_')) claimMission(+key.slice(3));
   }
@@ -1686,17 +1816,22 @@ cv.addEventListener('pointerdown', e => {
     const i = cellAt(x, y);
     if (i >= 0 && S.units[i]) { const [rx0, ry0] = rawPos(e); drag = { idx: i, x, y, sx: x, sy: y, rx: rx0, ry: ry0, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; }
   }
+  if (screen === 'shop' && y >= SHOP_TOP && y <= SHOP_BOT && shopMaxScroll() > 0) shopDrag = { y0: y, s0: shopScroll, moved: false };
   const k = hitKey(x, y);
   if (k) { press = { key: k }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} }
+  else if (shopDrag) { try { cv.setPointerCapture(e.pointerId); } catch (_) {} }
   else if (screen === 'play') selected = -1;
 });
 cv.addEventListener('pointermove', e => {
   const [x, y] = pos(e);
   if (drag) { const [rx1, ry1] = rawPos(e); drag.rx = rx1; drag.ry = ry1; drag.x = x; drag.y = y; if (!drag.moved && Math.hypot(x - drag.sx, y - drag.sy) > 8) { drag.moved = true; selected = -1; } }
-  else if (press && hitKey(x, y) !== press.key) press = null;
+  else if (shopDrag) { const dy = y - shopDrag.y0; if (!shopDrag.moved && Math.abs(dy) > 8) { shopDrag.moved = true; press = null; } if (shopDrag.moved) shopScroll = clamp(shopDrag.s0 - dy, 0, shopMaxScroll()); }
+  if (press && hitKey(x, y) !== press.key) press = null;
 });
+cv.addEventListener('wheel', e => { if (screen !== 'shop') return; e.preventDefault(); shopScroll = clamp(shopScroll + e.deltaY * 0.6, 0, shopMaxScroll()); }, { passive: false });
 cv.addEventListener('pointerup', e => {
   const [x, y] = pos(e);
+  if (shopDrag) { const mv = shopDrag.moved; shopDrag = null; if (mv) { press = null; return; } }
   if (press) { const k = press.key; press = null; if (hitKey(x, y) === k) activate(k); return; }
   if (!drag) return;
   const d = drag; drag = null;
@@ -1730,7 +1865,7 @@ cv.addEventListener('pointerup', e => {
   }
   S.units[j] = u; S.units[d.idx] = v; sfx('click');
 });
-cv.addEventListener('pointercancel', () => { drag = null; press = null; });
+cv.addEventListener('pointercancel', () => { drag = null; press = null; shopDrag = null; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'play' && !ADS.inAd) paused = true; });
 
 // ===== 루프 =====
