@@ -215,6 +215,8 @@ const BTN = {
   ad:    { x: 260, y: 562, w: 90, h: 54 },
   speed: { x: 10,  y: 562, w: 90, h: 54 },
   sound: { x: 318, y: 50, w: 32, h: 26 },
+  pause: { x: 282, y: 50, w: 32, h: 26 },
+  quit:  { x: 95,  y: 376, w: 170, h: 50 },
   start: { x: 95,  y: 452, w: 170, h: 62 },
   revive:{ x: 70,  y: 372, w: 220, h: 54 },
   shop:  { x: 95,  y: 528, w: 170, h: 48 },
@@ -1140,6 +1142,8 @@ function drawHUD() {
   S.picked.slice(-8).forEach((c, i) => { rr(60 + i * 17, 50, 15, 15, 4); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); if (TYPES[c.icon]) sprite(c.icon, 67.5 + i * 17, 64, 14); else icon(c.icon, 67.5 + i * 17, 57.5, 12); });
   // 사운드
   const b = BTN.sound; ctx.globalAlpha = 0.8; drawSpeaker(b.x + 16, b.y + 13, store.mute); ctx.globalAlpha = 1;
+  // 일시정지
+  const pb = BTN.pause; ctx.globalAlpha = 0.85; ctx.fillStyle = '#fff'; rr(pb.x + 10, pb.y + 5, 4.5, 16, 1.5); ctx.fill(); rr(pb.x + 18, pb.y + 5, 4.5, 16, 1.5); ctx.fill(); ctx.globalAlpha = 1;
 }
 function drawSpeaker(x, y, muted) {
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x - 9, y - 3); ctx.lineTo(x - 5, y - 3); ctx.lineTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.lineTo(x - 5, y + 3); ctx.lineTo(x - 9, y + 3); ctx.closePath(); ctx.fill();
@@ -1587,7 +1591,7 @@ function drawOver() {
   ctx.fillStyle = 'rgba(10,6,24,.75)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   panel(40, 130, 280, 420);
   sprite('boss', W / 2, 238, 88);
-  text(S.bossFail ? L('보스를 못 잡았어요', 'ボスを倒せなかった…') : L('방어 실패', '防衛失敗'), W / 2, 262, S.bossFail ? 26 : 32, '#ff6b6b', 'center', 6);
+  text(S.quit ? L('게임 종료', 'ゲーム終了') : S.bossFail ? L('보스를 못 잡았어요', 'ボスを倒せなかった…') : L('방어 실패', '防衛失敗'), W / 2, 262, S.bossFail && !S.quit ? 26 : 32, S.quit ? '#cfe8ff' : '#ff6b6b', 'center', 6);
   text(`WAVE ${S.wave}`, W / 2, 302, 26, '#fff', 'center', 5);
   text(L(`처치 ${S.kills.toLocaleString()}마리 · ${S.newBest ? '최고 기록 갱신!' : `최고 WAVE ${store.best}`}`, `撃破 ${S.kills.toLocaleString()}体 · ${S.newBest ? '最高記録更新！' : `最高 WAVE ${store.best}`}`), W / 2, 326, 13, S.newBest ? '#ffd166' : 'rgba(255,255,255,.75)', 'center', 3);
   icon('gem', W / 2 - 70, 350, 18); text(L(`보석 +${S.gemsEarned || 0}`, `ジェム +${S.gemsEarned || 0}`), W / 2 - 56, 350, 15, '#8fe3ff', 'left', 3); text(L(`보유 ${M.gems}`, `所持 ${M.gems}`), W / 2 + 70, 350, 12, 'rgba(255,255,255,.6)', 'right', 2.5);
@@ -1709,11 +1713,17 @@ function drawShop() {
   button(BTN.back, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る'), cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'back');
   if (shopPop) { shopPop.t -= 1 / 60; if (shopPop.t <= 0) shopPop = null; }
 }
+let quitAsk = 0;
 function drawPause() {
-  ctx.fillStyle = 'rgba(10,6,24,.7)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
-  text(L('일시정지', '一時停止'), W / 2, 250, 32, '#fff', 'center', 6);
+  ctx.fillStyle = 'rgba(10,6,24,.75)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
+  text(L('일시정지', '一時停止'), W / 2, 220, 32, '#fff', 'center', 6);
+  text(L(`WAVE ${S.wave} · 처치 ${S.kills.toLocaleString()}마리`, `WAVE ${S.wave} · 撃破 ${S.kills.toLocaleString()}体`), W / 2, 262, 14, '#cfe8ff', 'center', 3);
   button(BTN.resume, '#ff4f72', true, (cx, cy) => text(L('계속하기', 'つづける'), cx, cy, 22, '#fff', 'center', 4, '#8a1f38'), 'resume');
+  if (quitAsk > 0) quitAsk -= 1 / 60;
+  button(BTN.quit, quitAsk > 0 ? '#c0392b' : '#4a4466', true, (cx, cy) => text(quitAsk > 0 ? L('한 번 더 누르면 종료', 'もう一度押すと終了') : L('그만두기', 'やめる'), cx, cy, quitAsk > 0 ? 15 : 18, '#fff', 'center', 3), 'quit');
+  text(L('그만두면 지금 웨이브까지 보석을 받아요', 'やめても今のウェーブまでのジェムがもらえます'), W / 2, 446, 11, 'rgba(255,255,255,.55)', 'center', 2.5);
 }
+function quitGame() { quitAsk = 0; paused = false; S.quit = true; S.revived = true; track('quit', { wave: S.wave, play_sec: Math.round(S.time) }); gameOver(); }
 function drawAd() {
   if (ad.kind === 'wait') {
     ctx.fillStyle = 'rgba(10,6,24,.96)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
@@ -1797,8 +1807,8 @@ function hitKey(x, y) {
   if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; if (inRect(x, y, BTN.share)) return 'share'; return null; }
   if (S.pick) { for (let i = 0; i < 3; i++) if (inRect(x, y, pickRect(i))) return 'card_' + i; return null; }
   { const sr = sellRect(); if (sr && inRect(x, y, sr)) return 'sellsel'; }
-  if (paused) return inRect(x, y, BTN.resume) ? 'resume' : null;
-  for (const k of ['spin', 'ad', 'speed', 'sound']) if (inRect(x, y, BTN[k])) return k;
+  if (paused) return inRect(x, y, BTN.resume) ? 'resume' : inRect(x, y, BTN.quit) ? 'quit' : null;
+  for (const k of ['spin', 'ad', 'speed', 'sound', 'pause']) if (inRect(x, y, BTN[k])) return k;
   for (const b of UPG) if (inRect(x, y, b)) return 'up_' + b.t;
   return null;
 }
@@ -1817,7 +1827,9 @@ function activate(key) {
     case 'share': sfx('click'); shareRecord(); break;
     case 'retry': track('retry', { last_wave: S.wave }); sfx('click'); betweenGames(() => { newGame(); screen = 'play'; }); break;
     case 'revive': if (adMode()) showRewardAd(revive, 'revive'); else ad = { t: REVIVE_WAIT, max: REVIVE_WAIT, onReward: revive, kind: 'wait' }; break;
-    case 'resume': paused = false; sfx('click'); break;
+    case 'resume': paused = false; quitAsk = 0; sfx('click'); break;
+    case 'pause': paused = true; quitAsk = 0; sfx('click'); break;
+    case 'quit': sfx('click'); if (quitAsk > 0) quitGame(); else quitAsk = 3; break;
     case 'spin': doSpin(false); break;
     case 'speed': S.speed = S.speed === 1 ? 2 : 1; sfx('click'); break;
     case 'sound': store.mute = !store.mute; sfx('click'); break;
