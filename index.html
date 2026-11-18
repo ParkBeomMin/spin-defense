@@ -219,6 +219,8 @@ const BTN = {
   revive:{ x: 70,  y: 372, w: 220, h: 54 },
   shop:  { x: 95,  y: 528, w: 170, h: 48 },
   reward:{ x: 12,  y: 14,  w: 58,  h: 58 },
+  notice:{ x: 12,  y: 80,  w: 58,  h: 58 },
+  nclose:{ x: 105, y: 506, w: 150, h: 44 },
   tmute: { x: 296, y: 18,  w: 50,  h: 50 },
   attc:  { x: 110, y: 214, w: 140, h: 40 },
   home:  { x: 50,  y: 502, w: 126, h: 36 },
@@ -236,6 +238,27 @@ const rnd = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const easeOutBack = p => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); };
 
+// ===== 공지사항 (assets/notices.json, 새 공지는 빨간 점 + 첫 화면에서 한 번 자동으로 열림) =====
+let NOTICES = [], noticeOpen = false, noticeAuto = false;
+fetch('assets/notices.json?t=' + Date.now()).then(r => r.json()).then(n => { NOTICES = Array.isArray(n) ? n : []; }).catch(() => {});
+const noticeUnseen = () => NOTICES.length && localStorage.getItem('sd_notice_seen') !== NOTICES[0].id;
+function closeNotice() { noticeOpen = false; if (NOTICES.length) localStorage.setItem('sd_notice_seen', NOTICES[0].id); }
+function wrapText(str, maxW, size) { ctx.font = `${size}px ${FONT}`; const out = []; let line = ''; for (const ch of str) { const t = line + ch; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = ch.trimStart(); } else line = t; } if (line) out.push(line); return out; }
+function drawMegaphone(cx, cy) { ctx.save(); ctx.fillStyle = '#ffd166'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx - 10, cy - 4); ctx.lineTo(cx + 6, cy - 11); ctx.lineTo(cx + 6, cy + 9); ctx.lineTo(cx - 10, cy + 3); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ff6b6b'; ctx.fillRect(cx - 14, cy - 5, 5, 9); ctx.strokeRect(cx - 14, cy - 5, 5, 9); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx + 8, cy - 1, 8, -0.6, 0.6); ctx.stroke(); ctx.restore(); }
+function drawNotice() {
+  ctx.fillStyle = 'rgba(10,6,24,.82)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
+  panel(22, 70, 316, 496);
+  drawMegaphone(W / 2 - 62, 104); text(L('공지사항', 'お知らせ'), W / 2 + 12, 104, 24, '#ffd166', 'center', 5);
+  let y = 140;
+  for (const n of NOTICES.slice(0, 3)) {
+    if (y > 470) break;
+    text(n.date || '', 40, y, 11, 'rgba(255,255,255,.55)', 'left', 2); y += 18;
+    for (const ln of wrapText(n.title[LANG] || n.title.ko, 276, 16)) { text(ln, 40, y, 16, '#fff', 'left', 3); y += 22; }
+    for (const b of (n.body[LANG] || n.body.ko)) for (const [k, ln] of wrapText(b, 262, 12).entries()) { if (y > 486) break; text((k ? '   ' : '· ') + ln, 42, y, 12, '#cfe8ff', 'left', 2.5); y += 18; }
+    y += 12;
+  }
+  button(BTN.nclose, '#ff4f72', true, (cx, cy) => text(L('확인', 'OK'), cx, cy, 18, '#fff', 'center', 4, '#8a1f38'), 'nclose');
+}
 // ===== 저장값 =====
 const store = {
   get best() { return +(localStorage.getItem('sd_best') || 0); }, set best(v) { localStorage.setItem('sd_best', v); },
@@ -1504,8 +1527,12 @@ function drawTitle() {
   button(rb, '#2f8ae0', true, (cx, cy) => { icon('chest', cx, cy - 5, 30); text(L('보상', '報酬'), cx, cy + 17, 11, '#fff', 'center', 2.5); }, 'reward');
   ctx.restore();
   if (rbn) { redDot(rb.x + rb.w - 4, rb.y + 4); text(String(rbn), rb.x + rb.w - 4, rb.y + 4, 10, '#fff', 'center', 0); }
+  // 왼쪽 위 두 번째: 공지사항
+  if (NOTICES.length) { button(BTN.notice, '#6b5bb8', true, (cx, cy) => { drawMegaphone(cx + 1, cy - 6); text(L('공지', 'お知らせ'), cx, cy + 17, L(11, 9), '#fff', 'center', 2.5); }, 'notice'); if (noticeUnseen()) redDot(BTN.notice.x + BTN.notice.w - 4, BTN.notice.y + 4); }
   // 오른쪽 위: 소리
   button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawSpeaker(cx - 2, cy, store.mute), 'tmute');
+  if (!noticeAuto && noticeUnseen() && store.best > 0 && T > 1.2) { noticeAuto = true; noticeOpen = true; }
+  if (noticeOpen) drawNotice();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
   text(L('v1.0 베타', 'v1.0 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
@@ -1753,7 +1780,8 @@ function pos(e) {
   return [x, y < SPLIT ? y : Math.max(SPLIT, y - EX)];
 }
 function hitKey(x, y) {
-  if (screen === 'title') return inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : inRect(x, y, BTN.reward) ? 'reward' : inRect(x, y, BTN.tmute) ? 'tmute' : null;
+  if (screen === 'title' && noticeOpen) return 'nclose';
+  if (screen === 'title') return inRect(x, y, BTN.notice) && NOTICES.length ? 'notice' : inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : inRect(x, y, BTN.reward) ? 'reward' : inRect(x, y, BTN.tmute) ? 'tmute' : null;
   if (screen === 'missions') { if (inRect(x, y, BTN.back)) return 'back'; if (inRect(x, y, BTN.attc)) return 'attc'; for (let i = 0; i < 3; i++) if (inRect(x, y, missionClaimRect(i))) return 'mc_' + i; return null; }
   if (screen === 'shop') {
     if (inRect(x, y, BTN.back)) return 'back';
@@ -1782,6 +1810,8 @@ function activate(key) {
     case 'attc': claimAtt(); break;
     case 'sellsel': if (selected >= 0) sellUnit(selected); break;
     case 'tmute': store.mute = !store.mute; sfx('click'); break;
+    case 'notice': noticeOpen = true; sfx('click'); track('notice_open', { id: NOTICES[0] && NOTICES[0].id }); break;
+    case 'nclose': closeNotice(); sfx('click'); break;
     case 'back': screen = 'title'; sfx('click'); break;
     case 'home': screen = 'shop'; sfx('click'); break;
     case 'share': sfx('click'); shareRecord(); break;
