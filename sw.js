@@ -1,8 +1,8 @@
 // 스핀 디펜스 서비스워커: 한 번 받은 그림·소리·폰트는 저장해두고 바로 띄움
 // - 페이지(HTML)와 공지(notices.json)는 항상 네트워크 먼저 (업데이트가 바로 보이게), 안 되면 저장본
 // - 나머지 같은 사이트 파일은 저장본 먼저 + 뒤에서 새로 받아 갱신
-const CACHE = 'sd-v1';
-self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html', './assets/anim.json', './assets/bg.jpg', './assets/Jua-Regular.ttf']).catch(() => {}))); });
+const CACHE = 'sd-v2'; // 그림 파일을 바꿔 배포할 때마다 숫자를 올려 예전 저장본을 지움
+self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html', './assets/anim.json', './assets/bg.jpg']).catch(() => {}))); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
