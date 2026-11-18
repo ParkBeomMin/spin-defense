@@ -406,6 +406,7 @@ function ensureDaily() {
   D = { date: dayKey(), missions: ms, att: false, streak: prev.lastClaim === dayKey(1) ? (prev.streak || 0) : 0, lastClaim: prev.lastClaim || null };
   saveDaily();
 }
+const SHARE_REWARD = 20; // 하루 첫 기록 공유 보상 (광고 시청과 무관)
 const saveDaily = () => localStorage.setItem('sd_daily', JSON.stringify(D));
 // ===== 오늘의 도전: 날짜로 정해지는 덱(잠긴 영웅 포함) + 규칙, 웨이브 15 도달 시 하루 한 번 보석 60 =====
 const CHAL_MODS = [
@@ -1822,6 +1823,7 @@ function drawOver() {
   const canUp = Object.keys(UNLOCK_COST).some(k => !M.unlocked[k] && M.gems >= UNLOCK_COST[k]) || META_KEYS.some(k => (!TYPES[k] || M.unlocked[k]) && metaLv(k) < META_DEF[k].max && M.gems >= metaCost(k));
   if (canUp) redDot(BTN.home.x + BTN.home.w - 4, BTN.home.y + 4);
   button(BTN.share, '#1f9d6b', true, (cx, cy) => { shareIcon(cx - 40, cy); text(L('기록 공유', '記録をシェア'), cx + 10, cy, L(15, 12), '#fff', 'center', 3); }, 'share');
+  if (D && !D.shared) { const sb = BTN.share, bx = sb.x + sb.w - 22, by = sb.y - 6, pz = 1 + 0.06 * Math.sin(T * 5); ctx.save(); ctx.translate(bx, by); ctx.scale(pz, pz); rr(-24, -11, 48, 22, 11); ctx.fillStyle = '#ffcf5a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a4a00'; ctx.stroke(); icon('gem', -12, 0, 11); text('+' + SHARE_REWARD, 8, 1, 12, '#5a3a00', 'center', 0); ctx.restore(); }
   if (S.msgT > 0) { S.msgT -= 1 / 60; ctx.globalAlpha = Math.min(1, S.msgT * 2); text(S.msg, W / 2, 596, 13, S.msgCol, 'center', 3); ctx.globalAlpha = 1; }
 }
 function retryIcon(x, y, k = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, 0, 9, -0.3, Math.PI * 1.55); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(9, -9); ctx.lineTo(11, 1); ctx.lineTo(2, -3); ctx.closePath(); ctx.fill(); ctx.restore(); }
@@ -1856,7 +1858,12 @@ async function shareRecord() {
     if (e && e.name === 'AbortError') method = 'cancel';
     else { try { await navigator.clipboard.writeText(`${txt} ${url}`); method = 'copy'; flash(L('링크를 복사했어요! 친구에게 붙여넣어 보세요', 'リンクをコピーしました！'), '#9be36d', 2); } catch (_) {} }
   }
-  track('share', { wave: S.wave, method });
+  let reward = 0;
+  if (['file', 'link', 'copy'].includes(method)) {
+    ensureDaily();
+    if (!D.shared) { D.shared = true; saveDaily(); reward = SHARE_REWARD; M.gems += reward; saveMeta(); gemPop = { amt: reward, t: 1.4 }; sfx('jackpot'); buzz([20, 30]); flash(L(`공유 고마워요! 보석 +${reward}`, `シェアありがとう！ジェム +${reward}`), '#9be36d', 2.4); }
+  }
+  track('share', { wave: S.wave, method, reward });
 }
 function pickRect(i) { return { x: 30, y: 190 + i * 104, w: 300, h: 92 }; }
 function drawPick() {
