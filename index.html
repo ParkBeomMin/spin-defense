@@ -243,6 +243,8 @@ const BTN = {
   chal:  { x: 290, y: 80,  w: 58,  h: 58 },
   achb:  { x: 276, y: 22,  w: 74,  h: 40 },
   codeb: { x: 10,  y: 22,  w: 74,  h: 40 },
+  rank:  { x: 12,  y: 146, w: 58,  h: 58 },
+  rname: { x: 200, y: 590, w: 140, h: 36 },
   install:{ x: 254, y: 584, w: 96,  h: 30 },
   cgo:   { x: 80,  y: 470, w: 200, h: 54 },
   cback: { x: 120, y: 534, w: 120, h: 36 },
@@ -509,6 +511,83 @@ function drawAch() {
   drawGemPop();
 }
 let gemPop = null;
+// ===== 주간 랭킹 (Firestore REST, 주는 한국 시간 월요일 시작) =====
+const RANK_BASE = 'https://firestore.googleapis.com/v1/projects/practice-aa1c4/databases/(default)/documents/sd_rank';
+function weekKey(off = 0) {
+  const d = new Date(Date.now() + 9 * 3600e3 + off * 7 * 86400e3); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day + 3);
+  const y = d.getUTCFullYear(), w1 = new Date(Date.UTC(y, 0, 4)), wk = 1 + Math.round(((d - w1) / 86400e3 - 3 + ((w1.getUTCDay() + 6) % 7)) / 7);
+  return `${y}-W${String(wk).padStart(2, '0')}`;
+}
+function weekRange() { const d = new Date(Date.now() + 9 * 3600e3), day = (d.getUTCDay() + 6) % 7, mon = new Date(d - day * 86400e3), sun = new Date(+mon + 6 * 86400e3); const f = x => `${x.getUTCMonth() + 1}/${x.getUTCDate()}`; return `${f(mon)}~${f(sun)}`; }
+const deviceId = () => { let id = localStorage.getItem('sd_did'); if (!id) { id = Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-4); localStorage.setItem('sd_did', id); } return id; };
+const nick = () => localStorage.getItem('sd_nick') || '';
+const weekBest = () => { try { const b = JSON.parse(localStorage.getItem('sd_wbest')); return b && b.week === weekKey() ? b.wave : 0; } catch (e) { return 0; } };
+let RANK = { list: null, at: 0, err: false, loading: false, mine: null };
+async function loadRank(force) {
+  if (RANK.loading || (!force && RANK.list && performance.now() - RANK.at < 30000)) return;
+  RANK.loading = true; RANK.err = false;
+  try {
+    const r = await fetch(`${RANK_BASE}/${weekKey()}:runQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: 'wave' }, direction: 'DESCENDING' }], limit: 20 } }) });
+    const j = await r.json(); if (!Array.isArray(j)) throw new Error('bad');
+    RANK.list = j.filter(x => x.document).map(x => { const f = x.document.fields, id = x.document.name.split('/').pop(); return { id, name: (f.name && f.name.stringValue || '???').slice(0, 10), wave: +(f.wave && f.wave.integerValue || 0) }; });
+    RANK.at = performance.now();
+  } catch (e) { RANK.err = true; }
+  RANK.loading = false;
+}
+async function submitScore(wave) {
+  if (PORTAL || !nick()) return false;
+  const week = weekKey();
+  try {
+    const r = await fetch(`${RANK_BASE}/${week}/scores/${deviceId()}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { name: { stringValue: nick().slice(0, 10) }, wave: { integerValue: String(wave) }, at: { integerValue: String(Date.now()) }, lang: { stringValue: LANG } } }) });
+    if (!r.ok) return false;
+    localStorage.setItem('sd_wbest', JSON.stringify({ week, wave })); track('rank_submit', { wave }); RANK.at = 0; await loadRank(true);
+    return true;
+  } catch (e) { return false; }
+}
+const cleanNick = s => String(s || '').replace(/[<>"'`\\/]/g, '').replace(/\s+/g, ' ').trim().slice(0, 10);
+function openNickDialog(after) {
+  if (document.getElementById('codedlg')) return;
+  const wrap = document.createElement('div'); wrap.id = 'codedlg';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+  wrap.innerHTML = `<div style="width:min(300px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:18px 16px 14px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+    <div style="font-size:21px;color:#ffd166;margin-bottom:6px">${L('주간 랭킹에 올릴 이름', '週間ランキングの名前', 'Name for the weekly ranking')}</div>
+    <div style="font-size:12px;opacity:.75;margin-bottom:12px">${L('최대 10자 · 나중에 랭킹 화면에서 바꿀 수 있어요', '最大10文字・あとで変更できます', 'Up to 10 characters, you can change it later')}</div>
+    <input id="nickin" maxlength="10" autocomplete="off" spellcheck="false" value="${nick()}" style="width:100%;box-sizing:border-box;font:20px inherit;font-family:inherit;text-align:center;padding:10px;border-radius:12px;border:2px solid #8fe3ff;background:#1a1233;color:#fff;outline:none">
+    <div id="nickmsg" style="min-height:18px;font-size:12px;margin:8px 0 4px;color:#ffb0b0"></div>
+    <div style="display:flex;gap:8px"><button id="nickno" style="flex:1;font:15px inherit;font-family:inherit;padding:10px;border-radius:12px;border:0;background:#5a5a6a;color:#fff">${L('나중에', 'あとで', 'Later')}</button>
+    <button id="nickok" style="flex:1.4;font:16px inherit;font-family:inherit;padding:10px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('등록', '登録', 'Save')}</button></div></div>`;
+  document.body.appendChild(wrap);
+  const inp = wrap.querySelector('#nickin');
+  wrap.querySelector('#nickno').onclick = () => { wrap.remove(); localStorage.setItem('sd_nick_skip', '1'); };
+  const ok = () => { const n = cleanNick(inp.value); if (!n) { wrap.querySelector('#nickmsg').textContent = L('이름을 입력해 주세요', '名前を入力してね', 'Please enter a name'); return; } localStorage.setItem('sd_nick', n); localStorage.removeItem('sd_nick_skip'); wrap.remove(); sfx('click'); if (after) after(); };
+  wrap.querySelector('#nickok').onclick = ok; inp.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
+  setTimeout(() => inp.focus(), 50);
+}
+function rankAfterGame() {
+  if (PORTAL || S.chal || S.wave < 3 || S.wave <= weekBest()) return;
+  const w = S.wave, go = () => submitScore(w).then(ok => { if (ok && screen === 'over') { const i = (RANK.list || []).findIndex(x => x.id === deviceId()); S.rankMsg = i >= 0 ? L(`이번 주 랭킹 ${i + 1}위!`, `今週のランキング ${i + 1}位！`, `Weekly rank #${i + 1}!`) : L(`이번 주 기록 WAVE ${w} 등록`, `今週の記録 WAVE ${w} 登録`, `Weekly best WAVE ${w} saved`); } });
+  if (nick()) go(); else if (!localStorage.getItem('sd_nick_skip')) setTimeout(() => { if (screen === 'over') openNickDialog(go); }, 900);
+}
+function drawRank() {
+  ctx.fillStyle = 'rgba(14,8,32,.9)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
+  text(L('주간 랭킹', '週間ランキング', 'Weekly Ranking'), W / 2, 46, 30, '#ffd166', 'center', 6);
+  text(L(`${weekRange()} · 월요일에 새로 시작`, `${weekRange()}・毎週月曜リセット`, `${weekRange()} · resets every Monday`), W / 2, 80, 12, 'rgba(255,255,255,.65)', 'center', 2);
+  const list = RANK.list, me = deviceId();
+  if (!list) text(RANK.err ? L('랭킹을 불러오지 못했어요', '読み込めませんでした', 'Could not load the ranking') : L('불러오는 중...', '読み込み中...', 'Loading...'), W / 2, 250, 15, '#cfe8ff', 'center', 3);
+  else if (!list.length) text(L('아직 기록이 없어요. 첫 1등이 되어보세요!', 'まだ記録がありません。1位を狙おう！', 'No scores yet. Be the first!'), W / 2, 250, 14, '#cfe8ff', 'center', 3);
+  else list.slice(0, 10).forEach((r, i) => {
+    const y = 104 + i * 44, mine = r.id === me;
+    rr(16, y, 328, 38, 10); ctx.fillStyle = mine ? 'rgba(255,207,90,.28)' : i < 3 ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.06)'; ctx.fill();
+    if (mine) { ctx.strokeStyle = '#ffcf5a'; ctx.lineWidth = 2; ctx.stroke(); }
+    text(String(i + 1), 40, y + 19, i < 3 ? 20 : 15, ['#ffd166', '#dfe6ee', '#e0a070'][i] || '#fff', 'center', 3);
+    text(r.name, 66, y + 19, 15, '#fff', 'left', 3);
+    text(`WAVE ${r.wave}`, 330, y + 19, 15, '#8fe3ff', 'right', 3);
+  });
+  const myI = list ? list.findIndex(r => r.id === me) : -1, wb = weekBest();
+  text(nick() ? L(`내 이름: ${nick()} · 이번 주 최고 ${wb ? 'WAVE ' + wb : '없음'}${myI >= 10 ? ` (${myI + 1}위)` : ''}`, `名前：${nick()}・今週の最高 ${wb ? 'WAVE ' + wb : 'なし'}`, `Name: ${nick()} · Best this week ${wb ? 'WAVE ' + wb : '-'}`) : L('게임이 끝나면 이름을 등록할 수 있어요', 'ゲーム終了後に名前を登録できます', 'You can register a name after a game'), W / 2, 556, 12, '#cfe8ff', 'center', 3);
+  button(BTN.rname, '#5a49a8', true, (cx, cy) => text(L('이름 바꾸기', '名前を変更', 'Change name'), cx, cy, 13, '#fff', 'center', 3), 'rname');
+  button({ x: 20, y: 590, w: 140, h: 36 }, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る', 'Back'), cx, cy, 15, '#fff', 'center', 3), 'rback');
+}
 // ===== 이벤트 코드: assets/codes.json 에 코드의 해시·기간·보상을 적어두고, 기기마다 코드당 한 번 받기 =====
 // codes.json 항목: { id, h: sha256('sd:' + 대문자 코드), from: 'YYYY-MM-DD', until: 'YYYY-MM-DD'(그날까지 포함), gems, ch(채널) }
 let CODES = [];
@@ -1329,6 +1408,7 @@ function gameOver() {
   // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
   const total = Math.round(S.wave * 2 + S.kills / 25 + S.bossKills * 5);
   S.gemsEarned = total; M.gems += total - S.gemsGiven; S.gemsGiven = total; saveMeta();
+  rankAfterGame();
 }
 function revive() {
   track('revive', { wave: S.wave, mode: adMode() ? 'ad' : 'time' });
@@ -1975,6 +2055,7 @@ function drawTitle() {
   button(rb, '#2f8ae0', true, (cx, cy) => { icon('chest', cx, cy - 5, 30); text(L('보상', '報酬', 'Rewards'), cx, cy + 17, 11, '#fff', 'center', 2.5); }, 'reward');
   ctx.restore();
   if (rbn) { redDot(rb.x + rb.w - 4, rb.y + 4); text(String(rbn), rb.x + rb.w - 4, rb.y + 4, 10, '#fff', 'center', 0); }
+  if (!PORTAL) button(BTN.rank, '#b07a1a', true, (cx, cy) => { icon('star', cx, cy - 5, 28); text(L('랭킹', 'ランク', 'Rank'), cx, cy + 17, 11, '#fff', 'center', 2.5); }, 'rank');
   // 왼쪽 위 두 번째: 공지사항
   if (NOTICES.length) { button(BTN.notice, '#6b5bb8', true, (cx, cy) => { drawMegaphone(cx + 1, cy - 6); text(L('공지', 'お知らせ', 'News'), cx, cy + 17, L(11, 9, 10), '#fff', 'center', 2.5); }, 'notice'); if (noticeUnseen()) redDot(BTN.notice.x + BTN.notice.w - 4, BTN.notice.y + 4); }
   // 오른쪽 위: 소리
@@ -1988,7 +2069,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v1.8 베타', 'v1.8 ベータ', 'v1.8 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v1.9 베타', 'v1.9 ベータ', 'v1.9 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -2077,6 +2158,7 @@ function drawOver() {
   if (!PORTAL) button(BTN.share, '#1f9d6b', true, (cx, cy) => { shareIcon(cx - 40, cy); text(L('기록 공유', '記録をシェア', 'Share'), cx + 10, cy, L(15, 12, 15), '#fff', 'center', 3); }, 'share');
   if (!PORTAL && D && !D.shared) { const sb = BTN.share, bx = sb.x + sb.w - 22, by = sb.y - 6, pz = 1 + 0.06 * Math.sin(T * 5); ctx.save(); ctx.translate(bx, by); ctx.scale(pz, pz); rr(-24, -11, 48, 22, 11); ctx.fillStyle = '#ffcf5a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a4a00'; ctx.stroke(); icon('gem', -12, 0, 11); text('+' + SHARE_REWARD, 8, 1, 12, '#5a3a00', 'center', 0); ctx.restore(); }
   drawComeback();
+  if (S.rankMsg) text(S.rankMsg, W / 2, 96, 14, '#ffd166', 'center', 4);
   if (S.msgT > 0) { S.msgT -= 1 / 60; ctx.globalAlpha = Math.min(1, S.msgT * 2); text(S.msg, W / 2, 596, 13, S.msgCol, 'center', 3); ctx.globalAlpha = 1; }
 }
 // 게임오버 아래: 다시 올 이유 (출석·오늘의 도전)
@@ -2257,6 +2339,7 @@ function draw() {
   if (screen === 'shop') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawShop(); ctx.restore(); return; }
   if (screen === 'missions') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawMissions(); ctx.restore(); return; }
   if (screen === 'ach') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawAch(); ctx.restore(); return; }
+  if (screen === 'rank') { drawBG(); ctx.save(); ctx.translate(OX, EX / 2); drawRank(); ctx.restore(); return; }
   ctx.save();
   if (S.shake > 0) { const m = Math.min(1, S.shake / 0.4); ctx.translate((Math.random() - 0.5) * 10 * m, (Math.random() - 0.5) * 10 * m); }
   if (S.kick) { const q = S.kick.t / 0.12; ctx.translate(S.kick.x * q, S.kick.y * q); }
@@ -2303,7 +2386,8 @@ function hitKey(x, y) {
   if (screen === 'title' && noticeOpen) return 'nclose';
   if (screen === 'title' && chalOpen) return inRect(x, y, BTN.cgo) ? 'cgo' : inRect(x, y, BTN.cback) ? 'cback' : null;
   if (screen === 'title' && installEvt && inRect(x, y, BTN.install)) return 'install';
-  if (screen === 'title') return inRect(x, y, BTN.chal) ? 'chal' : inRect(x, y, BTN.notice) && NOTICES.length ? 'notice' : inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : inRect(x, y, BTN.reward) ? 'reward' : inRect(x, y, BTN.tmute) ? 'tmute' : null;
+  if (screen === 'title') return inRect(x, y, BTN.chal) ? 'chal' : inRect(x, y, BTN.notice) && NOTICES.length ? 'notice' : inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : inRect(x, y, BTN.reward) ? 'reward' : (!PORTAL && inRect(x, y, BTN.rank)) ? 'rank' : inRect(x, y, BTN.tmute) ? 'tmute' : null;
+  if (screen === 'rank') return inRect(x, y, BTN.rname) ? 'rname' : inRect(x, y, { x: 20, y: 590, w: 140, h: 36 }) ? 'rback' : null;
   if (screen === 'ach') { if (inRect(x, y, BTN.back)) return 'back'; if (y < ACH_TOP || y > ACH_BOT) return null; for (let i = 0; i < ACH.length; i++) { const yy = 108 + i * 66 - achScroll; if (inRect(x, y, { x: 250, y: yy + 11, w: 92, h: 36 })) return 'ach_' + ACH[i].id; } return null; }
   if (screen === 'missions') { if (inRect(x, y, BTN.achb)) return 'achb'; if (!PORTAL && inRect(x, y, BTN.codeb)) return 'codeb'; if (inRect(x, y, BTN.back)) return 'back'; if (inRect(x, y, BTN.attc)) return 'attc'; for (let i = 0; i < 3; i++) if (inRect(x, y, missionClaimRect(i))) return 'mc_' + i; return null; }
   if (screen === 'shop') {
@@ -2338,6 +2422,9 @@ function activate(key) {
     case 'nclose': closeNotice(); sfx('click'); break;
     case 'achb': screen = 'ach'; achScroll = 0; sfx('click'); break;
     case 'codeb': sfx('click'); openCodeDialog(); break;
+    case 'rank': screen = 'rank'; loadRank(); sfx('click'); track('rank_open', {}); break;
+    case 'rback': screen = 'title'; sfx('click'); break;
+    case 'rname': sfx('click'); openNickDialog(() => { const wb = weekBest(); if (wb) submitScore(wb); }); break;
     case 'chal': chalOpen = true; sfx('click'); break;
     case 'install': if (installEvt) { const ev = installEvt; ev.prompt(); ev.userChoice.then(r => { track('pwa_prompt', { outcome: r && r.outcome }); if (r && r.outcome === 'accepted') installEvt = null; }).catch(() => {}); } sfx('click'); break;
     case 'cback': chalOpen = false; sfx('click'); break;
