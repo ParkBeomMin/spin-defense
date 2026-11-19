@@ -149,7 +149,7 @@ function drawAnim(type, anim, p, x, foot, h, flip = false, alpha = 1, sc = 1, wh
 }
 // 발 위치 기준점 (스프라이트 폭 대비). 공격 포즈는 이펙트 때문에 폭이 넓어서 따로 지정
 const ANCH = { sword: 0.435, bow: 0.435, magic: 0.441, ice: 0.395, bard: 0.485, ninja: 0.536, storm: 0.463, dwarf: 0.532, alch: 0.419, sniper: 0.438, cat: 0.537, slimeking: 0.486, lich: 0.431, sword_atk: 0.34, bow_atk: 0.386, magic_atk: 0.367, ice_atk: 0.343 };
-const IMG_NAMES = ['slimeking', 'lich', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
+const IMG_NAMES = ['slimeking', 'lich', 'dragon', 'demonlord', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
 const ASSET_V = 12; // 그림 파일을 바꿔 배포할 때 올림 (서비스워커 저장본 갱신용)
 function loadAssets() {
   const ps = IMG_NAMES.map(n => new Promise(res => { const im = new Image(); im.onload = () => res(); im.onerror = () => res(); im.src = `assets/${n}.png?v=${ASSET_V}`; IMG[n] = im; }));
@@ -457,6 +457,8 @@ const ACH = [
   { id: 'w10',   icon: 'chest', name: L('웨이브 10 돌파', 'ウェーブ10突破', 'Pass wave 10'),     goal: 10,    val: () => store.best,  r: 30 },
   { id: 'w20',   icon: 'chest', name: L('웨이브 20 돌파', 'ウェーブ20突破', 'Pass wave 20'),     goal: 20,    val: () => store.best,  r: 60 },
   { id: 'w30',   icon: 'chest', name: L('웨이브 30 돌파', 'ウェーブ30突破', 'Pass wave 30'),     goal: 30,    val: () => store.best,  r: 120 },
+  { id: 'w40',   icon: 'chest', name: L('웨이브 40 돌파', 'ウェーブ40突破', 'Pass wave 40'),     goal: 40,    val: () => store.best,  r: 200 },
+  { id: 'w50',   icon: 'chest', name: L('웨이브 50 돌파 (마왕 처치)', 'ウェーブ50突破（魔王撃破）', 'Pass wave 50 (beat the Demon Lord)'), goal: 50, val: () => store.best, r: 300 },
   { id: 'k1k',   icon: 'sword', name: L('몬스터 1,000마리 처치', 'モンスター1,000体撃破', 'Defeat 1,000 monsters'),  goal: 1000,  val: () => M.st.kills, r: 50 },
   { id: 'k10k',  icon: 'sword', name: L('몬스터 10,000마리 처치', 'モンスター10,000体撃破', 'Defeat 10,000 monsters'), goal: 10000, val: () => M.st.kills, r: 150 },
   { id: 'b5',    icon: 'heart', name: L('보스 5마리 처치', 'ボス5体撃破', 'Defeat 5 bosses'),        goal: 5,     val: () => M.st.boss,  r: 60 },
@@ -561,6 +563,7 @@ const THEMES = [
   { id: 'desert', bg: 'bg_desert', name: L('모래 사막', '砂の砂漠', 'Sand Desert'),  path: ['#b8834a', '#e3b779', 'rgba(150,100,50,.5)'] },
   { id: 'snow',   bg: 'bg_snow',   name: L('얼음 설원', '氷の雪原', 'Ice Field'),  path: ['#8fa6bd', '#cfdeeb', 'rgba(110,135,160,.5)'] },
   { id: 'lava',   bg: 'bg_lava',   name: L('불의 화산', '炎の火山', 'Fire Volcano'),  path: ['#3e2a26', '#5e4640', 'rgba(255,120,40,.45)'] },
+  { id: 'castle', bg: 'bg_castle', name: L('어둠의 성', '闇の城', 'Dark Castle'),  path: ['#2e2440', '#4a3a66', 'rgba(170,90,255,.45)'] },
 ];
 const themeIdx = w => w < 1 ? 0 : Math.floor((w - 1) / 10) % THEMES.length;
 setTimeout(() => { for (const t of THEMES) if (!IMG[t.bg]) { const im = new Image(); im.src = `assets/${t.bg}.jpg?v=${ASSET_V}`; IMG[t.bg] = im; } }, 2500);
@@ -575,6 +578,7 @@ const MUSIC_SETS = {
   desert: { ch: [C5(74, 1), C5(72, 0), C5(70, 0), C5(69, 0), C5(74, 1), C5(72, 0), C5(70, 0), C5(69, 0)], arp: [0, 2, 1, 3, 1, 2, 0, 1], step: 0.23, lead: 'triangle' },
   snow:   { ch: [C5(69, 1), C5(65, 0), C5(72, 0), C5(67, 0), C5(69, 1), C5(65, 0), C5(67, 0), C5(64, 0)], arp: [0, 1, 2, 3, 3, 2, 1, 0], step: 0.3, lead: 'sine' },
   lava:   { ch: [C5(64, 1), C5(60, 0), C5(62, 0), C5(59, 0), C5(64, 1), C5(60, 0), C5(62, 0), C5(59, 0)], arp: [0, 0, 2, 1, 3, 1, 2, 1], step: 0.21, lead: 'sawtooth' },
+  castle: { ch: [C5(62, 1), C5(58, 0), C5(65, 0), C5(57, 1), C5(62, 1), C5(55, 1), C5(58, 0), C5(57, 0)], arp: [0, 3, 2, 1, 0, 2, 3, 2], step: 0.26, lead: 'square' },
   boss:   { ch: [C5(69, 1), C5(65, 0), C5(67, 0), C5(64, 0), C5(69, 1), C5(65, 0), C5(62, 1), C5(64, 0)], arp: [0, 2, 3, 2, 0, 2, 3, 1], step: 0.16, lead: 'square', drums: true },
 };
 function musicNote(f, t, dur, type, vol, f2) {
@@ -719,8 +723,25 @@ const BOSSES = {
   ogre:      { spr: 'boss',      h: 46, hp: 1.0,  name: L('오우거 왕', 'オーガ王', 'Ogre King'),      hint: L('가끔 돌진해요!', 'ときどき突進！', 'Charges now and then!') },
   slimeking: { spr: 'slimeking', h: 40, hp: 0.75, name: L('슬라임 왕', 'キングスライム', 'Slime King'), hint: L('맞으면 작은 슬라임으로 쪼개져요', '分裂して小さなスライムに', 'Splits into small slimes') },
   lich:      { spr: 'lich',      h: 50, hp: 0.85, name: L('리치', 'リッチ', 'Lich'),          hint: L('투명해지면 공격이 안 통해요', '透明な間は攻撃が効かない', 'Immune while invisible') },
+  dragon:    { spr: 'dragon',    h: 52, hp: 0.9,  name: L('화염 용왕', '炎の竜王', 'Fire Dragon King'), hint: L('불을 뿜어 영웅을 잠시 멈춰요', '炎でヒーローを一時停止', 'Breathes fire to stop your heroes') },
+  demonlord: { spr: 'demonlord', h: 54, hp: 0.85, name: L('마왕', '魔王', 'Demon Lord'),    hint: L('맞으면 뒤로 순간이동하고 저주를 걸어요', '後ろへワープして呪いをかける', 'Warps back and curses your heroes') },
 };
-const bossKindFor = w => ['ogre', 'slimeking', 'lich'][Math.max(0, Math.floor(w / 10) - 1) % 3];
+const BOSS_ORDER = ['ogre', 'slimeking', 'lich', 'dragon', 'demonlord'];
+const bossKindFor = w => BOSS_ORDER[Math.max(0, Math.floor(w / 10) - 1) % BOSS_ORDER.length];
+function dragonBreath(e) {
+  const idx = S.units.map((u, i) => u ? i : -1).filter(i => i >= 0).sort(() => Math.random() - 0.5).slice(0, 3);
+  for (const i of idx) { const u = S.units[i], [cx0, cy0] = cellCenter(i); u.burnT = 2.5; u.atk = null; S.fx.push({ k: 'shock', x: cx0, y: cy0, col: '#ff8a2a', r0: 6, r1: 30, w: 5, t: 0.4, max: 0.4 }); puffs(cx0, cy0, 8, '255,140,50', 9); }
+  S.fx.push({ k: 'shock', x: e.x, y: e.y - 24, col: '#ffb24a', r0: 8, r1: 60, w: 5, t: 0.45, max: 0.45 });
+  flashScreen(0.18, '#ffb070'); addShake(0.3); sfx('bigboom');
+  if (idx.length) flash(L('용의 불꽃! 영웅 몇 명이 잠시 멈췄어요', '竜の炎！ヒーローが少し止まった', 'Dragon fire! Some heroes are stunned'), '#ffb24a', 2);
+}
+function lordWarp(e) {
+  puffs(e.x, e.y - 20, 14, '160,90,240', 12); sfx('zap'); addShake(0.2);
+  e.d = Math.max(0, e.d - PER * 0.3);
+  S.fx.push({ k: 'shock', x: e.x, y: e.y - 20, col: '#b066ff', r0: 8, r1: 50, w: 5, t: 0.45, max: 0.45 });
+  setTimeout(() => { if (!e.dead) { puffs(e.x, e.y - 20, 14, '160,90,240', 12); spawnMinion('skeleton', e, 1.3, 2); } }, 60);
+  flash(L('마왕이 뒤로 순간이동했어요!', '魔王が後ろへワープ！', 'The Demon Lord warped back!'), '#c58bff', 2);
+}
 function spawnMinion(kind, near, hpMul, n) {
   for (let i = 0; i < n; i++) { const k = ENEMY[kind], hp = Math.round(enemyHP() * hpMul); const e = { roarT: 0, kind, d: Math.max(0, near.d - 6 - i * 9), hp, max: hp, spd: k.spd, slowT: 0, slowF: 1, boss: false, r: 10, hit: 0, bob: Math.random() * 6, x: near.x + (Math.random() - 0.5) * 18, y: near.y + (Math.random() - 0.5) * 10, placed: true, dir: 1, lane: (Math.random() * 2 - 1) * 9 }; S.enemies.push(e); }
   puffs(near.x, near.y - 6, 8, kind === 'slime' ? '255,120,120' : '200,190,230', 9);
@@ -734,7 +755,7 @@ function spawn(boss) {
   const kind = boss ? 'boss' : enemyKind(), k = ENEMY[kind];
   const bk = boss ? bossKindFor(S.wave) : null;
   const hp = boss ? enemyHP() * TUNE.boss * (1 + TUNE.bossGrow * (S.wave / 10 - 1)) * BOSSES[bk].hp : Math.round(enemyHP() * k.hp);
-  S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, bk, d: 0, hp, max: hp, spd: (boss ? 26 : k.spd) * (S.cm.spd || 1), slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7, chargeT: 5, vanT: 4.5 });
+  S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, bk, d: 0, hp, max: hp, spd: (boss ? 26 : k.spd) * (S.cm.spd || 1), slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7, chargeT: 5, vanT: 4.5, breathT: 4.5, curseT: 5 });
 }
 
 // ===== 슬롯 =====
@@ -886,6 +907,7 @@ function update(dt) {
   for (const k in S.lvPop) S.lvPop[k] = Math.max(0, S.lvPop[k] - dt);
   updateReels(dt);
   autoMergeTick(dt);
+  if (S.curse > 0) S.curse -= dt;
   S.waveT -= dt; if (S.waveT <= 0) startWave();
   if (S.spawnLeft > 0) { S.spawnT -= dt; if (S.spawnT <= 0) { spawn(false); S.spawnLeft--; S.spawnT = S.spawnGap; } }
   for (const e of S.enemies) {
@@ -898,6 +920,15 @@ function update(dt) {
       } else if (e.bk === 'lich') {
         if (e.vanish > 0) { e.vanish -= dt; if (e.vanish <= 0) { puffs(e.x, e.y - 20, 8, '190,140,255', 10); sfx('zap'); } }
         else { e.vanT -= dt; if (e.vanT <= 0) { e.vanish = 2.0; e.vanT = 6.5; puffs(e.x, e.y - 20, 10, '150,100,220', 11); sfx('zap'); spawnMinion('skeleton', e, 1.4, 2); } }
+      } else if (e.bk === 'dragon') {
+        // 화염 용왕: 7초마다 불을 뿜어 영웅 3명을 2.5초 동안 멈춘다
+        e.breathT -= dt; e.warn = e.breathT < 0.8;
+        if (e.breathT <= 0) { e.breathT = 7; e.warn = false; dragonBreath(e); }
+      } else if (e.bk === 'demonlord') {
+        // 마왕: 체력 66%·33%에서 길 뒤쪽으로 순간이동(+해골 2), 9초마다 3초간 저주(영웅 공격 속도 감소)
+        for (const [key, th] of [['warp1', 0.66], ['warp2', 0.33]]) if (!e[key] && e.hp < e.max * th) { e[key] = true; lordWarp(e); }
+        e.curseT -= dt; e.warn = e.curseT < 0.8;
+        if (e.curseT <= 0) { e.curseT = 9; e.warn = false; S.curse = 3; flash(L('마왕의 저주! 3초 동안 공격이 느려져요', '魔王の呪い！3秒間 攻撃が遅くなる', 'Demon curse! Heroes attack slower for 3s'), '#c58bff', 2.2); sfx('zap'); addShake(0.25); const [cx0, cy0] = cellCenter(7); S.fx.push({ k: 'shock', x: cx0, y: cy0, col: '#b066ff', r0: 10, r1: 170, w: 7, t: 0.6, max: 0.6 }); }
       }
     }
     if (e.hurtT > 0) e.hurtT -= dt;
@@ -944,7 +975,8 @@ function update(dt) {
       if (u.atk >= total) u.atk = null;
     }
     if (drag && drag.idx === i && drag.moved) { u.atk = null; return; }
-    u.cd -= dt; if (u.cd > 0 || u.atk != null) return;
+    if (u.burnT > 0) { u.burnT -= dt; return; }
+    u.cd -= dt * (S.curse > 0 ? 0.55 : 1); if (u.cd > 0 || u.atk != null) return;
     const target = nearestTarget(ux, uy, stats(u).range);
     if (!target) return;
     u.cd = stats(u).rate; u.atk = 0; u.fired = false; u.tgt = target; u.face = target.x < ux ? -1 : 1;
@@ -1355,6 +1387,7 @@ function drawEnemy(e) {
   if (e.slowF < 1) { if (!EA) { ctx.globalAlpha = 0.3; sprite(k, ex, ey + 7 - hop, h, e.dir < 0, 1, 1 + squash, 1 - squash, 0, 0); } ctx.globalAlpha = EA ? 0.16 : 0.3; ctx.fillStyle = '#9fdcff'; ctx.beginPath(); ctx.ellipse(ex, ey - h / 2 + 7, h * 0.42, h * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff'; for (let s = 0; s < 3; s++) { const a = T * 2 + s * 2.1; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * h * 0.35, ey - h / 2 + 7 + Math.sin(a) * h * 0.3, 1.3, 0, Math.PI * 2); ctx.fill(); } }
   ctx.restore();
   ctx.globalAlpha = 1;
+  if (e.warn && (e.bk === 'dragon' || e.bk === 'demonlord')) { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, e.bk === 'dragon' ? '#ff8a1f' : '#c58bff', 'center', 5); }
   if (e.warn && e.bk === 'ogre') { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, '#ff4f4f', 'center', 5); }
   if (e.charging > 0) { ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = '#ff8a6a'; ctx.lineWidth = 3; for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(e.x - e.dir * (8 + k * 7), e.y - h * 0.3 - k * 4); ctx.lineTo(e.x - e.dir * (20 + k * 9), e.y - h * 0.3 - k * 4); ctx.stroke(); } ctx.restore(); }
   if (e.stunT > 0) { for (let k = 0; k < 3; k++) { const ang = T * 6 + k * 2.09; icon('star', e.x + Math.cos(ang) * (e.boss ? 14 : 9), e.y - h + 2 + Math.sin(ang) * 3, e.boss ? 9 : 7); } }
@@ -1559,6 +1592,8 @@ function drawField() {
     const [x, y] = cellCenter(i);
     if (i === selected) { rr(x - 25, y - 25, 50, 50, 11); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke(); }
     drawUnitAt(u, x, y, { alpha: drag && drag.moved && drag.idx === i ? 0.3 : 1 });
+    if (u.burnT > 0) { ctx.save(); rr(x - 25, y - 25, 50, 50, 10); ctx.fillStyle = `rgba(60,20,0,${0.35 + 0.1 * Math.sin(T * 12)})`; ctx.fill(); for (let k = 0; k < 4; k++) { const ph = (T * 2.2 + k * 0.27) % 1, fx0 = x - 15 + k * 10; ctx.globalAlpha = 1 - ph; ctx.fillStyle = k % 2 ? '#ffb24a' : '#ff6a2a'; ctx.beginPath(); ctx.ellipse(fx0, y + 14 - ph * 30, 4 - ph * 2, 7 - ph * 3, 0, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+    if (S.curse > 0) { ctx.save(); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(T * 8 + i); ctx.strokeStyle = '#b066ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y + 4, 20 + 2 * Math.sin(T * 6 + i), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   });
   for (const e of es) if (e.y >= GY) drawEnemy(e);
   // 선택한 영웅 위 '판매' 버튼
@@ -1817,7 +1852,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v1.4 베타', 'v1.4 ベータ', 'v1.4 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v1.5 베타', 'v1.5 ベータ', 'v1.5 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
