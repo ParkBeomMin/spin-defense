@@ -1616,6 +1616,14 @@ function betweenGames(next) {
 // ===== 그리기 유틸 =====
 function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
 // 글자가 maxW보다 넓으면 글자 크기를 줄인다 (일본어처럼 긴 문구용)
+// 칸보다 긴 설명은 잠깐 멈췄다가 왼쪽으로 흘러가고, 끝에서 다시 잠깐 멈춘 뒤 처음으로 (줄마다 시작 시점을 살짝 엇갈리게)
+function marqueeText(s, x, y, size, col, boxW, seed = 0) {
+  ctx.font = `${size}px ${FONT}`; const w = ctx.measureText(s).width;
+  if (w <= boxW) { text(s, x, y, size, col, 'left', 2.5); return; }
+  const over = w - boxW + 6, SPD = 24, HOLD = 1.4, run = over / SPD, cyc = HOLD + run + HOLD;
+  const t = (T + seed * 0.7) % cyc, off = t < HOLD ? 0 : t < HOLD + run ? (t - HOLD) * SPD : over;
+  text(s, x - off, y, size, col, 'left', 2.5);
+}
 function fitSize(s, size, maxW) { ctx.font = `${size}px ${FONT}`; const w = ctx.measureText(s).width; return w > maxW ? Math.max(10, Math.floor(size * maxW / w)) : size; }
 function text(s, x, y, size, col = '#fff', align = 'center', stroke = 0, strokeCol = 'rgba(30,15,50,.9)') {
   ctx.font = `${size}px ${FONT}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
@@ -2322,7 +2330,7 @@ function drawOver() {
   overGoals().forEach((g, i) => {
     const y = 326 + i * 30;
     if (g.hero) sprite(g.hero, 72, y + 11, 24); else icon(g.icon, 72, y, 18);
-    ctx.save(); ctx.beginPath(); ctx.rect(86, y - 12, 214, 24); ctx.clip(); text(g.txt, 88, y - (g.p != null ? 3 : 0), 12, g.col, 'left', 3); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(86, y - 12, 214, 24); ctx.clip(); marqueeText(g.txt, 88, y - (g.p != null ? 3 : 0), 12, g.col, 210, i); ctx.restore();
     if (g.p != null) { rr(88, y + 7, 200, 5, 2.5); ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fill(); rr(88, y + 7, 200 * Math.max(0.03, Math.min(1, g.p)), 5, 2.5); ctx.fillStyle = g.p >= 1 ? '#9be36d' : '#8fe3ff'; ctx.fill(); }
   });
   if (!S.revived && !S.rushClear) button(BTN.revive, '#2f8ae0', true, (cx, cy) => { icon('heart', cx - 70, cy, 24); if (adMode()) { text(L('광고 보고 부활', '広告を見て復活', 'Watch ad to revive'), cx + 10, cy, 18, '#fff', 'center', 4); rr(cx + 72, cy - 22, 24, 14, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', cx + 84, cy - 15, 9, '#5a3a00'); } else text(L(`${REVIVE_WAIT}초 쉬고 부활`, `${REVIVE_WAIT}秒休んで復活`, `Rest ${REVIVE_WAIT}s & revive`), cx + 10, cy, 18, '#fff', 'center', 4); }, 'revive');
@@ -2459,7 +2467,7 @@ function drawShop() {
     text(isHero ? TYPES[k].name : d.name, 72, y + 16, 15, locked ? 'rgba(255,255,255,.6)' : '#fff', 'left', 3);
     if (!locked) text(`Lv.${l}`, 72 + ctx.measureText(isHero ? TYPES[k].name : d.name).width + 8, y + 17, 11, maxed ? '#ffd166' : 'rgba(255,255,255,.55)', 'left', 2);
     const sub = isHero ? (locked ? TYPES[k].role : (l > 0 ? L(`공격력 +${l * 8}%`, `攻撃力 +${l * 8}%`, `ATK +${l * 8}%`) + (maxed ? '' : ` → +${(l + 1) * 8}%`) : TYPES[k].role)) : (l > 0 ? d.desc(l) + (maxed ? '' : ` → ${d.desc(l + 1).replace(/^.*?([+-])/, '$1')}`) : d.desc(1));
-    ctx.save(); ctx.beginPath(); ctx.rect(70, y, isHero ? 124 : 188, 56); ctx.clip(); text(sub, 72, y + 38, 11, '#cfe8ff', 'left', 2.5); ctx.restore();
+    { const bw = isHero ? 124 : 188; ctx.save(); ctx.beginPath(); ctx.rect(70, y, bw, 56); ctx.clip(); marqueeText(sub, 72, y + 38, 11, '#cfe8ff', bw - 4, i); ctx.restore(); }
     const b = shopBuyRect(i);
     if (locked) {
       const ok = M.gems >= UNLOCK_COST[k];
