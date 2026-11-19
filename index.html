@@ -149,7 +149,7 @@ function drawAnim(type, anim, p, x, foot, h, flip = false, alpha = 1, sc = 1, wh
 }
 // 발 위치 기준점 (스프라이트 폭 대비). 공격 포즈는 이펙트 때문에 폭이 넓어서 따로 지정
 const ANCH = { sword: 0.435, bow: 0.435, magic: 0.441, ice: 0.395, bard: 0.485, ninja: 0.536, storm: 0.463, dwarf: 0.532, alch: 0.419, sniper: 0.438, cat: 0.537, slimeking: 0.486, lich: 0.431, sword_atk: 0.34, bow_atk: 0.386, magic_atk: 0.367, ice_atk: 0.343 };
-const IMG_NAMES = ['slimeking', 'lich', 'dragon', 'demonlord', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
+const IMG_NAMES = ['slimeking', 'lich', 'dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
 const ASSET_V = 12; // 그림 파일을 바꿔 배포할 때 올림 (서비스워커 저장본 갱신용)
 function loadAssets() {
   const ps = IMG_NAMES.map(n => new Promise(res => { const im = new Image(); im.onload = () => res(); im.onerror = () => res(); im.src = `assets/${n}.png?v=${ASSET_V}`; IMG[n] = im; }));
@@ -459,6 +459,8 @@ const ACH = [
   { id: 'w30',   icon: 'chest', name: L('웨이브 30 돌파', 'ウェーブ30突破', 'Pass wave 30'),     goal: 30,    val: () => store.best,  r: 120 },
   { id: 'w40',   icon: 'chest', name: L('웨이브 40 돌파', 'ウェーブ40突破', 'Pass wave 40'),     goal: 40,    val: () => store.best,  r: 200 },
   { id: 'w50',   icon: 'chest', name: L('웨이브 50 돌파 (마왕 처치)', 'ウェーブ50突破（魔王撃破）', 'Pass wave 50 (beat the Demon Lord)'), goal: 50, val: () => store.best, r: 300 },
+  { id: 'w75',   icon: 'chest', name: L('웨이브 75 돌파', 'ウェーブ75突破', 'Pass wave 75'), goal: 75, val: () => store.best, r: 400 },
+  { id: 'w100',  icon: 'chest', name: L('웨이브 100 돌파 (혼돈의 군주 처치)', 'ウェーブ100突破（混沌の君主撃破）', 'Pass wave 100 (beat the Chaos Overlord)'), goal: 100, val: () => store.best, r: 1000 },
   { id: 'k1k',   icon: 'sword', name: L('몬스터 1,000마리 처치', 'モンスター1,000体撃破', 'Defeat 1,000 monsters'),  goal: 1000,  val: () => M.st.kills, r: 50 },
   { id: 'k10k',  icon: 'sword', name: L('몬스터 10,000마리 처치', 'モンスター10,000体撃破', 'Defeat 10,000 monsters'), goal: 10000, val: () => M.st.kills, r: 150 },
   { id: 'b5',    icon: 'heart', name: L('보스 5마리 처치', 'ボス5体撃破', 'Defeat 5 bosses'),        goal: 5,     val: () => M.st.boss,  r: 60 },
@@ -564,6 +566,11 @@ const THEMES = [
   { id: 'snow',   bg: 'bg_snow',   name: L('얼음 설원', '氷の雪原', 'Ice Field'),  path: ['#8fa6bd', '#cfdeeb', 'rgba(110,135,160,.5)'] },
   { id: 'lava',   bg: 'bg_lava',   name: L('불의 화산', '炎の火山', 'Fire Volcano'),  path: ['#3e2a26', '#5e4640', 'rgba(255,120,40,.45)'] },
   { id: 'castle', bg: 'bg_castle', name: L('어둠의 성', '闇の城', 'Dark Castle'),  path: ['#2e2440', '#4a3a66', 'rgba(170,90,255,.45)'] },
+  { id: 'sky',    bg: 'bg_sky',    name: L('하늘섬', '空の島', 'Sky Islands'),     path: ['#7c8fae', '#a9bad3', 'rgba(90,110,150,.5)'] },
+  { id: 'sea',    bg: 'bg_sea',    name: L('깊은 바다', '深い海', 'Deep Sea'),      path: ['#3f6f86', '#6aa3b8', 'rgba(40,90,120,.5)'] },
+  { id: 'crystal', bg: 'bg_crystal', name: L('수정 동굴', '水晶の洞窟', 'Crystal Cave'), path: ['#2b3a5c', '#45608c', 'rgba(110,200,255,.45)'] },
+  { id: 'temple', bg: 'bg_temple', name: L('고대 신전', '古代神殿', 'Ancient Temple'), path: ['#8a7442', '#b39a5e', 'rgba(110,90,40,.5)'] },
+  { id: 'chaos',  bg: 'bg_chaos',  name: L('혼돈의 끝', '混沌の果て', 'Edge of Chaos'), path: ['#2a1838', '#46285c', 'rgba(230,80,255,.45)'] },
 ];
 const themeIdx = w => w < 1 ? 0 : Math.floor((w - 1) / 10) % THEMES.length;
 setTimeout(() => { for (const t of THEMES) if (!IMG[t.bg]) { const im = new Image(); im.src = `assets/${t.bg}.jpg?v=${ASSET_V}`; IMG[t.bg] = im; } }, 2500);
@@ -578,6 +585,11 @@ const MUSIC_SETS = {
   desert: { ch: [C5(74, 1), C5(72, 0), C5(70, 0), C5(69, 0), C5(74, 1), C5(72, 0), C5(70, 0), C5(69, 0)], arp: [0, 2, 1, 3, 1, 2, 0, 1], step: 0.23, lead: 'triangle' },
   snow:   { ch: [C5(69, 1), C5(65, 0), C5(72, 0), C5(67, 0), C5(69, 1), C5(65, 0), C5(67, 0), C5(64, 0)], arp: [0, 1, 2, 3, 3, 2, 1, 0], step: 0.3, lead: 'sine' },
   lava:   { ch: [C5(64, 1), C5(60, 0), C5(62, 0), C5(59, 0), C5(64, 1), C5(60, 0), C5(62, 0), C5(59, 0)], arp: [0, 0, 2, 1, 3, 1, 2, 1], step: 0.21, lead: 'sawtooth' },
+  sky:    { ch: [C5(72, 0), C5(67, 0), C5(69, 1), C5(65, 0), C5(72, 0), C5(67, 0), C5(65, 0), C5(67, 0)], arp: [0, 1, 2, 3, 2, 1, 3, 2], step: 0.24, lead: 'triangle' },
+  sea:    { ch: [C5(65, 0), C5(62, 1), C5(70, 0), C5(60, 0), C5(65, 0), C5(69, 1), C5(70, 0), C5(72, 0)], arp: [0, 2, 1, 2, 3, 2, 1, 2], step: 0.32, lead: 'sine' },
+  crystal: { ch: [C5(66, 1), C5(62, 0), C5(64, 0), C5(61, 1), C5(66, 1), C5(62, 0), C5(69, 0), C5(64, 0)], arp: [3, 2, 1, 0, 1, 2, 3, 1], step: 0.27, lead: 'sine' },
+  temple: { ch: [C5(64, 1), C5(62, 0), C5(60, 0), C5(59, 0), C5(64, 1), C5(67, 0), C5(65, 0), C5(64, 1)], arp: [0, 1, 0, 2, 0, 3, 2, 1], step: 0.22, lead: 'triangle', drums: true },
+  chaos:  { ch: [C5(61, 1), C5(64, 1), C5(66, 0), C5(59, 1), C5(61, 1), C5(57, 0), C5(59, 0), C5(56, 1)], arp: [0, 3, 1, 2, 0, 3, 2, 1], step: 0.18, lead: 'sawtooth', drums: true },
   castle: { ch: [C5(62, 1), C5(58, 0), C5(65, 0), C5(57, 1), C5(62, 1), C5(55, 1), C5(58, 0), C5(57, 0)], arp: [0, 3, 2, 1, 0, 2, 3, 2], step: 0.26, lead: 'square' },
   boss:   { ch: [C5(69, 1), C5(65, 0), C5(67, 0), C5(64, 0), C5(69, 1), C5(65, 0), C5(62, 1), C5(64, 0)], arp: [0, 2, 3, 2, 0, 2, 3, 1], step: 0.16, lead: 'square', drums: true },
 };
@@ -698,8 +710,10 @@ function banner(text, sub, col = '#fff', t = 1.6) { S.banner = { text, sub, col,
 const spinCost = () => Math.round((20 + S.spins * 2) * S.B.spinCost * ((S.cm && S.cm.spin) || 1));
 const upCost = t => 40 + S.lv[t] * 35;
 // 난이도 곡선: 초반 5웨이브는 순하게, 이후 가파르게 (TUNE은 시뮬레이션으로 맞춘 값)
-const TUNE = { A: 32, G: 1.17, L: 0.5, from: 7, boss: 16, bossGrow: 0.2, bossTime: 40, upPct: 0.2 };
-const enemyHP = () => Math.round(TUNE.A * Math.pow(TUNE.G, S.wave - 1) * (1 + TUNE.L * Math.max(0, S.wave - TUNE.from)) * ((S.cm && S.cm.hp) || 1) * (S.first && S.wave <= 8 ? 0.75 : 1));
+const TUNE = { A: 32, G: 1.17, G2: 1.09, G3: 1.04, L: 0.5, from: 7, boss: 16, bossGrow: 0.2, bossTime: 40, upPct: 0.2 };
+// 체력 성장: 30웨이브까지 1.17배씩, 31~60은 G2, 61부터는 G3 (웨이브 100까지 갈 수 있게 후반 성장을 완만하게)
+const hpCurve = w => Math.pow(TUNE.G, Math.min(w, 30) - 1) * (w > 30 ? Math.pow(TUNE.G2, Math.min(w, 60) - 30) : 1) * (w > 60 ? Math.pow(TUNE.G3, w - 60) : 1);
+const enemyHP = () => Math.round(TUNE.A * hpCurve(S.wave) * (1 + TUNE.L * Math.max(0, S.wave - TUNE.from)) * ((S.cm && S.cm.hp) || 1) * (S.first && S.wave <= 8 ? 0.75 : 1));
 function aliveWeight() { let w = 0; for (const e of S.enemies) w += e.boss ? 10 : 1; return w; }
 function emptyCells() { const r = []; S.units.forEach((u, i) => { if (!u) r.push(i); }); return r; }
 
@@ -725,8 +739,13 @@ const BOSSES = {
   lich:      { spr: 'lich',      h: 50, hp: 0.85, name: L('리치', 'リッチ', 'Lich'),          hint: L('투명해지면 공격이 안 통해요', '透明な間は攻撃が効かない', 'Immune while invisible') },
   dragon:    { spr: 'dragon',    h: 52, hp: 0.9,  name: L('화염 용왕', '炎の竜王', 'Fire Dragon King'), hint: L('불을 뿜어 영웅을 잠시 멈춰요', '炎でヒーローを一時停止', 'Breathes fire to stop your heroes') },
   demonlord: { spr: 'demonlord', h: 54, hp: 0.85, name: L('마왕', '魔王', 'Demon Lord'),    hint: L('맞으면 뒤로 순간이동하고 저주를 걸어요', '後ろへワープして呪いをかける', 'Warps back and curses your heroes') },
+  griffin:   { spr: 'griffin',   h: 52, hp: 0.85, name: L('폭풍 그리폰', '嵐のグリフォン', 'Storm Griffin'), hint: L('회오리로 영웅 자리를 뒤섞어요', '竜巻でヒーローの位置を入れ替える', 'Its whirlwind shuffles your heroes') },
+  kraken:    { spr: 'kraken',    h: 52, hp: 0.8,  name: L('크라켄', 'クラーケン', 'Kraken'),      hint: L('독에 걸리지 않으면 체력이 계속 차요', '毒にかからないと体力が回復し続ける', 'Regenerates unless poisoned') },
+  golem:     { spr: 'golem',     h: 54, hp: 0.85, name: L('수정 골렘', 'クリスタルゴーレム', 'Crystal Golem'), hint: L('수정 갑옷이 피해를 막아요. 기절시키면 깨져요', '水晶の鎧はスタンで壊れる', 'Crystal armor blocks damage. Stun it to break it') },
+  medusa:    { spr: 'medusa',    h: 52, hp: 0.85, name: L('메두사', 'メドゥーサ', 'Medusa'),      hint: L('영웅 한 줄을 돌로 만들어요', 'ヒーロー1列を石にする', 'Turns a row of heroes to stone') },
+  chaos:     { spr: 'chaos',     h: 58, hp: 0.9,  name: L('혼돈의 군주', '混沌の君主', 'Chaos Overlord'), hint: L('최종 보스! 모든 패턴을 섞어 써요', 'ラスボス！すべての技を使う', 'Final boss! Uses every pattern') },
 };
-const BOSS_ORDER = ['ogre', 'slimeking', 'lich', 'dragon', 'demonlord'];
+const BOSS_ORDER = ['ogre', 'slimeking', 'lich', 'dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos'];
 const bossKindFor = w => BOSS_ORDER[Math.max(0, Math.floor(w / 10) - 1) % BOSS_ORDER.length];
 function dragonBreath(e) {
   const idx = S.units.map((u, i) => u ? i : -1).filter(i => i >= 0).sort(() => Math.random() - 0.5).slice(0, 3);
@@ -734,6 +753,25 @@ function dragonBreath(e) {
   S.fx.push({ k: 'shock', x: e.x, y: e.y - 24, col: '#ffb24a', r0: 8, r1: 60, w: 5, t: 0.45, max: 0.45 });
   flashScreen(0.18, '#ffb070'); addShake(0.3); sfx('bigboom');
   if (idx.length) flash(L('용의 불꽃! 영웅 몇 명이 잠시 멈췄어요', '竜の炎！ヒーローが少し止まった', 'Dragon fire! Some heroes are stunned'), '#ffb24a', 2);
+}
+function lordCurse() {
+  S.curse = 3; flash(L('저주! 3초 동안 공격이 느려져요', '呪い！3秒間 攻撃が遅くなる', 'Curse! Heroes attack slower for 3s'), '#c58bff', 2.2); sfx('zap'); addShake(0.25);
+  const [cx0, cy0] = cellCenter(7); S.fx.push({ k: 'shock', x: cx0, y: cy0, col: '#b066ff', r0: 10, r1: 170, w: 7, t: 0.6, max: 0.6 });
+}
+function griffinSwirl(e) {
+  const cells = [...Array(S.units.length).keys()].filter(i => !(drag && drag.idx === i)).sort(() => Math.random() - 0.5);
+  let n = 0;
+  for (let k = 0; k + 1 < cells.length && n < 3; k += 2) { const a = cells[k], b = cells[k + 1]; if (!S.units[a] && !S.units[b]) continue; [S.units[a], S.units[b]] = [S.units[b], S.units[a]]; n++; for (const c of [a, b]) { const [cx0, cy0] = cellCenter(c); S.fx.push({ k: 'shock', x: cx0, y: cy0, col: '#8fd8ff', r0: 4, r1: 28, w: 4, t: 0.4, max: 0.4 }); puffs(cx0, cy0, 5, '200,235,255', 8); } }
+  selected = -1; addShake(0.2); sfx('poof');
+  flash(L('회오리! 영웅 자리가 뒤바뀌었어요', '竜巻！ヒーローの位置が入れ替わった', 'Whirlwind! Heroes swapped places'), '#8fd8ff', 2);
+}
+function golemShatter(e) { puffs(e.x, e.y - 24, 12, '140,230,255', 10); S.fx.push({ k: 'shock', x: e.x, y: e.y - 24, col: '#8fe3ff', r0: 6, r1: 44, w: 4, t: 0.4, max: 0.4 }); sfx('shatter'); if (S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 60, v: L('갑옷 깨짐!', '鎧ブレイク！', 'ARMOR BREAK!'), t: 1, max: 1, vx: 0 }); }
+function medusaGaze(e) {
+  const rows = [...Array(ROWS).keys()].filter(r => S.units.slice(r * COLS, r * COLS + COLS).some(Boolean)); if (!rows.length) return;
+  const r = rnd(rows);
+  for (let c = 0; c < COLS; c++) { const i = r * COLS + c, u = S.units[i]; if (!u) continue; u.stoneT = 3; u.atk = null; const [cx0, cy0] = cellCenter(i); puffs(cx0, cy0, 5, '180,180,170', 8); }
+  S.fx.push({ k: 'shock', x: e.x, y: e.y - 30, col: '#e8f080', r0: 8, r1: 60, w: 5, t: 0.45, max: 0.45 }); flashScreen(0.15, '#f4f8c0'); sfx('shatter'); addShake(0.2);
+  flash(L('석화! 영웅 한 줄이 3초 동안 굳었어요', '石化！ヒーロー1列が3秒止まった', 'Petrified! A row of heroes is frozen for 3s'), '#e8f080', 2);
 }
 function lordWarp(e) {
   puffs(e.x, e.y - 20, 14, '160,90,240', 12); sfx('zap'); addShake(0.2);
@@ -755,7 +793,7 @@ function spawn(boss) {
   const kind = boss ? 'boss' : enemyKind(), k = ENEMY[kind];
   const bk = boss ? bossKindFor(S.wave) : null;
   const hp = boss ? enemyHP() * TUNE.boss * (1 + TUNE.bossGrow * (S.wave / 10 - 1)) * BOSSES[bk].hp : Math.round(enemyHP() * k.hp);
-  S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, bk, d: 0, hp, max: hp, spd: (boss ? 26 : k.spd) * (S.cm.spd || 1), slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7, chargeT: 5, vanT: 4.5, breathT: 4.5, curseT: 5 });
+  S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, bk, d: 0, hp, max: hp, spd: (boss ? 26 : k.spd) * (S.cm.spd || 1), slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7, chargeT: 5, vanT: 4.5, breathT: 4.5, curseT: 5, swirlT: 4, stoneT: 4.5, chaosT: 3.5, armorT: 9 });
 }
 
 // ===== 슬롯 =====
@@ -867,7 +905,7 @@ function killEnemy(e) {
   e.dead = true; S.kills++; mission('kill'); if (e.boss) mission('boss'); stInc('kills'); if (e.boss) stInc('boss');
   if (e.bk === 'slimeking') spawnMinion('slime', e, 2.5, 4);
   const g = Math.round((e.boss ? 60 + S.wave * 6 : 2 + Math.floor(S.wave / 4)) * S.B.gold * (1 + 0.08 * metaLv('bounty')));
-  if (e.boss) { S.bossKills++; S.bossT = 0; }
+  if (e.boss) { S.bossKills++; S.bossT = 0; if (e.bk === 'chaos' && S.wave >= 100 && !S.cleared) { S.cleared = true; setTimeout(() => { if (screen !== 'play') return; banner(L('엔딩! 혼돈의 군주 처치', 'エンディング！混沌の君主撃破', 'ENDING! Chaos Overlord defeated'), L('축하해요! 이제부터는 끝없는 도전이에요', 'おめでとう！ここからはエンドレス', 'Congrats! Endless mode from here'), '#ffe9a0', 4.5); flashScreen(0.5, '#fff6d6'); sfx('jackpot'); buzz([80, 60, 160]); S.units.forEach(q => { if (q) q.cheer = 3; }); for (let k = 0; k < 6; k++) setTimeout(() => { if (screen === 'play') { const [cx0, cy0] = cellCenter(Math.floor(Math.random() * 20)); burst(cx0, cy0, ['#ffd166', '#ff7ab6', '#8fe3ff', '#9be36d'][k % 4], 22); } }, k * 260); }, 700); track('game_clear', { wave: S.wave, play_sec: Math.round(S.time) }); } }
   S.gold += Math.round(g * (S.cm.gold || 1));
   if (e.boss) {
     flashScreen(0.38); addShake(0.6); S.hsCd = 0; hitstop(0.16); sfx('bigboom');
@@ -890,6 +928,7 @@ function damage(e, dmg, showNum, fx, fy, crit = false) {
   if (e.vanish > 0) { if (showNum && S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 30, v: 'MISS', t: 0.5, max: 0.5, vx: 0 }); return; }
   if (crit) critFx(e, fx ?? e.x, fy ?? e.y);
   if (e.boss) dmg *= S.B.boss;
+  if (e.bk === 'golem' && !(e.armorOff > 0) && !(e.stunT > 0)) { dmg *= 0.25; if (showNum && Math.random() < 0.08 && S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 40, v: L('막힘', 'ブロック', 'BLOCK'), t: 0.4, max: 0.4, vx: 0 }); }
   e.hp -= dmg; e.hurtT = 0.3;
   if (!(e.hitCd > 0)) { e.hit = 0.08; e.hitCd = 0.18; } // 연타에도 하얗게 덮이지 않게 번쩍임 간격 제한
   if (fx != null && !e.boss) { const d = Math.hypot(e.x - fx, e.y - fy) || 1, k = 3.5; e.kbx = (e.x - fx) / d * k; e.kby = (e.y - fy) / d * k; }
@@ -928,7 +967,23 @@ function update(dt) {
         // 마왕: 체력 66%·33%에서 길 뒤쪽으로 순간이동(+해골 2), 9초마다 3초간 저주(영웅 공격 속도 감소)
         for (const [key, th] of [['warp1', 0.66], ['warp2', 0.33]]) if (!e[key] && e.hp < e.max * th) { e[key] = true; lordWarp(e); }
         e.curseT -= dt; e.warn = e.curseT < 0.8;
-        if (e.curseT <= 0) { e.curseT = 9; e.warn = false; S.curse = 3; flash(L('마왕의 저주! 3초 동안 공격이 느려져요', '魔王の呪い！3秒間 攻撃が遅くなる', 'Demon curse! Heroes attack slower for 3s'), '#c58bff', 2.2); sfx('zap'); addShake(0.25); const [cx0, cy0] = cellCenter(7); S.fx.push({ k: 'shock', x: cx0, y: cy0, col: '#b066ff', r0: 10, r1: 170, w: 7, t: 0.6, max: 0.6 }); }
+        if (e.curseT <= 0) { e.curseT = 9; e.warn = false; lordCurse(); }
+      } else if (e.bk === 'griffin') {
+        e.swirlT -= dt; e.warn = e.swirlT < 0.8; if (e.swirlT <= 0) { e.swirlT = 7; e.warn = false; griffinSwirl(e); }
+      } else if (e.bk === 'kraken') {
+        // 독(연금술사)이나 기절 중이 아니면 초당 최대 체력 1.2% 회복
+        if (!(e.poisonT > 0) && !(e.stunT > 0) && e.hp < e.max) { e.hp = Math.min(e.max, e.hp + e.max * 0.012 * dt); e.regen = (e.regen || 0) + dt; if (e.regen > 0.5) { e.regen = 0; if (S.dmg.length < 30) S.dmg.push({ x: e.x + (Math.random() - 0.5) * 20, y: e.y - 40, v: '+', t: 0.6, max: 0.6, vx: 0, heal: true }); } }
+      } else if (e.bk === 'golem') {
+        // 기절하면 4초 동안 갑옷이 깨지고, 10초마다 스스로 3초 동안 벗겨진다
+        if (e.armorOff > 0) e.armorOff -= dt;
+        else if (e.stunT > 0) { e.armorOff = 4; golemShatter(e); }
+        else { e.armorT -= dt; if (e.armorT <= 0) { e.armorT = 10; e.armorOff = 3; golemShatter(e); } }
+      } else if (e.bk === 'medusa') {
+        e.stoneT -= dt; e.warn = e.stoneT < 0.8; if (e.stoneT <= 0) { e.stoneT = 8; e.warn = false; medusaGaze(e); }
+      } else if (e.bk === 'chaos') {
+        if (!e.warp1 && e.hp < e.max * 0.5) { e.warp1 = true; lordWarp(e); }
+        e.chaosT -= dt; e.warn = e.chaosT < 0.8;
+        if (e.chaosT <= 0) { e.chaosT = 6; e.warn = false; const pick = rnd(['breath', 'curse', 'stone', 'swirl', 'summon']); if (pick === 'breath') dragonBreath(e); else if (pick === 'curse') lordCurse(); else if (pick === 'stone') medusaGaze(e); else if (pick === 'swirl') griffinSwirl(e); else { spawnMinion('skeleton', e, 1.5, 3); puffs(e.x, e.y - 20, 12, '230,80,255', 12); sfx('zap'); } }
       }
     }
     if (e.hurtT > 0) e.hurtT -= dt;
@@ -976,6 +1031,7 @@ function update(dt) {
     }
     if (drag && drag.idx === i && drag.moved) { u.atk = null; return; }
     if (u.burnT > 0) { u.burnT -= dt; return; }
+    if (u.stoneT > 0) { u.stoneT -= dt; return; }
     u.cd -= dt * (S.curse > 0 ? 0.55 : 1); if (u.cd > 0 || u.atk != null) return;
     const target = nearestTarget(ux, uy, stats(u).range);
     if (!target) return;
@@ -1387,7 +1443,8 @@ function drawEnemy(e) {
   if (e.slowF < 1) { if (!EA) { ctx.globalAlpha = 0.3; sprite(k, ex, ey + 7 - hop, h, e.dir < 0, 1, 1 + squash, 1 - squash, 0, 0); } ctx.globalAlpha = EA ? 0.16 : 0.3; ctx.fillStyle = '#9fdcff'; ctx.beginPath(); ctx.ellipse(ex, ey - h / 2 + 7, h * 0.42, h * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff'; for (let s = 0; s < 3; s++) { const a = T * 2 + s * 2.1; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * h * 0.35, ey - h / 2 + 7 + Math.sin(a) * h * 0.3, 1.3, 0, Math.PI * 2); ctx.fill(); } }
   ctx.restore();
   ctx.globalAlpha = 1;
-  if (e.warn && (e.bk === 'dragon' || e.bk === 'demonlord')) { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, e.bk === 'dragon' ? '#ff8a1f' : '#c58bff', 'center', 5); }
+  if (e.bk === 'golem' && !(e.armorOff > 0)) { ctx.save(); ctx.globalAlpha = 0.35 + 0.1 * Math.sin(T * 4); ctx.strokeStyle = '#8fe3ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(e.x, e.y - h * 0.45, h * 0.55, h * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+  if (e.warn && ['dragon', 'demonlord', 'griffin', 'medusa', 'chaos'].includes(e.bk)) { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, { dragon: '#ff8a1f', griffin: '#8fd8ff', medusa: '#e8f080' }[e.bk] || '#c58bff', 'center', 5); }
   if (e.warn && e.bk === 'ogre') { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, '#ff4f4f', 'center', 5); }
   if (e.charging > 0) { ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = '#ff8a6a'; ctx.lineWidth = 3; for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(e.x - e.dir * (8 + k * 7), e.y - h * 0.3 - k * 4); ctx.lineTo(e.x - e.dir * (20 + k * 9), e.y - h * 0.3 - k * 4); ctx.stroke(); } ctx.restore(); }
   if (e.stunT > 0) { for (let k = 0; k < 3; k++) { const ang = T * 6 + k * 2.09; icon('star', e.x + Math.cos(ang) * (e.boss ? 14 : 9), e.y - h + 2 + Math.sin(ang) * 3, e.boss ? 9 : 7); } }
@@ -1593,6 +1650,7 @@ function drawField() {
     if (i === selected) { rr(x - 25, y - 25, 50, 50, 11); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke(); }
     drawUnitAt(u, x, y, { alpha: drag && drag.moved && drag.idx === i ? 0.3 : 1 });
     if (u.burnT > 0) { ctx.save(); rr(x - 25, y - 25, 50, 50, 10); ctx.fillStyle = `rgba(60,20,0,${0.35 + 0.1 * Math.sin(T * 12)})`; ctx.fill(); for (let k = 0; k < 4; k++) { const ph = (T * 2.2 + k * 0.27) % 1, fx0 = x - 15 + k * 10; ctx.globalAlpha = 1 - ph; ctx.fillStyle = k % 2 ? '#ffb24a' : '#ff6a2a'; ctx.beginPath(); ctx.ellipse(fx0, y + 14 - ph * 30, 4 - ph * 2, 7 - ph * 3, 0, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+    if (u.stoneT > 0) { ctx.save(); rr(x - 25, y - 25, 50, 50, 10); ctx.fillStyle = 'rgba(150,150,140,.62)'; ctx.fill(); ctx.strokeStyle = 'rgba(90,90,80,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 14, y - 10); ctx.lineTo(x - 2, y); ctx.lineTo(x - 8, y + 12); ctx.moveTo(x + 10, y - 14); ctx.lineTo(x + 4, y + 2); ctx.stroke(); ctx.restore(); }
     if (S.curse > 0) { ctx.save(); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(T * 8 + i); ctx.strokeStyle = '#b066ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y + 4, 20 + 2 * Math.sin(T * 6 + i), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   });
   for (const e of es) if (e.y >= GY) drawEnemy(e);
@@ -1700,6 +1758,7 @@ function drawField() {
     ctx.save(); ctx.globalAlpha = a; ctx.translate(d.x, d.y); ctx.scale(sc, sc);
     if (d.ulti) { text(d.v, 0, 0, 14, '#ffe9a0', 'center', 4, '#5a3a00'); }
     else if (d.gold) { icon('coin', -12, 0, 12); text(String(d.v), 4, 0, 12, '#ffd166', 'center', 3, '#5a3a00'); }
+    else if (d.heal) { text(d.v, 0, 0, 16, '#7dff8a', 'center', 4, '#0a4020'); }
     else if (d.crit) { text(d.v + '!', 0, 0, 13, '#ffd23f', 'center', 4, '#7a1d00'); }
     else text(String(d.v), 0, 0, 11, '#fff', 'center', 3);
     ctx.restore();
@@ -1852,7 +1911,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v1.5 베타', 'v1.5 ベータ', 'v1.5 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v1.6 베타', 'v1.6 ベータ', 'v1.6 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
