@@ -321,17 +321,17 @@ const store = {
 
 // ===== 영구 성장: 판이 끝나면 보석을 받고, 보석으로 영구 강화 =====
 const META_DEF = {
-  sword:  { icon: 'sword', name: L('기사 단련', 'ナイト修練', 'Knight Training'),   max: 10, desc: l => L(`기사 공격력 +${l * 8}%`, `ナイト攻撃力 +${l * 8}%`, `Knight ATK +${l * 8}%`) },
-  bow:    { icon: 'bow',   name: L('궁수 단련', '弓使い修練', 'Archer Training'),   max: 10, desc: l => L(`궁수 공격력 +${l * 8}%`, `弓使い攻撃力 +${l * 8}%`, `Archer ATK +${l * 8}%`) },
-  magic:  { icon: 'magic', name: L('마법사 단련', '魔法使い修練', 'Mage Training'), max: 10, desc: l => L(`마법사 공격력 +${l * 8}%`, `魔法使い攻撃力 +${l * 8}%`, `Mage ATK +${l * 8}%`) },
-  ice:    { icon: 'ice',   name: L('얼음공주 단련', '氷の姫修練', 'Ice Princess Training'), max: 10, desc: l => L(`얼음공주 공격력 +${l * 8}%`, `氷の姫攻撃力 +${l * 8}%`, `Ice Princess ATK +${l * 8}%`) },
-  bard:   { icon: 'bard',  name: L('음유시인 단련', '吟遊詩人修練', 'Bard Training'), max: 10, desc: l => L(`음유시인 공격력 +${l * 8}%`, `吟遊詩人攻撃力 +${l * 8}%`, `Bard ATK +${l * 8}%`) },
-  ninja:  { icon: 'ninja', name: L('닌자 단련', '忍者修練', 'Ninja Training'),     max: 10, desc: l => L(`닌자 공격력 +${l * 8}%`, `忍者攻撃力 +${l * 8}%`, `Ninja ATK +${l * 8}%`) },
-  storm:  { icon: 'storm', name: L('번개술사 단련', '雷術師修練', 'Stormcaller Training'), max: 10, desc: l => L(`번개술사 공격력 +${l * 8}%`, `雷術師攻撃力 +${l * 8}%`, `Stormcaller ATK +${l * 8}%`) },
-  dwarf:  { icon: 'dwarf', name: L('드워프 단련', 'ドワーフ修練', 'Dwarf Training'), max: 10, desc: l => L(`드워프 공격력 +${l * 8}%`, `ドワーフ攻撃力 +${l * 8}%`, `Dwarf ATK +${l * 8}%`) },
-  alch:   { icon: 'alch',  name: L('연금술사 단련', '錬金術師修練', 'Alchemist Training'), max: 10, desc: l => L(`연금술사 공격력 +${l * 8}%`, `錬金術師攻撃力 +${l * 8}%`, `Alchemist ATK +${l * 8}%`) },
-  sniper: { icon: 'sniper', name: L('저격수 단련', '狙撃手修練', 'Sniper Training'), max: 10, desc: l => L(`저격수 공격력 +${l * 8}%`, `狙撃手攻撃力 +${l * 8}%`, `Sniper ATK +${l * 8}%`) },
-  cat:    { icon: 'cat',   name: L('냥상인 단련', 'ネコ商人修練', 'Cat Merchant Training'), max: 10, desc: l => L(`냥상인 공격력 +${l * 8}%`, `ネコ商人攻撃力 +${l * 8}%`, `Cat Merchant ATK +${l * 8}%`) },
+  sword:  { icon: 'sword', name: L('기사 단련', 'ナイト修練', 'Knight Training'),   max: 30, desc: l => L(`기사 공격력 +${l * 8}%`, `ナイト攻撃力 +${l * 8}%`, `Knight ATK +${l * 8}%`) },
+  bow:    { icon: 'bow',   name: L('궁수 단련', '弓使い修練', 'Archer Training'),   max: 30, desc: l => L(`궁수 공격력 +${l * 8}%`, `弓使い攻撃力 +${l * 8}%`, `Archer ATK +${l * 8}%`) },
+  magic:  { icon: 'magic', name: L('마법사 단련', '魔法使い修練', 'Mage Training'), max: 30, desc: l => L(`마법사 공격력 +${l * 8}%`, `魔法使い攻撃力 +${l * 8}%`, `Mage ATK +${l * 8}%`) },
+  ice:    { icon: 'ice',   name: L('얼음공주 단련', '氷の姫修練', 'Ice Princess Training'), max: 30, desc: l => L(`얼음공주 공격력 +${l * 8}%`, `氷の姫攻撃力 +${l * 8}%`, `Ice Princess ATK +${l * 8}%`) },
+  bard:   { icon: 'bard',  name: L('음유시인 단련', '吟遊詩人修練', 'Bard Training'), max: 30, desc: l => L(`음유시인 공격력 +${l * 8}%`, `吟遊詩人攻撃力 +${l * 8}%`, `Bard ATK +${l * 8}%`) },
+  ninja:  { icon: 'ninja', name: L('닌자 단련', '忍者修練', 'Ninja Training'),     max: 30, desc: l => L(`닌자 공격력 +${l * 8}%`, `忍者攻撃力 +${l * 8}%`, `Ninja ATK +${l * 8}%`) },
+  storm:  { icon: 'storm', name: L('번개술사 단련', '雷術師修練', 'Stormcaller Training'), max: 30, desc: l => L(`번개술사 공격력 +${l * 8}%`, `雷術師攻撃力 +${l * 8}%`, `Stormcaller ATK +${l * 8}%`) },
+  dwarf:  { icon: 'dwarf', name: L('드워프 단련', 'ドワーフ修練', 'Dwarf Training'), max: 30, desc: l => L(`드워프 공격력 +${l * 8}%`, `ドワーフ攻撃力 +${l * 8}%`, `Dwarf ATK +${l * 8}%`) },
+  alch:   { icon: 'alch',  name: L('연금술사 단련', '錬金術師修練', 'Alchemist Training'), max: 30, desc: l => L(`연금술사 공격력 +${l * 8}%`, `錬金術師攻撃力 +${l * 8}%`, `Alchemist ATK +${l * 8}%`) },
+  sniper: { icon: 'sniper', name: L('저격수 단련', '狙撃手修練', 'Sniper Training'), max: 30, desc: l => L(`저격수 공격력 +${l * 8}%`, `狙撃手攻撃力 +${l * 8}%`, `Sniper ATK +${l * 8}%`) },
+  cat:    { icon: 'cat',   name: L('냥상인 단련', 'ネコ商人修練', 'Cat Merchant Training'), max: 30, desc: l => L(`냥상인 공격력 +${l * 8}%`, `ネコ商人攻撃力 +${l * 8}%`, `Cat Merchant ATK +${l * 8}%`) },
   gold:   { icon: 'coin',  name: L('두둑한 지갑', 'ふくらむ財布', 'Fat Wallet'), max: 5,  desc: l => L(`시작 골드 +${l * 25}`, `開始ゴールド +${l * 25}`, `Starting gold +${l * 25}`) },
   luck:   { icon: 'star',  name: L('행운의 별', '幸運の星', 'Lucky Star'),   max: 5,  desc: l => L(`별(와일드) 확률 +${l * 8}%`, `星(ワイルド)確率 +${l * 8}%`, `Star (wild) chance +${l * 8}%`) },
   bounty: { icon: 'chest', name: L('전리품', '戦利品', 'Loot'),      max: 5,  desc: l => L(`처치 골드 +${l * 8}%`, `撃破ゴールド +${l * 8}%`, `Gold per kill +${l * 8}%`) },
@@ -355,7 +355,8 @@ function toggleDeck(t) {
 let shopMsg = null;
 const saveMeta = () => localStorage.setItem('sd_meta', JSON.stringify(M));
 const metaLv = k => M.lv[k] || 0;
-const metaCost = k => (META_DEF[k].max === 10 ? 30 : 60) * (metaLv(k) + 1);
+// 영웅 단련: Lv10까지 30×(Lv+1), Lv11~30은 60×(Lv+1) (웨이브 100 대비 장기 목표). 그 밖의 항목은 60×(Lv+1)
+const metaCost = k => (TYPES[k] ? (metaLv(k) < 10 ? 30 : 60) : 60) * (metaLv(k) + 1);
 function buyMeta(k) {
   const d = META_DEF[k], c = metaCost(k);
   if (TYPES[k] && !M.unlocked[k]) return;
@@ -395,7 +396,7 @@ function openPick() {
   S.pick = { cards, t: 0 }; sfx('win');
 }
 function choosePick(i) {
-  const c = S.pick.cards[i]; c.apply(S.B); S.picked.push(c); S.pick = null; track('card_pick', { card: c.name, wave: S.wave });
+  const c = S.pick.cards[i]; c.apply(S.B); S.picked.push(c); S.pick = null; track('card_pick', { card: c.name, wave: S.wave }); saveRun();
   flash(`${c.name}: ${c.desc}`, '#8fe3ff', 2.2); sfx('up'); buzz(15);
 }
 const freeRecharge = () => FREE_RECHARGE - 10 * metaLv('charge');
@@ -688,6 +689,41 @@ const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (
 const LIMIT = 60, WAVE_LEN = 22, MAX_AD_SPINS = 3;
 const FREE_RECHARGE = 90, FREE_MAX = 3, REVIVE_WAIT = 8;
 let S, screen = 'loading', drag = null, selected = -1, ad = null, press = null, paused = false, T = 0;
+// ===== 이어하기: 웨이브가 시작될 때마다 판 상태를 저장, 앱을 닫았다 와도 그 웨이브 처음부터 이어서 =====
+const RUN_KEY = 'sd_run';
+function saveRun() {
+  if (!S || S.first || S.chal || S.wave < 3 || screen !== 'play') return;
+  try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, speed: S.speed })); } catch (e) {}
+}
+function loadRun() { try { const r = JSON.parse(localStorage.getItem(RUN_KEY)); if (!r || r.v !== 1 || !r.wave || Date.now() - r.at > 14 * 86400000) return null; return r; } catch (e) { return null; } }
+function clearRun() { localStorage.removeItem(RUN_KEY); runCache = null; }
+let runCache = null, runCacheT = 0;
+const loadRunCached = () => { if (T - runCacheT > 1 || T < runCacheT) { runCache = loadRun(); runCacheT = T; } return runCache; };
+function resumeRun(r) {
+  const deck = M.deck.slice(); M.deck = r.deck.slice(); newGame(); M.deck = deck;
+  Object.assign(S, { gold: r.gold, goldShown: r.gold, kills: r.kills || 0, time: r.time || 0, spins: r.spins || 0, bossKills: r.bossKills || 0, revived: !!r.revived, gemsGiven: r.gemsGiven || 0, freeCharges: r.freeCharges ?? 1, freeT: r.freeT ?? freeRecharge(), adSpins: r.adSpins ?? MAX_AD_SPINS, speed: r.speed || 1, first: false });
+  for (const k in r.lv) S.lv[k] = r.lv[k];
+  r.units.forEach((u, i) => { S.units[i] = u ? { type: u[0], grade: u[1], cd: Math.random() * 0.4, anim: 0, born: 0.3 } : null; });
+  for (const ci of r.picked || []) { const c = CARDS[ci]; if (c) { c.apply(S.B); S.picked.push(c); } }
+  S.wave = r.wave - 1; S.waveT = 3; S.skipPick = !!r.pickDone; S.themeFade = 0;
+  screen = 'play'; track('run_resume', { wave: r.wave });
+}
+function openResumeDialog(r) {
+  if (document.getElementById('codedlg')) return;
+  const wrap = document.createElement('div'); wrap.id = 'codedlg';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+  const ago = Math.max(1, Math.round((Date.now() - r.at) / 60000)), agoTxt = ago < 60 ? L(`${ago}분 전`, `${ago}分前`, `${ago} min ago`) : ago < 1440 ? L(`${Math.round(ago / 60)}시간 전`, `${Math.round(ago / 60)}時間前`, `${Math.round(ago / 60)} h ago`) : L(`${Math.round(ago / 1440)}일 전`, `${Math.round(ago / 1440)}日前`, `${Math.round(ago / 1440)} d ago`);
+  wrap.innerHTML = `<div style="width:min(300px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:18px 16px 14px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+    <div style="font-size:22px;color:#ffd166;margin-bottom:6px">${L('하던 판이 있어요', '続きのゲームがあります', 'Continue your run?')}</div>
+    <div style="font-size:15px;margin-bottom:4px">WAVE ${r.wave} · ${L('영웅', 'ヒーロー', 'Heroes')} ${r.units.filter(Boolean).length}</div>
+    <div style="font-size:12px;opacity:.7;margin-bottom:14px">${agoTxt} ${L('저장', '保存', 'saved')}</div>
+    <button id="rsok" style="width:100%;font:18px inherit;font-family:inherit;padding:12px;border-radius:12px;border:0;background:#ff4f72;color:#fff;margin-bottom:8px">${L('이어하기', '続きから', 'Continue')}</button>
+    <button id="rsnew" style="width:100%;font:14px inherit;font-family:inherit;padding:9px;border-radius:12px;border:0;background:#5a5a6a;color:#fff">${L('새로 시작 (저장된 판은 사라져요)', '最初から（保存は消えます）', 'New game (discard saved run)')}</button></div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector('#rsok').onclick = () => { wrap.remove(); sfx('click'); resumeRun(r); };
+  wrap.querySelector('#rsnew').onclick = () => { wrap.remove(); clearRun(); sfx('click'); newGame(); screen = 'play'; };
+  wrap.addEventListener('pointerdown', e => { if (e.target === wrap) wrap.remove(); });
+}
 function newGame(chal = null) {
   TYPE_KEYS = (chal ? chal.deck : M.deck).slice(); SYMS = [...TYPE_KEYS, 'star']; buildUPG();
   S = {
@@ -721,7 +757,8 @@ function emptyCells() { const r = []; S.units.forEach((u, i) => { if (!u) r.push
 function startWave() {
   S.wave++; S.waveT = WAVE_LEN; mission('wave', 0, S.wave);
   if (S.chal && S.wave >= S.chal.target && !S.chalWin) { S.chalWin = true; if (!chalDone()) { D.chalDone = true; saveDaily(); stInc('chal'); M.gems += S.chal.reward; saveMeta(); S.chalPaid = true; track('challenge_clear', { mod: S.chal.mod.id, deck: S.chal.deck.join(',') }); } setTimeout(() => { banner(L('도전 성공!', 'チャレンジ成功！', 'Challenge cleared!'), S.chalPaid ? L(`보석 +${S.chal.reward}`, `ジェム +${S.chal.reward}`, `Gems +${S.chal.reward}`) : L('오늘 보상은 이미 받았어요', '今日の報酬は受け取り済み', 'Today\'s reward already claimed'), '#ffd166', 2.4); sfx('jackpot'); }, 1400); } if (S.wave % 5 === 0) track('wave_reached', { wave: S.wave });
-  if (S.wave % 5 === 0) openPick();
+  if (S.wave % 5 === 0 && !S.skipPick) openPick();
+  S.skipPick = false; saveRun();
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
   S.spawnGap = Math.min(1.2, 14 / Math.max(1, S.spawnLeft)); S.spawnT = 0;
@@ -1253,6 +1290,7 @@ function findPair() {
   return null;
 }
 function gameOver() {
+  clearRun();
   screen = 'over'; drag = null; selected = -1; sfx('lose'); buzz(120);
   if (!S.playCounted) { S.playCounted = true; mission('play'); stInc('games'); }
   track('game_over', { wave: S.wave, kills: S.kills, boss_fail: S.bossFail ? 1 : 0, revived: S.revived ? 1 : 0, cards: S.picked.length, spins: S.spins, play_sec: Math.round(S.time), deck: TYPE_KEYS.join(','), gems: S.gemsEarned || 0, auto: store.auto ? 1 : 0 });
@@ -1889,6 +1927,7 @@ function drawTitle() {
   button(b, '#ff4f72', true, (cx, cy) => text(L('게임 시작', 'ゲームスタート', 'Start Game'), cx, cy, 25, '#fff', 'center', 5, '#8a1f38'), 'start');
   shine(b);
   ctx.restore();
+  { const r = loadRunCached(); if (r) { rr(b.x + b.w - 70, b.y - 12, 84, 22, 11); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text(L(`이어하기 W${r.wave}`, `続き W${r.wave}`, `Resume W${r.wave}`), b.x + b.w - 28, b.y - 1, 11, '#5a3a00', 'center', 0); } }
   // 영웅 강화 (살 수 있는 게 있으면 빨간 점)
   button(BTN.shop, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 62, cy, 20); text(L('영웅 강화', 'ヒーロー強化', 'Upgrade Heroes'), L(cx - 12, cx - 16, cx - 16), cy - 1, L(18, 15, 15), '#fff', 'center', 4); rr(cx + 34, cy - 11, 44, 22, 11); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill(); text(String(M.gems), cx + 56, cy, 13, '#8fe3ff', 'center', 2.5); }, 'shop');
   if (META_KEYS.some(k => (!TYPES[k] || M.unlocked[k]) && metaLv(k) < META_DEF[k].max && M.gems >= metaCost(k)) || Object.keys(UNLOCK_COST).some(k => !M.unlocked[k] && M.gems >= UNLOCK_COST[k])) redDot(BTN.shop.x + BTN.shop.w - 4, BTN.shop.y + 4);
@@ -1911,7 +1950,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v1.6 베타', 'v1.6 ベータ', 'v1.6 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v1.7 베타', 'v1.7 ベータ', 'v1.7 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -2251,7 +2290,7 @@ function hitKey(x, y) {
 }
 function activate(key) {
   switch (key) {
-    case 'start': track('game_start', { deck: M.deck.join(','), best_wave: store.best, gems: M.gems, lang: LANG }); if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: L('덱에 영웅 4명을 골라주세요', 'デッキにヒーローを4人選んでね', 'Pick 4 heroes for your deck'), t: 2.5 }; sfx('error'); break; } newGame(); screen = 'play'; sfx('click'); break;
+    case 'start': track('game_start', { deck: M.deck.join(','), best_wave: store.best, gems: M.gems, lang: LANG }); if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: L('덱에 영웅 4명을 골라주세요', 'デッキにヒーローを4人選んでね', 'Pick 4 heroes for your deck'), t: 2.5 }; sfx('error'); break; } { const r = loadRun(); if (r) { openResumeDialog(r); break; } } newGame(); screen = 'play'; sfx('click'); break;
     case 'shop': screen = 'shop'; sfx('click'); break;
     case 'reward': ensureDaily(); screen = 'missions'; sfx('click'); break;
     case 'attc': claimAtt(); break;
