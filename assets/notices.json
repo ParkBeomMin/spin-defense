@@ -1,5 +1,31 @@
 [
  {
+  "id": "2026-11-19-v2.2",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v2.2: 친구 초대하면 둘 다 보석 50개",
+   "ja": "v2.2：友だち招待で2人ともジェム50",
+   "en": "v2.2: Invite a friend, both get 50 gems"
+  },
+  "body": {
+   "ko": [
+    "게임이 끝난 뒤 '기록 공유'로 보낸 링크가 초대 링크예요",
+    "친구가 그 링크로 시작해서 웨이브 5를 넘기면 친구 보석 +50",
+    "나도 보석 +50 (최대 10명까지)"
+   ],
+   "ja": [
+    "ゲーム終了後の「記録シェア」のリンクが招待リンクです",
+    "友だちがそのリンクから始めてウェーブ5を超えると友だちにジェム +50",
+    "あなたにもジェム +50（最大10人）"
+   ],
+   "en": [
+    "The link you send with 'Share' after a game is your invite link",
+    "When a friend starts from it and passes wave 5, they get 50 gems",
+    "You get 50 gems too (up to 10 friends)"
+   ]
+  }
+ },
+ {
   "id": "2026-11-19-v2.1",
   "date": "2026.11.19",
   "title": {
