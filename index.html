@@ -512,7 +512,7 @@ function drawAch() {
 }
 let gemPop = null;
 // ===== 주간 랭킹 (Firestore REST, 주는 한국 시간 월요일 시작) =====
-const RANK_BASE = 'https://firestore.googleapis.com/v1/projects/practice-aa1c4/databases/(default)/documents/sd_rank';
+const RANK_BASE = 'https://firestore.googleapis.com/v1/projects/myapplication5-71719/databases/(default)/documents/sd_rank';
 function weekKey(off = 0) {
   const d = new Date(Date.now() + 9 * 3600e3 + off * 7 * 86400e3); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day + 3);
   const y = d.getUTCFullYear(), w1 = new Date(Date.UTC(y, 0, 4)), wk = 1 + Math.round(((d - w1) / 86400e3 - 3 + ((w1.getUTCDay() + 6) % 7)) / 7);
