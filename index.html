@@ -65,6 +65,9 @@ const ADS = {
 };
 ADS.prod = ADS.prodHosts.includes(location.hostname);
 ADS.enabled = !/[?&](rec|noads|embed)=1/.test(location.search); // embed=1: 다른 사이트 iframe 게재용 (광고 없음)
+// 게임 포털 업로드용 빌드(itch.io, CrazyGames 등): 외부 광고·서비스워커·공유·앱 설치 끔
+const PORTAL = window.SD_PORTAL === true || /[?&]portal=1/.test(location.search);
+if (PORTAL) ADS.enabled = false;
 ADS.test = !ADS.prod || /[?&]adtest=1/.test(location.search);
 ADS.preview = /[?&]adpreview=1/.test(location.search);   // 로컬에서 배너 자리 미리보기
 ADS.wantBanner = ADS.enabled && (!!ADS.bannerSlot || ADS.preview);
@@ -240,12 +243,13 @@ const BTN = {
   cgo:   { x: 80,  y: 470, w: 200, h: 54 },
   cback: { x: 120, y: 534, w: 120, h: 36 },
   attc:  { x: 110, y: 214, w: 140, h: 40 },
-  home:  { x: 50,  y: 524, w: 126, h: 38 },
+  home:  { x: 50,  y: 524, w: 126, h: 38 },  // 포털 빌드에선 아래에서 가운데로 옮김
   share: { x: 184, y: 524, w: 126, h: 38 },
   back:  { x: 105, y: 590, w: 150, h: 40 },
   retry: { x: 56,  y: 448, w: 248, h: 62 },
   resume:{ x: 95,  y: 300, w: 170, h: 58 },
 };
+if (PORTAL) BTN.home.x = (360 - BTN.home.w) / 2;
 const UPG = [];
 function buildUPG() { UPG.length = 0; TYPE_KEYS.forEach((t, k) => UPG.push({ t, x: 12 + k * 85, y: 384, w: 81, h: 36 })); }
 buildUPG();
@@ -257,7 +261,7 @@ const easeOutBack = p => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow
 
 // ===== 홈 화면 설치 (PWA) =====
 let installEvt = null;
-if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+if (!PORTAL && 'serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
 window.addEventListener('appinstalled', () => { installEvt = null; track('pwa_installed'); });
 if (/[?&]src=pwa/.test(location.search)) setTimeout(() => track('pwa_launch'), 1500);
@@ -1851,8 +1855,8 @@ function drawOver() {
   button(BTN.home, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 42, cy, 15); text(L('영웅 강화', 'ヒーロー強化', 'Upgrade'), cx + 8, cy, L(15, 12, 15), '#fff', 'center', 3); }, 'home');
   const canUp = Object.keys(UNLOCK_COST).some(k => !M.unlocked[k] && M.gems >= UNLOCK_COST[k]) || META_KEYS.some(k => (!TYPES[k] || M.unlocked[k]) && metaLv(k) < META_DEF[k].max && M.gems >= metaCost(k));
   if (canUp) redDot(BTN.home.x + BTN.home.w - 4, BTN.home.y + 4);
-  button(BTN.share, '#1f9d6b', true, (cx, cy) => { shareIcon(cx - 40, cy); text(L('기록 공유', '記録をシェア', 'Share'), cx + 10, cy, L(15, 12, 15), '#fff', 'center', 3); }, 'share');
-  if (D && !D.shared) { const sb = BTN.share, bx = sb.x + sb.w - 22, by = sb.y - 6, pz = 1 + 0.06 * Math.sin(T * 5); ctx.save(); ctx.translate(bx, by); ctx.scale(pz, pz); rr(-24, -11, 48, 22, 11); ctx.fillStyle = '#ffcf5a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a4a00'; ctx.stroke(); icon('gem', -12, 0, 11); text('+' + SHARE_REWARD, 8, 1, 12, '#5a3a00', 'center', 0); ctx.restore(); }
+  if (!PORTAL) button(BTN.share, '#1f9d6b', true, (cx, cy) => { shareIcon(cx - 40, cy); text(L('기록 공유', '記録をシェア', 'Share'), cx + 10, cy, L(15, 12, 15), '#fff', 'center', 3); }, 'share');
+  if (!PORTAL && D && !D.shared) { const sb = BTN.share, bx = sb.x + sb.w - 22, by = sb.y - 6, pz = 1 + 0.06 * Math.sin(T * 5); ctx.save(); ctx.translate(bx, by); ctx.scale(pz, pz); rr(-24, -11, 48, 22, 11); ctx.fillStyle = '#ffcf5a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a4a00'; ctx.stroke(); icon('gem', -12, 0, 11); text('+' + SHARE_REWARD, 8, 1, 12, '#5a3a00', 'center', 0); ctx.restore(); }
   drawComeback();
   if (S.msgT > 0) { S.msgT -= 1 / 60; ctx.globalAlpha = Math.min(1, S.msgT * 2); text(S.msg, W / 2, 596, 13, S.msgCol, 'center', 3); ctx.globalAlpha = 1; }
 }
@@ -2094,7 +2098,7 @@ function hitKey(x, y) {
       if (TYPES[k] && inRect(x, y, shopDeckRect(i))) return 'deck_' + k; }
     return null;
   }
-  if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; if (inRect(x, y, BTN.share)) return 'share'; return null; }
+  if (screen === 'over') { if (!S.revived && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; if (!PORTAL && inRect(x, y, BTN.share)) return 'share'; return null; }
   if (S.pick) { for (let i = 0; i < 3; i++) if (inRect(x, y, pickRect(i))) return 'card_' + i; return null; }
   { const sr = sellRect(); if (sr && inRect(x, y, sr)) return 'sellsel'; }
   if (paused) return inRect(x, y, BTN.resume) ? 'resume' : inRect(x, y, BTN.quit) ? 'quit' : null;
