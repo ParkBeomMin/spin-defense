@@ -149,8 +149,13 @@ function drawAnim(type, anim, p, x, foot, h, flip = false, alpha = 1, sc = 1, wh
 }
 // 발 위치 기준점 (스프라이트 폭 대비). 공격 포즈는 이펙트 때문에 폭이 넓어서 따로 지정
 const ANCH = { bomber: 0.52, chrono: 0.53, sword: 0.435, bow: 0.435, magic: 0.441, ice: 0.395, bard: 0.485, ninja: 0.536, storm: 0.463, dwarf: 0.532, alch: 0.419, sniper: 0.438, cat: 0.537, slimeking: 0.486, lich: 0.431, sword_atk: 0.34, bow_atk: 0.386, magic_atk: 0.367, ice_atk: 0.343 };
-const IMG_NAMES = ['slimeking', 'lich', 'dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'bomber', 'chrono', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
+// 후반 보스 그림은 처음에 받지 않고, 해당 보스 8웨이브 전에 받는다 (첫 로딩을 가볍게)
+const LATE_IMGS = ['dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos'];
+function ensureImg(n) { if (IMG[n]) return; const im = new Image(); im.src = `assets/${n}.png?v=${ASSET_V}`; IMG[n] = im; }
+const IMG_NAMES = ['slimeking', 'lich', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'bomber', 'chrono', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
 const ASSET_V = 12; // 그림 파일을 바꿔 배포할 때 올림 (서비스워커 저장본 갱신용)
+let ANIM_META = null, ANIM_LOAD = () => {}; const ANIM_REQ = new Set();
+function needAnims(keys) { keys.forEach(k => ANIM_LOAD(k)); }
 function loadAssets() {
   const ps = IMG_NAMES.map(n => new Promise(res => { const im = new Image(); im.onload = () => res(); im.onerror = () => res(); im.src = `assets/${n}.png?v=${ASSET_V}`; IMG[n] = im; }));
   ps.push(new Promise(res => { const im = new Image(); im.onload = res; im.onerror = res; im.src = 'assets/bg.jpg'; IMG.bg = im; }));
@@ -158,8 +163,11 @@ function loadAssets() {
   const need = new Set(['sword', 'bow', 'magic', 'ice', 'goblin', 'skeleton', 'boss', ...(M.deck || [])]);
   const loadAnim = (meta, k) => new Promise(res => { const im = new Image(); im.onload = () => { ANIM[k] = { im, ...meta[k] }; res(); }; im.onerror = res; im.src = `assets/anim_${k}.webp?v=${ASSET_V}`; });
   ps.push(fetch('assets/anim.json?a=2').then(r => r.json()).then(meta => {
-    const later = Object.keys(meta).filter(k => !need.has(k));
-    return Promise.all(Object.keys(meta).filter(k => need.has(k)).map(k => loadAnim(meta, k))).then(() => { setTimeout(() => later.forEach(k => loadAnim(meta, k)), 300); });
+    // 처음엔 덱·기본 적만, 잠시 뒤 보유 영웅과 적, 아직 없는 영웅은 상점·도전에서 필요할 때 받는다
+    ANIM_META = meta; ANIM_LOAD = k => { if (ANIM[k] || ANIM_REQ.has(k) || !meta[k]) return; ANIM_REQ.add(k); loadAnim(meta, k); };
+    Object.keys(meta).filter(k => need.has(k)).forEach(k => ANIM_REQ.add(k));
+    const later = Object.keys(meta).filter(k => !need.has(k) && (!TYPES[k] || M.unlocked[k]));
+    return Promise.all(Object.keys(meta).filter(k => need.has(k)).map(k => loadAnim(meta, k))).then(() => { setTimeout(() => later.forEach(k => ANIM_LOAD(k)), 1500); });
   }).catch(() => {}));
   ps.push(document.fonts ? Promise.race([document.fonts.load('20px Jua', '스핀디펜스영웅소환게임시작강화보상웨이브몬스터골드무료배속판매합체 0123456789').catch(() => {}), new Promise(r => setTimeout(r, 2500))]) : Promise.resolve());
   if (LANG === 'ja' && document.fonts) ps.push(document.fonts.load('20px MPR', 'ヒーロー召喚').catch(() => {}));
@@ -286,6 +294,7 @@ function wrapText(str, maxW, size) {
 function drawMegaphone(cx, cy) { ctx.save(); ctx.fillStyle = '#ffd166'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx - 10, cy - 4); ctx.lineTo(cx + 6, cy - 11); ctx.lineTo(cx + 6, cy + 9); ctx.lineTo(cx - 10, cy + 3); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ff6b6b'; ctx.fillRect(cx - 14, cy - 5, 5, 9); ctx.strokeRect(cx - 14, cy - 5, 5, 9); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx + 8, cy - 1, 8, -0.6, 0.6); ctx.stroke(); ctx.restore(); }
 function drawFlame(cx, cy, k = 1) { ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k); const g = ctx.createLinearGradient(0, -14, 0, 12); g.addColorStop(0, '#ffe066'); g.addColorStop(1, '#ff5d2e'); ctx.fillStyle = g; ctx.strokeStyle = '#7a2a00'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -14); ctx.bezierCurveTo(8, -6, 11, 2, 9, 6); ctx.bezierCurveTo(7, 12, -7, 12, -9, 6); ctx.bezierCurveTo(-11, 0, -5, -4, -3, -9); ctx.bezierCurveTo(-1, -5, 1, -6, 0, -14); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.ellipse(0, 5, 3.5, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 function drawChallenge() {
+  needAnims(todayChallenge().deck);
   const C = todayChallenge(), done = chalDone();
   ctx.fillStyle = 'rgba(10,6,24,.84)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   panel(22, 80, 316, 504);
@@ -321,6 +330,9 @@ const store = {
   get tut() { return +(localStorage.getItem('sd_tut') || 0); }, set tut(v) { localStorage.setItem('sd_tut', v); },
   get mute() { return localStorage.getItem('sd_mute') === '1'; }, set mute(v) { localStorage.setItem('sd_mute', v ? '1' : '0'); },
   get auto() { return localStorage.getItem('sd_auto') === '1'; }, set auto(v) { localStorage.setItem('sd_auto', v ? '1' : '0'); },
+  get music() { const v = localStorage.getItem('sd_music'); return v == null ? 2 : +v; }, set music(v) { localStorage.setItem('sd_music', v); },
+  get sfxOn() { return localStorage.getItem('sd_sfx') !== '0'; }, set sfxOn(v) { localStorage.setItem('sd_sfx', v ? '1' : '0'); },
+  get vib() { return localStorage.getItem('sd_vib') !== '0'; }, set vib(v) { localStorage.setItem('sd_vib', v ? '1' : '0'); },
   get autoHint() { return localStorage.getItem('sd_auto_hint') === '1'; }, set autoHint(v) { localStorage.setItem('sd_auto_hint', v ? '1' : '0'); },
 };
 
@@ -545,6 +557,36 @@ async function submitScore(wave) {
   } catch (e) { return false; }
 }
 const cleanNick = s => String(s || '').replace(/[<>"'`\\/]/g, '').replace(/\s+/g, ' ').trim().slice(0, 10);
+function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+function openSettings() {
+  if (document.getElementById('codedlg')) return;
+  const wrap = document.createElement('div'); wrap.id = 'codedlg';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+  const seg = (id, opts, cur) => `<div style="display:flex;gap:6px" data-seg="${id}">${opts.map(([v, t]) => `<button data-v="${v}" style="flex:1;font:14px inherit;font-family:inherit;padding:8px 4px;border-radius:10px;border:2px solid ${String(v) === String(cur) ? '#ffcf5a' : 'transparent'};background:${String(v) === String(cur) ? '#6b5bb8' : '#3a2f66'};color:#fff">${t}</button>`).join('')}</div>`;
+  const row = (label, html) => `<div style="text-align:left;margin:10px 0 4px;font-size:13px;color:#cfe8ff">${label}</div>${html}`;
+  const langCur = (new URLSearchParams(location.search).get('lang')) || 'auto';
+  const render = () => {
+    wrap.innerHTML = `<div style="width:min(310px,86vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:16px 16px 14px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+      <div style="font-size:22px;color:#ffd166;margin-bottom:4px">${L('설정', '設定', 'Settings')}</div>
+      ${row(L('배경음악', 'BGM', 'Music'), seg('music', [[0, L('끄기', 'OFF', 'Off')], [1, L('작게', '小', 'Low')], [2, L('보통', '中', 'Mid')], [4, L('크게', '大', 'High')]], store.mute ? 0 : store.music))}
+      ${row(L('효과음', '効果音', 'Sound effects'), seg('sfx', [[1, L('켜기', 'ON', 'On')], [0, L('끄기', 'OFF', 'Off')]], store.mute ? 0 : (store.sfxOn ? 1 : 0)))}
+      ${row(L('진동', 'バイブ', 'Vibration'), seg('vib', [[1, L('켜기', 'ON', 'On')], [0, L('끄기', 'OFF', 'Off')]], store.vib ? 1 : 0))}
+      ${row(L('언어', '言語', 'Language'), seg('lang', [['auto', L('자동', '自動', 'Auto')], ['ko', '한국어'], ['ja', '日本語'], ['en', 'English']], langCur))}
+      <button id="setok" style="width:100%;margin-top:14px;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('닫기', '閉じる', 'Close')}</button></div>`;
+    wrap.querySelectorAll('[data-seg] button').forEach(b => b.onclick = () => {
+      const id = b.parentElement.dataset.seg, v = b.dataset.v;
+      if (id === 'music') { store.music = +v; if (+v > 0) store.mute = false; }
+      else if (id === 'sfx') { store.sfxOn = v === '1'; if (v === '1') store.mute = false; }
+      else if (id === 'vib') { store.vib = v === '1'; if (v === '1') buzz(30); }
+      else if (id === 'lang') { const u = new URL(location.href); if (v === 'auto') u.searchParams.delete('lang'); else u.searchParams.set('lang', v); location.href = u.toString(); return; }
+      if (store.music === 0 && !store.sfxOn) store.mute = true;
+      sfx('click'); track('settings', { id, v }); render();
+    });
+    wrap.querySelector('#setok').onclick = () => wrap.remove();
+  };
+  render(); document.body.appendChild(wrap);
+  wrap.addEventListener('pointerdown', e => { if (e.target === wrap) wrap.remove(); });
+}
 function openNickDialog(after) {
   if (document.getElementById('codedlg')) return;
   const wrap = document.createElement('div'); wrap.id = 'codedlg';
@@ -563,6 +605,25 @@ function openNickDialog(after) {
   wrap.querySelector('#nickok').onclick = ok; inp.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
   setTimeout(() => inp.focus(), 50);
 }
+// 지난주 랭킹 보상: 다음 주 첫 접속 때 지난주 TOP 10이면 보석 (1위 500, 2위 300, 3위 200, 4~10위 100)
+const RANK_REWARD = [500, 300, 200, 100, 100, 100, 100, 100, 100, 100];
+async function checkWeekReward() {
+  if (PORTAL || !nick()) return;
+  const lw = weekKey(-1); if (localStorage.getItem('sd_rwk') === lw) return;
+  try {
+    const r = await fetch(`${RANK_BASE}/${lw}:runQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: 'wave' }, direction: 'DESCENDING' }], limit: 10 } }) });
+    const j = await r.json(); if (!Array.isArray(j)) return;
+    localStorage.setItem('sd_rwk', lw);
+    const ids = j.filter(x => x.document).map(x => x.document.name.split('/').pop()), i = ids.indexOf(deviceId());
+    if (i < 0) return;
+    const g = RANK_REWARD[i]; M.gems += g; saveMeta(); gemPop = { amt: g, t: 1.8 }; track('rank_reward', { rank: i + 1, gems: g });
+    const show = () => { if (document.getElementById('codedlg')) return setTimeout(show, 1500); const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+      w.innerHTML = `<div style="width:min(290px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="font-size:15px;color:#cfe8ff">${L('지난주 주간 랭킹', '先週の週間ランキング', 'Last week\'s ranking')}</div><div style="font-size:34px;color:#ffd166;margin:6px 0">${L(`${i + 1}위!`, `${i + 1}位！`, `#${i + 1}!`)}</div><div style="font-size:16px;margin-bottom:14px">${L(`보상 보석 +${g}`, `報酬 ジェム +${g}`, `Reward: ${g} gems`)}</div><button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
+      document.body.appendChild(w); w.querySelector('button').onclick = () => { w.remove(); sfx('jackpot'); }; };
+    show();
+  } catch (e) {}
+}
+setTimeout(checkWeekReward, 3500);
 function rankAfterGame() {
   if (PORTAL || S.chal || S.wave < 3 || S.wave <= weekBest()) return;
   const w = S.wave, go = () => submitScore(w).then(ok => { if (ok && screen === 'over') { const i = (RANK.list || []).findIndex(x => x.id === deviceId()); S.rankMsg = i >= 0 ? L(`이번 주 랭킹 ${i + 1}위!`, `今週のランキング ${i + 1}位！`, `Weekly rank #${i + 1}!`) : L(`이번 주 기록 WAVE ${w} 등록`, `今週の記録 WAVE ${w} 登録`, `Weekly best WAVE ${w} saved`); } });
@@ -571,7 +632,7 @@ function rankAfterGame() {
 function drawRank() {
   ctx.fillStyle = 'rgba(14,8,32,.9)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   text(L('주간 랭킹', '週間ランキング', 'Weekly Ranking'), W / 2, 46, 30, '#ffd166', 'center', 6);
-  text(L(`${weekRange()} · 월요일에 새로 시작`, `${weekRange()}・毎週月曜リセット`, `${weekRange()} · resets every Monday`), W / 2, 80, 12, 'rgba(255,255,255,.65)', 'center', 2);
+  text(L(`${weekRange()} · 월요일 보상: 1위 500 · 2위 300 · 3위 200 · TOP10 100`, `${weekRange()}・月曜報酬 1位500・2位300・3位200・TOP10 100`, `${weekRange()} · Monday rewards: #1 500, #2 300, #3 200, TOP10 100`), W / 2, 80, fitSize(L(`${weekRange()} · 월요일 보상: 1위 500 · 2위 300 · 3위 200 · TOP10 100`, `${weekRange()}・月曜報酬 1位500・2位300・3位200・TOP10 100`, `${weekRange()} · Monday rewards: #1 500, #2 300, #3 200, TOP10 100`), 12, 330), '#ffd166', 'center', 2);
   const list = RANK.list, me = deviceId();
   if (!list) text(RANK.err ? L('랭킹을 불러오지 못했어요', '読み込めませんでした', 'Could not load the ranking') : L('불러오는 중...', '読み込み中...', 'Loading...'), W / 2, 250, 15, '#cfe8ff', 'center', 3);
   else if (!list.length) text(L('아직 기록이 없어요. 첫 1등이 되어보세요!', 'まだ記録がありません。1位を狙おう！', 'No scores yet. Be the first!'), W / 2, 250, 14, '#cfe8ff', 'center', 3);
@@ -660,7 +721,13 @@ const THEMES = [
   { id: 'chaos',  bg: 'bg_chaos',  name: L('혼돈의 끝', '混沌の果て', 'Edge of Chaos'), path: ['#2a1838', '#46285c', 'rgba(230,80,255,.45)'] },
 ];
 const themeIdx = w => w < 1 ? 0 : Math.floor((w - 1) / 10) % THEMES.length;
-setTimeout(() => { for (const t of THEMES) if (!IMG[t.bg]) { const im = new Image(); im.src = `assets/${t.bg}.jpg?v=${ASSET_V}`; IMG[t.bg] = im; } }, 2500);
+// 지역 배경도 필요할 때만: 지금 지역과, 다음 지역 5웨이브 전부터 미리 받기
+function loadBg(n) { if (IMG[n]) return; const im = new Image(); im.src = `assets/${n}.jpg?v=${ASSET_V}`; IMG[n] = im; }
+function preloadFor(w) {
+  loadBg(THEMES[themeIdx(Math.max(1, w))].bg); if (w % 10 >= 5 || w % 10 === 0) loadBg(THEMES[themeIdx(w + 6)].bg);
+  const nb = Math.ceil((w + 1) / 10) * 10; if (nb - w <= 8) { const k = bossKindFor(nb); if (LATE_IMGS.includes(BOSSES[k].spr)) ensureImg(BOSSES[k].spr); }
+}
+setTimeout(() => loadBg('bg_desert'), 4000);
 // ===== 배경 음악 (WebAudio로 직접 연주, 파일 없음) =====
 const MUSIC = { on: false, next: 0, step: 0, gain: null, timer: null };
 const mf = n => 440 * Math.pow(2, (n - 69) / 12);
@@ -687,7 +754,7 @@ function musicNote(f, t, dur, type, vol, f2) {
 }
 function scheduleMusic() {
   const boss = screen === 'play' && S && S.enemies && S.enemies.some(e => e.boss);
-  const vol = (store.mute || ADS.inAd || document.hidden || paused) ? 0 : 0.5;
+  const vol = (store.mute || ADS.inAd || document.hidden || paused) ? 0 : 0.25 * store.music;
   MUSIC.gain.gain.setTargetAtTime(vol, AC.currentTime, 0.15);
   const set = boss ? MUSIC_SETS.boss : MUSIC_SETS[screen === 'play' && S ? THEMES[themeIdx(S.wave)].id : 'forest'], stepLen = set.step;
   while (MUSIC.next < AC.currentTime + 0.35) {
@@ -731,7 +798,7 @@ function noise(dur, vol, ftype = 'bandpass', f = 1500, delay = 0, f2 = null, q =
   src.connect(fl).connect(g).connect(SY.dest); src.start(t0, Math.random() * 0.2); src.stop(t0 + dur + 0.02);
 }
 function sfx(k) {
-  if (store.mute || ADS.inAd) return;
+  if (store.mute || !store.sfxOn || ADS.inAd) return;
   const now = window.__sfxLog ? (window.__vclock || 0) * 1000 : performance.now();
   if (SFX_GAP[k]) { if (now - (sfxLast[k] ?? -1e9) < SFX_GAP[k]) return; sfxLast[k] = now; }
   if (window.__sfxLog) { if (!window.__sfxOff) window.__sfxLog.push([k, window.__vclock || 0]); return; }
@@ -769,7 +836,7 @@ function synth(ac, dest, base, k) {
       case 'bigboom': tone(80, 0.7, 'sine', 0.28, 28); noise(0.7, 0.16, 'lowpass', 1600, 0, 90); tone(523, 0.3, 'triangle', 0.06, 262, 0.05); break;
     }
 }
-const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+const buzz = ms => { if (!store.vib) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 
 // ===== 상태 =====
 const LIMIT = 60, WAVE_LEN = 22, MAX_AD_SPINS = 3;
@@ -779,7 +846,7 @@ let S, screen = 'loading', drag = null, selected = -1, ad = null, press = null, 
 const RUN_KEY = 'sd_run';
 function saveRun() {
   if (!S || S.first || S.chal || S.wave < 3 || screen !== 'play') return;
-  try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, speed: S.speed })); } catch (e) {}
+  try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, speed: S.speed, endless: S.endless || 0, cleared: !!S.cleared })); } catch (e) {}
 }
 function loadRun() { try { const r = JSON.parse(localStorage.getItem(RUN_KEY)); if (!r || r.v !== 1 || !r.wave || Date.now() - r.at > 14 * 86400000) return null; return r; } catch (e) { return null; } }
 function clearRun() { localStorage.removeItem(RUN_KEY); runCache = null; }
@@ -787,12 +854,12 @@ let runCache = null, runCacheT = 0;
 const loadRunCached = () => { if (T - runCacheT > 1 || T < runCacheT) { runCache = loadRun(); runCacheT = T; } return runCache; };
 function resumeRun(r) {
   const deck = M.deck.slice(); M.deck = r.deck.slice(); newGame(); M.deck = deck;
-  Object.assign(S, { gold: r.gold, goldShown: r.gold, kills: r.kills || 0, time: r.time || 0, spins: r.spins || 0, bossKills: r.bossKills || 0, revived: !!r.revived, gemsGiven: r.gemsGiven || 0, freeCharges: r.freeCharges ?? 1, freeT: r.freeT ?? freeRecharge(), adSpins: r.adSpins ?? MAX_AD_SPINS, speed: r.speed || 1, first: false });
+  Object.assign(S, { gold: r.gold, goldShown: r.gold, kills: r.kills || 0, time: r.time || 0, spins: r.spins || 0, bossKills: r.bossKills || 0, revived: !!r.revived, gemsGiven: r.gemsGiven || 0, freeCharges: r.freeCharges ?? 1, freeT: r.freeT ?? freeRecharge(), adSpins: r.adSpins ?? MAX_AD_SPINS, speed: r.speed || 1, first: false, endless: r.endless || 0, cleared: !!r.cleared });
   for (const k in r.lv) S.lv[k] = r.lv[k];
   r.units.forEach((u, i) => { S.units[i] = u ? { type: u[0], grade: u[1], cd: Math.random() * 0.4, anim: 0, born: 0.3 } : null; });
   for (const ci of r.picked || []) { const c = CARDS[ci]; if (c) { c.apply(S.B); S.picked.push(c); } }
   S.wave = r.wave - 1; S.waveT = 3; S.skipPick = !!r.pickDone; S.themeFade = 0;
-  screen = 'play'; track('run_resume', { wave: r.wave });
+  preloadFor(r.wave); screen = 'play'; track('run_resume', { wave: r.wave });
 }
 function openResumeDialog(r) {
   if (document.getElementById('codedlg')) return;
@@ -811,7 +878,7 @@ function openResumeDialog(r) {
   wrap.addEventListener('pointerdown', e => { if (e.target === wrap) wrap.remove(); });
 }
 function newGame(chal = null) {
-  TYPE_KEYS = (chal ? chal.deck : M.deck).slice(); SYMS = [...TYPE_KEYS, 'star']; buildUPG();
+  TYPE_KEYS = (chal ? chal.deck : M.deck).slice(); needAnims(TYPE_KEYS); SYMS = [...TYPE_KEYS, 'star']; buildUPG();
   S = {
     gold: 100 + 25 * metaLv('gold'), goldShown: 100 + 25 * metaLv('gold'), B: newBuffs(), picked: [], pick: null, bossKills: 0, gemsGiven: 0, wave: 0, waveT: 3, spawnLeft: 0, spawnGap: 1, spawnT: 0,
     enemies: [], units: Array(COLS * ROWS).fill(null), fx: [], proj: [], dmg: [], parts: [], coins: [], dying: [], decals: [], pools: [], hitstop: 0, hsCd: 0, flash: null, kick: null,
@@ -844,7 +911,7 @@ function startWave() {
   S.wave++; S.waveT = WAVE_LEN; mission('wave', 0, S.wave);
   if (S.chal && S.wave >= S.chal.target && !S.chalWin) { S.chalWin = true; if (!chalDone()) { D.chalDone = true; saveDaily(); stInc('chal'); M.gems += S.chal.reward; saveMeta(); S.chalPaid = true; track('challenge_clear', { mod: S.chal.mod.id, deck: S.chal.deck.join(',') }); } setTimeout(() => { banner(L('도전 성공!', 'チャレンジ成功！', 'Challenge cleared!'), S.chalPaid ? L(`보석 +${S.chal.reward}`, `ジェム +${S.chal.reward}`, `Gems +${S.chal.reward}`) : L('오늘 보상은 이미 받았어요', '今日の報酬は受け取り済み', 'Today\'s reward already claimed'), '#ffd166', 2.4); sfx('jackpot'); }, 1400); } if (S.wave % 5 === 0) track('wave_reached', { wave: S.wave });
   if (S.wave % 5 === 0 && !S.skipPick) openPick();
-  S.skipPick = false; saveRun();
+  S.skipPick = false; saveRun(); preloadFor(S.wave);
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
   S.spawnGap = Math.min(1.2, 14 / Math.max(1, S.spawnLeft)); S.spawnT = 0;
@@ -1028,6 +1095,7 @@ function killEnemy(e) {
   e.dead = true; S.kills++; mission('kill'); if (e.boss) mission('boss'); stInc('kills'); if (e.boss) stInc('boss');
   if (e.bk === 'slimeking') spawnMinion('slime', e, 2.5, 4);
   const g = Math.round((e.boss ? 60 + S.wave * 6 : 2 + Math.floor(S.wave / 4)) * S.B.gold * (1 + 0.08 * metaLv('bounty')));
+  if (e.boss && S.wave > 100) { const eb = 30 + Math.floor((S.wave - 100) / 2); S.endless = (S.endless || 0) + eb; setTimeout(() => { if (screen === 'play') { banner(L('무한 모드 보너스!', 'エンドレスボーナス！', 'Endless bonus!'), L(`보석 +${eb} (게임이 끝나면 받아요)`, `ジェム +${eb}（終了時に獲得）`, `Gems +${eb} (paid at game over)`), '#8fe3ff', 2.2); sfx('jackpot'); } }, 900); }
   if (e.boss) { S.bossKills++; S.bossT = 0; if (e.bk === 'chaos' && S.wave >= 100 && !S.cleared) { S.cleared = true; setTimeout(() => { if (screen !== 'play') return; banner(L('엔딩! 혼돈의 군주 처치', 'エンディング！混沌の君主撃破', 'ENDING! Chaos Overlord defeated'), L('축하해요! 이제부터는 끝없는 도전이에요', 'おめでとう！ここからはエンドレス', 'Congrats! Endless mode from here'), '#ffe9a0', 4.5); flashScreen(0.5, '#fff6d6'); sfx('jackpot'); buzz([80, 60, 160]); S.units.forEach(q => { if (q) q.cheer = 3; }); for (let k = 0; k < 6; k++) setTimeout(() => { if (screen === 'play') { const [cx0, cy0] = cellCenter(Math.floor(Math.random() * 20)); burst(cx0, cy0, ['#ffd166', '#ff7ab6', '#8fe3ff', '#9be36d'][k % 4], 22); } }, k * 260); }, 700); track('game_clear', { wave: S.wave, play_sec: Math.round(S.time) }); } }
   S.gold += Math.round(g * (S.cm.gold || 1));
   if (e.boss) {
@@ -1406,7 +1474,7 @@ function gameOver() {
   track('game_over', { wave: S.wave, kills: S.kills, boss_fail: S.bossFail ? 1 : 0, revived: S.revived ? 1 : 0, cards: S.picked.length, spins: S.spins, play_sec: Math.round(S.time), deck: TYPE_KEYS.join(','), gems: S.gemsEarned || 0, auto: store.auto ? 1 : 0 });
   if (S.wave > store.best) { store.best = S.wave; S.newBest = true; }
   // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
-  const total = Math.round(S.wave * 2 + S.kills / 25 + S.bossKills * 5);
+  const total = Math.round(S.wave * 2 + S.kills / 25 + S.bossKills * 5 + (S.endless || 0));
   S.gemsEarned = total; M.gems += total - S.gemsGiven; S.gemsGiven = total; saveMeta();
   rankAfterGame();
 }
@@ -2059,7 +2127,7 @@ function drawTitle() {
   // 왼쪽 위 두 번째: 공지사항
   if (NOTICES.length) { button(BTN.notice, '#6b5bb8', true, (cx, cy) => { drawMegaphone(cx + 1, cy - 6); text(L('공지', 'お知らせ', 'News'), cx, cy + 17, L(11, 9, 10), '#fff', 'center', 2.5); }, 'notice'); if (noticeUnseen()) redDot(BTN.notice.x + BTN.notice.w - 4, BTN.notice.y + 4); }
   // 오른쪽 위: 소리
-  button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawSpeaker(cx - 2, cy, store.mute), 'tmute');
+  button(BTN.tmute, '#4a3f7a', true, (cx, cy) => drawGear(cx, cy), 'tmute');
   if (installEvt) button(BTN.install, '#1f9d6b', true, (cx, cy) => text(L('📲 앱으로 설치', '📲 アプリに追加', '📲 Install app'), cx, cy, L(12, 10, 11), '#fff', 'center', 2.5), 'install');
   // 오른쪽 위 두 번째: 오늘의 도전
   button(BTN.chal, '#d9542b', true, (cx, cy) => { drawFlame(cx, cy - 6, 0.95); text(L('도전', 'チャレンジ', 'Challenge'), cx, cy + 17, L(11, 8, 9), '#fff', 'center', 2.5); }, 'chal');
@@ -2069,7 +2137,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v1.9 베타', 'v1.9 ベータ', 'v1.9 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.0 베타', 'v2.0 ベータ', 'v2.0 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -2413,11 +2481,11 @@ function hitKey(x, y) {
 function activate(key) {
   switch (key) {
     case 'start': track('game_start', { deck: M.deck.join(','), best_wave: store.best, gems: M.gems, lang: LANG }); if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: L('덱에 영웅 4명을 골라주세요', 'デッキにヒーローを4人選んでね', 'Pick 4 heroes for your deck'), t: 2.5 }; sfx('error'); break; } { const r = loadRun(); if (r) { openResumeDialog(r); break; } } newGame(); screen = 'play'; sfx('click'); break;
-    case 'shop': screen = 'shop'; sfx('click'); break;
+    case 'shop': screen = 'shop'; sfx('click'); needAnims(Object.keys(TYPES)); break;
     case 'reward': ensureDaily(); screen = 'missions'; sfx('click'); break;
     case 'attc': claimAtt(); break;
     case 'sellsel': if (selected >= 0) sellUnit(selected); break;
-    case 'tmute': store.mute = !store.mute; sfx('click'); break;
+    case 'tmute': sfx('click'); openSettings(); break;
     case 'notice': noticeOpen = true; sfx('click'); track('notice_open', { id: NOTICES[0] && NOTICES[0].id }); break;
     case 'nclose': closeNotice(); sfx('click'); break;
     case 'achb': screen = 'ach'; achScroll = 0; sfx('click'); break;
