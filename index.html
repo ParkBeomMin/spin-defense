@@ -1441,7 +1441,7 @@ function drawSlot() {
       text(L('배속', '倍速'), cx + 12, cy + 13, 11, 'rgba(255,255,255,.75)', 'center', 2);
     }, 'speed');
   }
-  if (!S.first && !paused) drawAutoToggle();
+  if (!S.first && !paused && screen === 'play') drawAutoToggle();
   if (adMode()) {
     const adOk = S.adSpins > 0 && can;
     button(BTN.ad, '#2f8ae0', adOk, (cx, cy) => {
@@ -1758,7 +1758,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v1.3 베타', 'v1.3 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v1.3.2 베타', 'v1.3.2 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -1845,7 +1845,20 @@ function drawOver() {
   if (canUp) redDot(BTN.home.x + BTN.home.w - 4, BTN.home.y + 4);
   button(BTN.share, '#1f9d6b', true, (cx, cy) => { shareIcon(cx - 40, cy); text(L('기록 공유', '記録をシェア'), cx + 10, cy, L(15, 12), '#fff', 'center', 3); }, 'share');
   if (D && !D.shared) { const sb = BTN.share, bx = sb.x + sb.w - 22, by = sb.y - 6, pz = 1 + 0.06 * Math.sin(T * 5); ctx.save(); ctx.translate(bx, by); ctx.scale(pz, pz); rr(-24, -11, 48, 22, 11); ctx.fillStyle = '#ffcf5a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a4a00'; ctx.stroke(); icon('gem', -12, 0, 11); text('+' + SHARE_REWARD, 8, 1, 12, '#5a3a00', 'center', 0); ctx.restore(); }
+  drawComeback();
   if (S.msgT > 0) { S.msgT -= 1 / 60; ctx.globalAlpha = Math.min(1, S.msgT * 2); text(S.msg, W / 2, 596, 13, S.msgCol, 'center', 3); ctx.globalAlpha = 1; }
+}
+// 게임오버 아래: 다시 올 이유 (출석·오늘의 도전)
+function comebackLines() {
+  ensureDaily(); const out = [];
+  if (!D.att) out.push({ txt: L(`오늘 출석 보상 아직 안 받았어요 · 보석 +${ATT_REWARD[attDay()]}`, `今日のログボ未受け取り・ジェム +${ATT_REWARD[attDay()]}`), col: '#ffd166' });
+  else out.push({ txt: L(`내일 또 오면 출석 보석 +${ATT_REWARD[D.streak % 7]} (${D.streak + 1}일 연속)`, `明日も来るとログボ ジェム +${ATT_REWARD[D.streak % 7]}（${D.streak + 1}日連続）`), col: '#8fe3ff' });
+  if (!chalDone() && !S.chal) out.push({ txt: L(`오늘의 도전 남았어요 · 보석 +${CHAL_REWARD}`, `今日のチャレンジ未クリア・ジェム +${CHAL_REWARD}`), col: '#ff9f6b' });
+  return out;
+}
+function drawComeback() {
+  if (S.msgT > 0) return;
+  comebackLines().forEach((l, i) => { const y = 600 + i * 22, sz = fitSize(l.txt, 12, 270); ctx.font = `${sz}px ${FONT}`; const w = ctx.measureText(l.txt).width; icon('gem', W / 2 - w / 2 - 10, y, 13); text(l.txt, W / 2 + 4, y, sz, l.col, 'center', 3); });
 }
 function drawAutoToggle() {
   const b = BTN.amerge, on = store.auto, hint = !store.autoHint && S.time > 4 && S.time < 16;
