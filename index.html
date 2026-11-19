@@ -1147,6 +1147,8 @@ function betweenGames(next) {
 
 // ===== 그리기 유틸 =====
 function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+// 글자가 maxW보다 넓으면 글자 크기를 줄인다 (일본어처럼 긴 문구용)
+function fitSize(s, size, maxW) { ctx.font = `${size}px ${FONT}`; const w = ctx.measureText(s).width; return w > maxW ? Math.max(10, Math.floor(size * maxW / w)) : size; }
 function text(s, x, y, size, col = '#fff', align = 'center', stroke = 0, strokeCol = 'rgba(30,15,50,.9)') {
   ctx.font = `${size}px ${FONT}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
   if (stroke) { ctx.lineJoin = 'round'; ctx.lineWidth = stroke; ctx.strokeStyle = strokeCol; ctx.strokeText(s, x, y); }
@@ -1621,9 +1623,9 @@ function drawBanner() {
   const b = S.banner; if (!b) return;
   const p = 1 - b.t / b.max, s = p < 0.15 ? easeOutBack(p / 0.15) : 1, a = b.t < 0.3 ? b.t / 0.3 : 1;
   ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, 236); ctx.scale(s, s);
-  ctx.fillStyle = 'rgba(20,10,40,.55)'; rr(-150, -40, 300, 80, 20); ctx.fill();
-  text(b.text, 0, -8, 40, b.col, 'center', 7);
-  if (b.sub) text(b.sub, 0, 24, 15, '#fff', 'center', 4);
+  ctx.fillStyle = 'rgba(20,10,40,.55)'; rr(-170, -40, 340, 80, 20); ctx.fill();
+  text(b.text, 0, -8, fitSize(b.text, 40, 320), b.col, 'center', 7);
+  if (b.sub) text(b.sub, 0, 24, fitSize(b.sub, 15, 330), '#fff', 'center', 4);
   ctx.restore();
 }
 function drawHand(x, y, press) {
