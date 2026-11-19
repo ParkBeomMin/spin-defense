@@ -19,7 +19,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
 <link rel="canonical" href="https://parkbeommin.github.io/spin-defense/?lang=en">
 <meta http-equiv="refresh" content="0; url=../?lang=en">
-<script>location.replace('../?lang=en' + (location.hash || ''));</script>
+<script>location.replace('../?lang=en' + (location.search ? '&' + location.search.slice(1) : '') + (location.hash || ''));</script>
 </head>
 <body style="background:#1a1233;color:#fff;font-family:sans-serif;text-align:center;padding-top:40vh">
 <a href="../?lang=en" style="color:#ffd166">Open Spin Defense</a>
