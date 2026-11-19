@@ -1,1 +1,370 @@
-[{"id": "2026-11-19-v1.9", "date": "2026.11.19", "title": {"ko": "v1.9: 주간 랭킹 오픈!", "ja": "v1.9：週間ランキング開始！", "en": "v1.9: Weekly ranking is live!"}, "body": {"ko": ["첫 화면 왼쪽 '랭킹'에서 이번 주 TOP 10을 볼 수 있어요", "게임이 끝나면 이름을 등록하고 이번 주 최고 웨이브가 올라가요", "매주 월요일에 새로 시작해요"], "ja": ["タイトル左の「ランク」で今週のTOP10をチェック", "ゲーム終了後に名前を登録すると今週の最高ウェーブが載ります", "毎週月曜にリセット"], "en": ["See this week's TOP 10 from 'Rank' on the title screen", "Register a name after a game to post your best wave", "Resets every Monday"]}}, {"id": "2026-11-19-v1.8", "date": "2026.11.19", "title": {"ko": "v1.8: 새 영웅 2명 · 폭탄 공병 · 시간술사", "ja": "v1.8：新ヒーロー2人・ボム工兵・時間術師", "en": "v1.8: 2 new heroes, Bomber & Chronomancer"}, "body": {"ko": ["폭탄 공병 (보석 650): 큰 폭발로 적을 길 뒤로 날려요. 초월 스킬 '융단 폭격'", "시간술사 (보석 800): 적을 느리게 하고 가끔 뒤로 되감아요. 초월 스킬 '시간 정지'", "영웅 강화 화면에서 해금할 수 있어요"], "ja": ["ボム工兵（ジェム650）：大爆発で敵を押し戻す。超越スキル「絨毯爆撃」", "時間術師（ジェム800）：敵をスロー、時々巻き戻す。超越スキル「時間停止」", "ヒーロー強化画面で解放できます"], "en": ["Bomber (650 gems): big blasts knock enemies back. Ultimate: Carpet Bombing", "Chronomancer (800 gems): slows and sometimes rewinds enemies. Ultimate: Time Stop", "Unlock them in Upgrade Heroes"]}}, {"id": "2026-11-19-v1.7", "date": "2026.11.19", "title": {"ko": "v1.7: 이어하기 · 영웅 단련 Lv30", "ja": "v1.7：続きから・ヒーロー修練Lv30", "en": "v1.7: Continue your run · Training up to Lv30"}, "body": {"ko": ["웨이브마다 자동 저장돼요. 앱을 닫아도 '게임 시작'을 누르면 하던 판을 이어서 할 수 있어요", "영웅 단련 최대 레벨이 10에서 30으로 늘었어요 (웨이브 100 도전용)"], "ja": ["ウェーブごとに自動保存。アプリを閉じても「ゲームスタート」で続きから遊べます", "ヒーロー修練の最大レベルが10→30に"], "en": ["Your run is saved every wave. Close the app anytime and tap Start Game to continue", "Hero training max level raised from 10 to 30 (for the wave 100 challenge)"]}}, {"id": "2026-11-19-v1.6", "date": "2026.11.19", "title": {"ko": "v1.6 업데이트: 웨이브 100까지! 보스 5종 · 지역 5곳 추가", "ja": "v1.6：ウェーブ100まで！ボス5体・エリア5つ追加", "en": "v1.6: Up to wave 100! 5 new bosses & 5 new areas"}, "body": {"ko": ["51~60 하늘섬 · 웨이브 60 폭풍 그리폰: 회오리로 영웅 자리를 뒤섞어요", "61~70 깊은 바다 · 웨이브 70 크라켄: 독에 걸리지 않으면 체력이 계속 차요 (연금술사 추천)", "71~80 수정 동굴 · 웨이브 80 수정 골렘: 갑옷이 피해를 막아요. 기절시키면 깨져요 (드워프·얼음공주 추천)", "81~90 고대 신전 · 웨이브 90 메두사: 영웅 한 줄을 돌로 만들어요", "91~100 혼돈의 끝 · 웨이브 100 혼돈의 군주: 모든 패턴을 쓰는 최종 보스. 잡으면 엔딩!", "31웨이브 이후 몬스터 체력이 덜 가파르게 늘어나요"], "ja": ["51〜60 空の島・ウェーブ60 嵐のグリフォン：竜巻でヒーローの位置を入れ替える", "61〜70 深い海・ウェーブ70 クラーケン：毒にかからないと回復し続ける（錬金術師おすすめ）", "71〜80 水晶の洞窟・ウェーブ80 クリスタルゴーレム：鎧はスタンで壊れる（ドワーフ・氷の姫おすすめ）", "81〜90 古代神殿・ウェーブ90 メドゥーサ：ヒーロー1列を石にする", "91〜100 混沌の果て・ウェーブ100 混沌の君主：すべての技を使うラスボス。倒すとエンディング！", "ウェーブ31以降、モンスター体力の伸びがゆるやかに"], "en": ["51-60 Sky Islands. Wave 60 Storm Griffin shuffles your heroes", "61-70 Deep Sea. Wave 70 Kraken regenerates unless poisoned (Alchemist helps)", "71-80 Crystal Cave. Wave 80 Crystal Golem's armor breaks when stunned (Dwarf, Ice Princess help)", "81-90 Ancient Temple. Wave 90 Medusa turns a row of heroes to stone", "91-100 Edge of Chaos. Wave 100 Chaos Overlord uses every pattern. Beat it for the ending!", "Monster HP grows more gently after wave 31"]}}, {"id": "2026-11-19-v1.5", "date": "2026.11.19", "title": {"ko": "v1.5 업데이트: 웨이브 40 이후 새 보스 · 어둠의 성", "ja": "v1.5：ウェーブ40以降の新ボス・闇の城", "en": "v1.5: New bosses after wave 40 & Dark Castle"}, "body": {"ko": ["웨이브 40 보스 '화염 용왕': 불을 뿜어 영웅 3명을 잠시 멈춰요", "웨이브 41부터 새 지역 '어둠의 성' (전용 음악)", "웨이브 50 보스 '마왕': 맞으면 뒤로 순간이동하고, 영웅 공격을 느리게 하는 저주를 걸어요", "업적 추가: 웨이브 40 돌파, 웨이브 50 돌파(마왕 처치)"], "ja": ["ウェーブ40ボス「炎の竜王」：炎を吐いてヒーロー3人を一時停止", "ウェーブ41から新エリア「闇の城」（専用BGM）", "ウェーブ50ボス「魔王」：後ろへワープし、攻撃が遅くなる呪いをかける", "実績追加：ウェーブ40突破、ウェーブ50突破（魔王撃破）"], "en": ["Wave 40 boss 'Fire Dragon King' breathes fire and stops 3 heroes for a moment", "New area from wave 41: Dark Castle, with its own music", "Wave 50 boss 'Demon Lord' warps back when hurt and curses your heroes", "New achievements: pass wave 40 and wave 50"]}}, {"id": "2026-11-19-code", "date": "2026.11.19", "title": {"ko": "이벤트 코드가 생겼어요", "ja": "イベントコード登場", "en": "Event codes are here"}, "body": {"ko": ["보상 화면 왼쪽 위 '코드' 버튼에서 입력하면 보석을 받아요", "코드는 개발일지(스레드 @beoms_official)에서 기간 한정으로 나눠드려요"], "ja": ["報酬画面の左上「コード」から入力するとジェムがもらえます", "コードは開発日記（note）で期間限定で配布します"], "en": ["Enter a code with the 'Code' button on the Rewards screen to get gems", "Codes are shared for a limited time in our dev posts"]}}, {"id": "2026-11-19-v1.4", "date": "2026.11.19", "title": {"ko": "v1.4 업데이트: 영어 지원 · 다시 올 이유", "ja": "v1.4：英語対応・また来たくなる仕組み", "en": "v1.4: English version is here"}, "body": {"ko": ["브라우저 언어가 한국어·일본어가 아니면 영어로 나와요", "게임오버 화면 아래에 출석 보상과 오늘의 도전 안내가 나와요"], "ja": ["ブラウザの言語が韓国語・日本語以外なら英語で表示されます", "ゲームオーバー画面の下に、ログボと今日のチャレンジの案内を表示"], "en": ["Spin Defense now speaks English!", "Merge matching heroes, beat a boss every 10 waves, and see how far you can go", "Turn on Auto Merge (next to the Summon button) to merge up to Legend automatically", "Daily login rewards and a new Daily Challenge every day", "Feedback is welcome on Threads @beoms_official"]}}, {"id": "2026-11-19-v1.3", "date": "2026.11.19", "title": {"ko": "v1.3 업데이트: 자동 합치기 · 공유 보상", "ja": "v1.3：オート合体・シェア報酬", "en": "v1.3: Auto Merge · Share reward"}, "body": {"ko": ["소환 버튼 오른쪽 '자동 합치기'를 켜면 전설까지 알아서 합쳐요 (신화·초월은 직접 합쳐서 손맛을 느껴보세요)", "게임오버 화면에서 기록을 공유하면 하루 한 번 보석 20개", "피드백 주신 분들 고마워요! 댓글로 계속 알려주세요"], "ja": ["召喚ボタン右の「オート合体」をONにするとレジェンドまで自動で合体（ミシック・超越は自分で合体！）", "ゲームオーバー画面で記録をシェアすると1日1回ジェム20", "フィードバックありがとうございます！"], "en": ["Turn on Auto Merge next to the Summon button to merge up to Legend automatically (merge Mythic and Transcend yourself!)", "Share your record from the game over screen for 20 gems once a day"]}}, {"id": "2026-11-18-v1.2", "date": "2026.11.18", "title": {"ko": "v1.2 업데이트: 지역 · 초월 스킬 · 업적", "ja": "v1.2：エリア・超越スキル・実績", "en": "v1.2: Areas · Ultimate skills · Achievements"}, "body": {"ko": ["10웨이브마다 지역이 바뀌어요: 숲 → 사막 → 설원 → 화산 (지역별 음악, 보스전 전용 음악)", "초월 영웅마다 고유 스킬이 생겼어요 (메테오, 대지진, 황금비 등 11종)", "보상 화면 오른쪽 위 '업적'에서 장기 목표를 달성하고 보석을 받아요", "로딩이 훨씬 빨라졌어요"], "ja": ["10ウェーブごとにエリアが変化：森 → 砂漠 → 雪原 → 火山（エリア別BGM・ボス専用BGM）", "超越ヒーローに固有スキル（メテオ、大地震、黄金の雨など11種）", "報酬画面右上の「実績」で長期目標を達成してジェムGET", "読み込みがかなり速くなりました"], "en": ["The area changes every 10 waves: Forest → Desert → Ice Field → Volcano, with music for each", "Every Transcend hero has a unique ultimate skill (11 in total)", "Reach long-term goals in Achievements for gems"]}}, {"id": "2026-11-18-v1.1", "date": "2026.11.18", "title": {"ko": "v1.1 업데이트: 보스 3종 · 오늘의 도전", "ja": "v1.1：ボス3種・今日のチャレンジ", "en": "v1.1: 3 bosses · Daily Challenge"}, "body": {"ko": ["10웨이브마다 보스가 바뀌어요: 돌진하는 오우거 왕 → 분열하는 슬라임 왕 → 투명해지는 리치", "오른쪽 위 🔥 도전: 매일 바뀌는 덱과 규칙으로 WAVE 15 도달 시 보석 60개", "게임오버 화면에 다음 목표(최고 기록, 다음 해금)를 보여줘요", "안드로이드 크롬에서는 '앱으로 설치' 버튼으로 홈 화면에 추가할 수 있어요"], "ja": ["10ウェーブごとにボスが変わります：突進するオーガ王 → 分裂するキングスライム → 透明になるリッチ", "右上の🔥チャレンジ：毎日変わるデッキとルールでWAVE15到達するとジェム60", "ゲームオーバー画面に次の目標を表示", "Androidのchromeでは「アプリに追加」からホーム画面に追加できます"], "en": ["A different boss every 10 waves: Ogre King → Slime King → Lich", "Daily Challenge: a new deck and rule every day, reach WAVE 15 for 60 gems"]}}, {"id": "2026-11-18-v1.0", "date": "2026.11.18", "title": {"ko": "v1.0 업데이트: 새 영웅 4명!", "ja": "v1.0アップデート：新ヒーロー4人！", "en": "v1.0: 4 new heroes!"}, "body": {"ko": ["드워프 망치병: 내려찍어서 적을 기절시켜요", "연금술사: 독 장판으로 계속 피해를 줘요", "석궁 저격수: 보스를 노리는 강력한 한 방", "냥상인: 몇 초마다 골드를 벌어와요", "게임오버 화면에서 내 기록을 공유할 수 있어요", "게임 중 오른쪽 위 ⏸ 버튼으로 일시정지·그만두기를 할 수 있어요"], "ja": ["ドワーフ：叩きつけで敵をスタン", "錬金術師：毒の沼で継続ダメージ", "狙撃手：ボスを狙う強力な一撃", "ネコ商人：数秒ごとにゴールドを稼ぐ", "ゲームオーバー画面から記録をシェアできます", "プレイ中は右上の ⏸ ボタンで一時停止・終了ができます"], "en": ["Dwarf, Alchemist, Sniper and Cat Merchant joined", "Pause anytime with the ⏸ button"]}}, {"id": "2026-11-17-ja", "date": "2026.11.17", "title": {"ko": "일본어 지원", "ja": "日本語に対応しました", "en": "Japanese support"}, "body": {"ko": ["브라우저 언어가 일본어면 자동으로 일본어로 나와요"], "ja": ["ブラウザの言語が日本語なら自動で日本語表示になります"], "en": ["The game switches to Japanese automatically for Japanese browsers"]}}, {"id": "2026-11-17-beta", "date": "2026.11.17", "title": {"ko": "오픈 베타 시작", "ja": "オープンベータ開始", "en": "Open beta"}, "body": {"ko": ["버그나 의견은 스레드 @beoms_official 로 알려주세요"], "ja": ["不具合やご意見は Threads @beoms_official まで"], "en": ["Send bugs and ideas to @beoms_official on Threads"]}}]
+[
+ {
+  "id": "2026-11-19-v2.0",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v2.0: 랭킹 보상, 설정, 무한 모드 보너스",
+   "ja": "v2.0：ランキング報酬・設定・エンドレスボーナス",
+   "en": "v2.0: Ranking rewards, settings, endless bonus"
+  },
+  "body": {
+   "ko": [
+    "매주 월요일, 지난주 랭킹 1위 500 · 2위 300 · 3위 200 · TOP10 100 보석을 드려요",
+    "첫 화면 오른쪽 위 톱니바퀴: 배경음악 크기, 효과음, 진동, 언어 설정",
+    "웨이브 100 이후 보스를 잡을 때마다 보석 보너스",
+    "첫 로딩이 더 빨라졌어요"
+   ],
+   "ja": [
+    "毎週月曜、先週のランキング1位500・2位300・3位200・TOP10 100ジェム",
+    "タイトル右上の歯車：BGM音量・効果音・バイブ・言語",
+    "ウェーブ100以降、ボスを倒すたびにジェムボーナス",
+    "最初の読み込みが速くなりました"
+   ],
+   "en": [
+    "Every Monday: last week #1 gets 500 gems, #2 300, #3 200, TOP10 100",
+    "Gear icon (top right): music volume, sound effects, vibration, language",
+    "After wave 100, every boss kill gives bonus gems",
+    "Faster first load"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-v1.9",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v1.9: 주간 랭킹 오픈!",
+   "ja": "v1.9：週間ランキング開始！",
+   "en": "v1.9: Weekly ranking is live!"
+  },
+  "body": {
+   "ko": [
+    "첫 화면 왼쪽 '랭킹'에서 이번 주 TOP 10을 볼 수 있어요",
+    "게임이 끝나면 이름을 등록하고 이번 주 최고 웨이브가 올라가요",
+    "매주 월요일에 새로 시작해요"
+   ],
+   "ja": [
+    "タイトル左の「ランク」で今週のTOP10をチェック",
+    "ゲーム終了後に名前を登録すると今週の最高ウェーブが載ります",
+    "毎週月曜にリセット"
+   ],
+   "en": [
+    "See this week's TOP 10 from 'Rank' on the title screen",
+    "Register a name after a game to post your best wave",
+    "Resets every Monday"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-v1.8",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v1.8: 새 영웅 2명 · 폭탄 공병 · 시간술사",
+   "ja": "v1.8：新ヒーロー2人・ボム工兵・時間術師",
+   "en": "v1.8: 2 new heroes, Bomber & Chronomancer"
+  },
+  "body": {
+   "ko": [
+    "폭탄 공병 (보석 650): 큰 폭발로 적을 길 뒤로 날려요. 초월 스킬 '융단 폭격'",
+    "시간술사 (보석 800): 적을 느리게 하고 가끔 뒤로 되감아요. 초월 스킬 '시간 정지'",
+    "영웅 강화 화면에서 해금할 수 있어요"
+   ],
+   "ja": [
+    "ボム工兵（ジェム650）：大爆発で敵を押し戻す。超越スキル「絨毯爆撃」",
+    "時間術師（ジェム800）：敵をスロー、時々巻き戻す。超越スキル「時間停止」",
+    "ヒーロー強化画面で解放できます"
+   ],
+   "en": [
+    "Bomber (650 gems): big blasts knock enemies back. Ultimate: Carpet Bombing",
+    "Chronomancer (800 gems): slows and sometimes rewinds enemies. Ultimate: Time Stop",
+    "Unlock them in Upgrade Heroes"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-v1.7",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v1.7: 이어하기 · 영웅 단련 Lv30",
+   "ja": "v1.7：続きから・ヒーロー修練Lv30",
+   "en": "v1.7: Continue your run · Training up to Lv30"
+  },
+  "body": {
+   "ko": [
+    "웨이브마다 자동 저장돼요. 앱을 닫아도 '게임 시작'을 누르면 하던 판을 이어서 할 수 있어요",
+    "영웅 단련 최대 레벨이 10에서 30으로 늘었어요 (웨이브 100 도전용)"
+   ],
+   "ja": [
+    "ウェーブごとに自動保存。アプリを閉じても「ゲームスタート」で続きから遊べます",
+    "ヒーロー修練の最大レベルが10→30に"
+   ],
+   "en": [
+    "Your run is saved every wave. Close the app anytime and tap Start Game to continue",
+    "Hero training max level raised from 10 to 30 (for the wave 100 challenge)"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-v1.6",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v1.6 업데이트: 웨이브 100까지! 보스 5종 · 지역 5곳 추가",
+   "ja": "v1.6：ウェーブ100まで！ボス5体・エリア5つ追加",
+   "en": "v1.6: Up to wave 100! 5 new bosses & 5 new areas"
+  },
+  "body": {
+   "ko": [
+    "51~60 하늘섬 · 웨이브 60 폭풍 그리폰: 회오리로 영웅 자리를 뒤섞어요",
+    "61~70 깊은 바다 · 웨이브 70 크라켄: 독에 걸리지 않으면 체력이 계속 차요 (연금술사 추천)",
+    "71~80 수정 동굴 · 웨이브 80 수정 골렘: 갑옷이 피해를 막아요. 기절시키면 깨져요 (드워프·얼음공주 추천)",
+    "81~90 고대 신전 · 웨이브 90 메두사: 영웅 한 줄을 돌로 만들어요",
+    "91~100 혼돈의 끝 · 웨이브 100 혼돈의 군주: 모든 패턴을 쓰는 최종 보스. 잡으면 엔딩!",
+    "31웨이브 이후 몬스터 체력이 덜 가파르게 늘어나요"
+   ],
+   "ja": [
+    "51〜60 空の島・ウェーブ60 嵐のグリフォン：竜巻でヒーローの位置を入れ替える",
+    "61〜70 深い海・ウェーブ70 クラーケン：毒にかからないと回復し続ける（錬金術師おすすめ）",
+    "71〜80 水晶の洞窟・ウェーブ80 クリスタルゴーレム：鎧はスタンで壊れる（ドワーフ・氷の姫おすすめ）",
+    "81〜90 古代神殿・ウェーブ90 メドゥーサ：ヒーロー1列を石にする",
+    "91〜100 混沌の果て・ウェーブ100 混沌の君主：すべての技を使うラスボス。倒すとエンディング！",
+    "ウェーブ31以降、モンスター体力の伸びがゆるやかに"
+   ],
+   "en": [
+    "51-60 Sky Islands. Wave 60 Storm Griffin shuffles your heroes",
+    "61-70 Deep Sea. Wave 70 Kraken regenerates unless poisoned (Alchemist helps)",
+    "71-80 Crystal Cave. Wave 80 Crystal Golem's armor breaks when stunned (Dwarf, Ice Princess help)",
+    "81-90 Ancient Temple. Wave 90 Medusa turns a row of heroes to stone",
+    "91-100 Edge of Chaos. Wave 100 Chaos Overlord uses every pattern. Beat it for the ending!",
+    "Monster HP grows more gently after wave 31"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-v1.5",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v1.5 업데이트: 웨이브 40 이후 새 보스 · 어둠의 성",
+   "ja": "v1.5：ウェーブ40以降の新ボス・闇の城",
+   "en": "v1.5: New bosses after wave 40 & Dark Castle"
+  },
+  "body": {
+   "ko": [
+    "웨이브 40 보스 '화염 용왕': 불을 뿜어 영웅 3명을 잠시 멈춰요",
+    "웨이브 41부터 새 지역 '어둠의 성' (전용 음악)",
+    "웨이브 50 보스 '마왕': 맞으면 뒤로 순간이동하고, 영웅 공격을 느리게 하는 저주를 걸어요",
+    "업적 추가: 웨이브 40 돌파, 웨이브 50 돌파(마왕 처치)"
+   ],
+   "ja": [
+    "ウェーブ40ボス「炎の竜王」：炎を吐いてヒーロー3人を一時停止",
+    "ウェーブ41から新エリア「闇の城」（専用BGM）",
+    "ウェーブ50ボス「魔王」：後ろへワープし、攻撃が遅くなる呪いをかける",
+    "実績追加：ウェーブ40突破、ウェーブ50突破（魔王撃破）"
+   ],
+   "en": [
+    "Wave 40 boss 'Fire Dragon King' breathes fire and stops 3 heroes for a moment",
+    "New area from wave 41: Dark Castle, with its own music",
+    "Wave 50 boss 'Demon Lord' warps back when hurt and curses your heroes",
+    "New achievements: pass wave 40 and wave 50"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-code",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "이벤트 코드가 생겼어요",
+   "ja": "イベントコード登場",
+   "en": "Event codes are here"
+  },
+  "body": {
+   "ko": [
+    "보상 화면 왼쪽 위 '코드' 버튼에서 입력하면 보석을 받아요",
+    "코드는 개발일지(스레드 @beoms_official)에서 기간 한정으로 나눠드려요"
+   ],
+   "ja": [
+    "報酬画面の左上「コード」から入力するとジェムがもらえます",
+    "コードは開発日記（note）で期間限定で配布します"
+   ],
+   "en": [
+    "Enter a code with the 'Code' button on the Rewards screen to get gems",
+    "Codes are shared for a limited time in our dev posts"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-v1.4",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v1.4 업데이트: 영어 지원 · 다시 올 이유",
+   "ja": "v1.4：英語対応・また来たくなる仕組み",
+   "en": "v1.4: English version is here"
+  },
+  "body": {
+   "ko": [
+    "브라우저 언어가 한국어·일본어가 아니면 영어로 나와요",
+    "게임오버 화면 아래에 출석 보상과 오늘의 도전 안내가 나와요"
+   ],
+   "ja": [
+    "ブラウザの言語が韓国語・日本語以外なら英語で表示されます",
+    "ゲームオーバー画面の下に、ログボと今日のチャレンジの案内を表示"
+   ],
+   "en": [
+    "Spin Defense now speaks English!",
+    "Merge matching heroes, beat a boss every 10 waves, and see how far you can go",
+    "Turn on Auto Merge (next to the Summon button) to merge up to Legend automatically",
+    "Daily login rewards and a new Daily Challenge every day",
+    "Feedback is welcome on Threads @beoms_official"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-19-v1.3",
+  "date": "2026.11.19",
+  "title": {
+   "ko": "v1.3 업데이트: 자동 합치기 · 공유 보상",
+   "ja": "v1.3：オート合体・シェア報酬",
+   "en": "v1.3: Auto Merge · Share reward"
+  },
+  "body": {
+   "ko": [
+    "소환 버튼 오른쪽 '자동 합치기'를 켜면 전설까지 알아서 합쳐요 (신화·초월은 직접 합쳐서 손맛을 느껴보세요)",
+    "게임오버 화면에서 기록을 공유하면 하루 한 번 보석 20개",
+    "피드백 주신 분들 고마워요! 댓글로 계속 알려주세요"
+   ],
+   "ja": [
+    "召喚ボタン右の「オート合体」をONにするとレジェンドまで自動で合体（ミシック・超越は自分で合体！）",
+    "ゲームオーバー画面で記録をシェアすると1日1回ジェム20",
+    "フィードバックありがとうございます！"
+   ],
+   "en": [
+    "Turn on Auto Merge next to the Summon button to merge up to Legend automatically (merge Mythic and Transcend yourself!)",
+    "Share your record from the game over screen for 20 gems once a day"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-18-v1.2",
+  "date": "2026.11.18",
+  "title": {
+   "ko": "v1.2 업데이트: 지역 · 초월 스킬 · 업적",
+   "ja": "v1.2：エリア・超越スキル・実績",
+   "en": "v1.2: Areas · Ultimate skills · Achievements"
+  },
+  "body": {
+   "ko": [
+    "10웨이브마다 지역이 바뀌어요: 숲 → 사막 → 설원 → 화산 (지역별 음악, 보스전 전용 음악)",
+    "초월 영웅마다 고유 스킬이 생겼어요 (메테오, 대지진, 황금비 등 11종)",
+    "보상 화면 오른쪽 위 '업적'에서 장기 목표를 달성하고 보석을 받아요",
+    "로딩이 훨씬 빨라졌어요"
+   ],
+   "ja": [
+    "10ウェーブごとにエリアが変化：森 → 砂漠 → 雪原 → 火山（エリア別BGM・ボス専用BGM）",
+    "超越ヒーローに固有スキル（メテオ、大地震、黄金の雨など11種）",
+    "報酬画面右上の「実績」で長期目標を達成してジェムGET",
+    "読み込みがかなり速くなりました"
+   ],
+   "en": [
+    "The area changes every 10 waves: Forest → Desert → Ice Field → Volcano, with music for each",
+    "Every Transcend hero has a unique ultimate skill (11 in total)",
+    "Reach long-term goals in Achievements for gems"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-18-v1.1",
+  "date": "2026.11.18",
+  "title": {
+   "ko": "v1.1 업데이트: 보스 3종 · 오늘의 도전",
+   "ja": "v1.1：ボス3種・今日のチャレンジ",
+   "en": "v1.1: 3 bosses · Daily Challenge"
+  },
+  "body": {
+   "ko": [
+    "10웨이브마다 보스가 바뀌어요: 돌진하는 오우거 왕 → 분열하는 슬라임 왕 → 투명해지는 리치",
+    "오른쪽 위 🔥 도전: 매일 바뀌는 덱과 규칙으로 WAVE 15 도달 시 보석 60개",
+    "게임오버 화면에 다음 목표(최고 기록, 다음 해금)를 보여줘요",
+    "안드로이드 크롬에서는 '앱으로 설치' 버튼으로 홈 화면에 추가할 수 있어요"
+   ],
+   "ja": [
+    "10ウェーブごとにボスが変わります：突進するオーガ王 → 分裂するキングスライム → 透明になるリッチ",
+    "右上の🔥チャレンジ：毎日変わるデッキとルールでWAVE15到達するとジェム60",
+    "ゲームオーバー画面に次の目標を表示",
+    "Androidのchromeでは「アプリに追加」からホーム画面に追加できます"
+   ],
+   "en": [
+    "A different boss every 10 waves: Ogre King → Slime King → Lich",
+    "Daily Challenge: a new deck and rule every day, reach WAVE 15 for 60 gems"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-18-v1.0",
+  "date": "2026.11.18",
+  "title": {
+   "ko": "v1.0 업데이트: 새 영웅 4명!",
+   "ja": "v1.0アップデート：新ヒーロー4人！",
+   "en": "v1.0: 4 new heroes!"
+  },
+  "body": {
+   "ko": [
+    "드워프 망치병: 내려찍어서 적을 기절시켜요",
+    "연금술사: 독 장판으로 계속 피해를 줘요",
+    "석궁 저격수: 보스를 노리는 강력한 한 방",
+    "냥상인: 몇 초마다 골드를 벌어와요",
+    "게임오버 화면에서 내 기록을 공유할 수 있어요",
+    "게임 중 오른쪽 위 ⏸ 버튼으로 일시정지·그만두기를 할 수 있어요"
+   ],
+   "ja": [
+    "ドワーフ：叩きつけで敵をスタン",
+    "錬金術師：毒の沼で継続ダメージ",
+    "狙撃手：ボスを狙う強力な一撃",
+    "ネコ商人：数秒ごとにゴールドを稼ぐ",
+    "ゲームオーバー画面から記録をシェアできます",
+    "プレイ中は右上の ⏸ ボタンで一時停止・終了ができます"
+   ],
+   "en": [
+    "Dwarf, Alchemist, Sniper and Cat Merchant joined",
+    "Pause anytime with the ⏸ button"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-17-ja",
+  "date": "2026.11.17",
+  "title": {
+   "ko": "일본어 지원",
+   "ja": "日本語に対応しました",
+   "en": "Japanese support"
+  },
+  "body": {
+   "ko": [
+    "브라우저 언어가 일본어면 자동으로 일본어로 나와요"
+   ],
+   "ja": [
+    "ブラウザの言語が日本語なら自動で日本語表示になります"
+   ],
+   "en": [
+    "The game switches to Japanese automatically for Japanese browsers"
+   ]
+  }
+ },
+ {
+  "id": "2026-11-17-beta",
+  "date": "2026.11.17",
+  "title": {
+   "ko": "오픈 베타 시작",
+   "ja": "オープンベータ開始",
+   "en": "Open beta"
+  },
+  "body": {
+   "ko": [
+    "버그나 의견은 스레드 @beoms_official 로 알려주세요"
+   ],
+   "ja": [
+    "不具合やご意見は Threads @beoms_official まで"
+   ],
+   "en": [
+    "Send bugs and ideas to @beoms_official on Threads"
+   ]
+  }
+ }
+]
