@@ -223,6 +223,7 @@ const BTN = {
   speed: { x: 10,  y: 562, w: 90, h: 54 },
   sound: { x: 318, y: 50, w: 32, h: 26 },
   pause: { x: 282, y: 50, w: 32, h: 26 },
+  amerge:{ x: 304, y: 452, w: 50, h: 64 },
   quit:  { x: 95,  y: 376, w: 170, h: 50 },
   start: { x: 95,  y: 452, w: 170, h: 62 },
   revive:{ x: 70,  y: 388, w: 220, h: 50 },
@@ -301,6 +302,8 @@ const store = {
   get best() { return +(localStorage.getItem('sd_best') || 0); }, set best(v) { localStorage.setItem('sd_best', v); },
   get tut() { return +(localStorage.getItem('sd_tut') || 0); }, set tut(v) { localStorage.setItem('sd_tut', v); },
   get mute() { return localStorage.getItem('sd_mute') === '1'; }, set mute(v) { localStorage.setItem('sd_mute', v ? '1' : '0'); },
+  get auto() { return localStorage.getItem('sd_auto') === '1'; }, set auto(v) { localStorage.setItem('sd_auto', v ? '1' : '0'); },
+  get autoHint() { return localStorage.getItem('sd_auto_hint') === '1'; }, set autoHint(v) { localStorage.setItem('sd_auto_hint', v ? '1' : '0'); },
 };
 
 // ===== 영구 성장: 판이 끝나면 보석을 받고, 보석으로 영구 강화 =====
@@ -823,6 +826,7 @@ function update(dt) {
   if (S.lastWin > 0) S.lastWin -= dt;
   for (const k in S.lvPop) S.lvPop[k] = Math.max(0, S.lvPop[k] - dt);
   updateReels(dt);
+  autoMergeTick(dt);
   S.waveT -= dt; if (S.waveT <= 0) startWave();
   if (S.spawnLeft > 0) { S.spawnT -= dt; if (S.spawnT <= 0) { spawn(false); S.spawnLeft--; S.spawnT = S.spawnGap; } }
   for (const e of S.enemies) {
@@ -1031,6 +1035,20 @@ function thirdOf(i, j) {
   for (let k = 0; k < S.units.length; k++) { if (k === i || k === j) continue; const q = S.units[k]; if (q && q.type === a.type && q.grade === a.grade) return k; }
   return -1;
 }
+// 자동 합치기: 켜져 있으면 0.35초마다 한 쌍씩, 전설(4등급)이 되는 합치기까지만. 신화·초월은 손으로
+const AUTO_MAX_RESULT = 4;
+function autoMergeTick(dt) {
+  if (!store.auto || S.first || drag || S.pick || paused) return;
+  S.autoT = (S.autoT || 0) - dt; if (S.autoT > 0) return;
+  for (let g = 1; g < AUTO_MAX_RESULT; g++) for (let i = 0; i < S.units.length; i++) {
+    const a = S.units[i]; if (!a || a.grade !== g || a.born > 0.2) continue;
+    for (let j = 0; j < S.units.length; j++) {
+      if (j === i || !S.units[j] || (S.units[j].born || 0) > 0.2) continue;
+      if (canMerge(i, j)) { if (selected === i || selected === j) selected = -1; const { nt, ng } = mergeAt(i, j); mergeFx(j, nt, ng, true); S.autoT = 0.35; S.autoN = (S.autoN || 0) + 1; return; }
+    }
+  }
+  S.autoT = 0.2;
+}
 function canMerge(i, j) {
   const a = S.units[i], b = S.units[j];
   if (!a || !b || i === j || a.type !== b.type || a.grade !== b.grade || a.grade >= MAX_GRADE) return false;
@@ -1090,7 +1108,7 @@ function findPair() {
 function gameOver() {
   screen = 'over'; drag = null; selected = -1; sfx('lose'); buzz(120);
   if (!S.playCounted) { S.playCounted = true; mission('play'); stInc('games'); }
-  track('game_over', { wave: S.wave, kills: S.kills, boss_fail: S.bossFail ? 1 : 0, revived: S.revived ? 1 : 0, cards: S.picked.length, spins: S.spins, play_sec: Math.round(S.time), deck: TYPE_KEYS.join(','), gems: S.gemsEarned || 0 });
+  track('game_over', { wave: S.wave, kills: S.kills, boss_fail: S.bossFail ? 1 : 0, revived: S.revived ? 1 : 0, cards: S.picked.length, spins: S.spins, play_sec: Math.round(S.time), deck: TYPE_KEYS.join(','), gems: S.gemsEarned || 0, auto: store.auto ? 1 : 0 });
   if (S.wave > store.best) { store.best = S.wave; S.newBest = true; }
   // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
   const total = Math.round(S.wave * 2 + S.kills / 25 + S.bossKills * 5);
@@ -1421,6 +1439,7 @@ function drawSlot() {
       text(L('배속', '倍速'), cx + 12, cy + 13, 11, 'rgba(255,255,255,.75)', 'center', 2);
     }, 'speed');
   }
+  if (!S.first && !paused) drawAutoToggle();
   if (adMode()) {
     const adOk = S.adSpins > 0 && can;
     button(BTN.ad, '#2f8ae0', adOk, (cx, cy) => {
@@ -1737,7 +1756,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v1.2 베타', 'v1.2 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v1.3 베타', 'v1.3 ベータ'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -1825,6 +1844,19 @@ function drawOver() {
   button(BTN.share, '#1f9d6b', true, (cx, cy) => { shareIcon(cx - 40, cy); text(L('기록 공유', '記録をシェア'), cx + 10, cy, L(15, 12), '#fff', 'center', 3); }, 'share');
   if (D && !D.shared) { const sb = BTN.share, bx = sb.x + sb.w - 22, by = sb.y - 6, pz = 1 + 0.06 * Math.sin(T * 5); ctx.save(); ctx.translate(bx, by); ctx.scale(pz, pz); rr(-24, -11, 48, 22, 11); ctx.fillStyle = '#ffcf5a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#7a4a00'; ctx.stroke(); icon('gem', -12, 0, 11); text('+' + SHARE_REWARD, 8, 1, 12, '#5a3a00', 'center', 0); ctx.restore(); }
   if (S.msgT > 0) { S.msgT -= 1 / 60; ctx.globalAlpha = Math.min(1, S.msgT * 2); text(S.msg, W / 2, 596, 13, S.msgCol, 'center', 3); ctx.globalAlpha = 1; }
+}
+function drawAutoToggle() {
+  const b = BTN.amerge, on = store.auto, hint = !store.autoHint && S.time > 4 && S.time < 16;
+  ctx.save();
+  if (hint) { const p = 0.5 + 0.5 * Math.sin(T * 6); ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10 + 14 * p; }
+  rr(b.x, b.y, b.w, b.h, 12); ctx.fillStyle = on ? 'rgba(40,120,70,.95)' : 'rgba(30,20,60,.85)'; ctx.fill();
+  ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = on ? '#9be36d' : 'rgba(255,255,255,.45)'; ctx.stroke();
+  const sw = 30, sh = 16, sx = b.x + (b.w - sw) / 2, sy = b.y + 8; rr(sx, sy, sw, sh, 8); ctx.fillStyle = on ? '#9be36d' : 'rgba(255,255,255,.25)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(on ? sx + sw - 8 : sx + 8, sy + 8, 6.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+  text(L('자동', 'オート'), b.x + b.w / 2, b.y + 36, 12, '#fff', 'center', 2.5);
+  text(L('합치기', '合体'), b.x + b.w / 2, b.y + 51, 11, on ? '#d8ffc0' : 'rgba(255,255,255,.8)', 'center', 2.5);
+  ctx.restore();
+  if (hint) { text(L('귀찮으면 켜기', '面倒ならON'), b.x + b.w / 2 - 6, b.y - 10, 11, '#ffd166', 'center', 3); drawHand(b.x + b.w / 2 + 4, b.y + 30); }
 }
 function retryIcon(x, y, k = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, 0, 9, -0.3, Math.PI * 1.55); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(9, -9); ctx.lineTo(11, 1); ctx.lineTo(2, -3); ctx.closePath(); ctx.fill(); ctx.restore(); }
 function shareIcon(x, y) { ctx.save(); ctx.strokeStyle = '#fff'; ctx.fillStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 5, y + 1); ctx.lineTo(x + 5, y - 5); ctx.moveTo(x - 5, y + 1); ctx.lineTo(x + 5, y + 6); ctx.stroke(); for (const [a, b] of [[x - 5, y + 1], [x + 5, y - 5], [x + 5, y + 6]]) { ctx.beginPath(); ctx.arc(a, b, 3, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
@@ -2044,6 +2076,7 @@ function hitKey(x, y) {
   { const sr = sellRect(); if (sr && inRect(x, y, sr)) return 'sellsel'; }
   if (paused) return inRect(x, y, BTN.resume) ? 'resume' : inRect(x, y, BTN.quit) ? 'quit' : null;
   for (const k of ['spin', 'ad', 'speed', 'sound', 'pause']) if (inRect(x, y, BTN[k])) return k;
+  if (!S.first && inRect(x, y, BTN.amerge)) return 'amerge';
   for (const b of UPG) if (inRect(x, y, b)) return 'up_' + b.t;
   return null;
 }
@@ -2072,6 +2105,7 @@ function activate(key) {
     case 'quit': sfx('click'); if (quitAsk > 0) quitGame(); else quitAsk = 3; break;
     case 'spin': doSpin(false); break;
     case 'speed': S.speed = S.speed === 1 ? 2 : 1; sfx('click'); break;
+    case 'amerge': store.auto = !store.auto; store.autoHint = true; S.autoT = 0.3; sfx('click'); buzz(10); flash(store.auto ? L('자동 합치기 켜짐 · 전설까지 알아서 합쳐요', 'オート合体ON・レジェンドまで自動で合体') : L('자동 합치기 꺼짐', 'オート合体OFF'), store.auto ? '#9be36d' : '#ffd166', 2); track('auto_merge', { auto: store.auto ? 1 : 0, wave: S.wave }); break;
     case 'sound': store.mute = !store.mute; sfx('click'); break;
     case 'ad':
       if (!canSpin()) { flash(L('칸이 꽉 찼거나 소환 중이에요', 'マスがいっぱいか、召喚中です'), '#ffb35c'); sfx('error'); }
@@ -2136,19 +2170,25 @@ cv.addEventListener('pointerup', e => {
   }
   if (canMerge(d.idx, j)) {
     const { nt, ng } = mergeAt(d.idx, j);
-    const [x2, y2] = cellCenter(j);
-    S.fx.push({ k: 'ring', x: x2, y: y2, t: 0.6, max: 0.6, col: GRADES[ng].col }); burst(x2, y2, GRADES[ng].col, 14);
-    mission('merge'); if (ng === 4) mission('legend'); if (ng >= 4) track('high_merge', { grade: ng, wave: S.wave });
-    if (ng === 6) { banner(L('초월!!!', '超越!!!'), L(`${TYPES[nt].name} · 6초마다 「${ULTI[nt] ? ULTI[nt].name : '심판'}」`, `${TYPES[nt].name} · 6秒ごとに「${ULTI[nt] ? ULTI[nt].name : 'ジャッジメント'}」`), '#ffe9a0', 3); S.shake = 0.6; flashScreen(0.45, '#fff6d6'); sfx('bigboom'); sfx('jackpot'); buzz([60, 40, 120]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
-    else if (ng === 5) { banner(L('신화 탄생!!', 'ミシック誕生!!'), L(`${TYPES[nt].name} · 주변 영웅 공격력 +15%`, `${TYPES[nt].name} · 周囲のヒーロー攻撃力 +15%`), '#ff4fd8', 2.6); S.shake = 0.45; flashScreen(0.3, '#ffd6f6'); sfx('jackpot'); buzz([40, 50, 80]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
-    else if (ng >= 3) { banner(`${GRADES[ng].name}!`, L(`${TYPES[nt].name} 등장`, `${TYPES[nt].name} 登場`), GRADES[ng].col, 1.6); S.shake = 0.2; }
-    else flash(L(`합체! ${GRADES[ng].name} ${TYPES[nt].name}`, `合体！ ${GRADES[ng].name} ${TYPES[nt].name}`), GRADES[ng].col, 1.8);
-    sfx('merge'); buzz(20);
+    mergeFx(j, nt, ng);
     if (store.tut === 1) store.tut = 2;
     return;
   }
   S.units[j] = u; S.units[d.idx] = v; sfx('click');
 });
+// 합치기 연출 (손으로 합치기, 자동 합치기 공통)
+function mergeFx(j, nt, ng, auto = false) {
+  {
+    const [x2, y2] = cellCenter(j);
+    S.fx.push({ k: 'ring', x: x2, y: y2, t: 0.6, max: 0.6, col: GRADES[ng].col }); burst(x2, y2, GRADES[ng].col, 14);
+    mission('merge'); if (ng === 4) mission('legend'); if (ng >= 4) track('high_merge', { grade: ng, wave: S.wave, auto: auto ? 1 : 0 });
+    if (ng === 6) { banner(L('초월!!!', '超越!!!'), L(`${TYPES[nt].name} · 6초마다 「${ULTI[nt] ? ULTI[nt].name : '심판'}」`, `${TYPES[nt].name} · 6秒ごとに「${ULTI[nt] ? ULTI[nt].name : 'ジャッジメント'}」`), '#ffe9a0', 3); S.shake = 0.6; flashScreen(0.45, '#fff6d6'); sfx('bigboom'); sfx('jackpot'); buzz([60, 40, 120]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
+    else if (ng === 5) { banner(L('신화 탄생!!', 'ミシック誕生!!'), L(`${TYPES[nt].name} · 주변 영웅 공격력 +15%`, `${TYPES[nt].name} · 周囲のヒーロー攻撃力 +15%`), '#ff4fd8', 2.6); S.shake = 0.45; flashScreen(0.3, '#ffd6f6'); sfx('jackpot'); buzz([40, 50, 80]); S.units.forEach(q => { if (q) q.cheer = CHEER_T; }); }
+    else if (ng >= 3) { banner(`${GRADES[ng].name}!`, L(`${TYPES[nt].name} 등장`, `${TYPES[nt].name} 登場`), GRADES[ng].col, 1.6); S.shake = 0.2; }
+    else flash(L(`합체! ${GRADES[ng].name} ${TYPES[nt].name}`, `合体！ ${GRADES[ng].name} ${TYPES[nt].name}`), GRADES[ng].col, 1.8);
+    sfx('merge'); if (!auto) buzz(20);
+  }
+}
 cv.addEventListener('pointercancel', () => { drag = null; press = null; shopDrag = null; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'play' && !ADS.inAd) paused = true; });
 
