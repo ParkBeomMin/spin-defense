@@ -239,6 +239,7 @@ const BTN = {
   tmute: { x: 296, y: 18,  w: 50,  h: 50 },
   chal:  { x: 290, y: 80,  w: 58,  h: 58 },
   achb:  { x: 276, y: 22,  w: 74,  h: 40 },
+  codeb: { x: 10,  y: 22,  w: 74,  h: 40 },
   install:{ x: 254, y: 584, w: 96,  h: 30 },
   cgo:   { x: 80,  y: 470, w: 200, h: 54 },
   cback: { x: 120, y: 534, w: 120, h: 36 },
@@ -496,6 +497,52 @@ function drawAch() {
   drawGemPop();
 }
 let gemPop = null;
+// ===== 이벤트 코드: assets/codes.json 에 코드의 해시·기간·보상을 적어두고, 기기마다 코드당 한 번 받기 =====
+// codes.json 항목: { id, h: sha256('sd:' + 대문자 코드), from: 'YYYY-MM-DD', until: 'YYYY-MM-DD'(그날까지 포함), gems, ch(채널) }
+let CODES = [];
+fetch('assets/codes.json?t=' + Date.now()).then(r => r.json()).then(c => { CODES = Array.isArray(c) ? c : []; }).catch(() => {});
+const usedCodes = () => { try { return JSON.parse(localStorage.getItem('sd_codes')) || []; } catch (e) { return []; } };
+// 지금 받을 수 있는 코드가 있는지(빨간 점용): 기간 안 + 아직 안 씀
+const activeCodeCount = () => { const t = dayKey(), u = usedCodes(); return CODES.filter(c => c.from <= t && t <= c.until && !u.includes(c.id) && c.dot).length; };
+async function sha256hex(str) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+const md = d => { const [, m, dd] = d.split('-'); return `${+m}/${+dd}`; };
+async function redeemCode(raw) {
+  const code = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!code) return { ok: false, msg: L('코드를 입력해 주세요', 'コードを入力してね', 'Please enter a code') };
+  let h = ''; try { h = await sha256hex('sd:' + code); } catch (e) { return { ok: false, msg: L('이 브라우저에서는 코드를 쓸 수 없어요', 'このブラウザではコードが使えません', 'Codes are not supported in this browser') }; }
+  const c = CODES.find(q => q.h === h), t = dayKey();
+  if (!c) { track('code_fail', { reason: 'invalid' }); return { ok: false, msg: L('없는 코드예요', '存在しないコードです', 'Invalid code') }; }
+  if (usedCodes().includes(c.id)) { track('code_fail', { reason: 'used', id: c.id }); return { ok: false, msg: L('이미 받은 코드예요', '受け取り済みのコードです', 'Already redeemed') }; }
+  if (t < c.from) { track('code_fail', { reason: 'early', id: c.id }); return { ok: false, msg: L(`${md(c.from)}부터 쓸 수 있는 코드예요`, `${md(c.from)}から使えるコードです`, `Available from ${md(c.from)}`) }; }
+  if (t > c.until) { track('code_fail', { reason: 'expired', id: c.id }); return { ok: false, msg: L(`기간이 끝난 코드예요 (${md(c.until)}까지)`, `期限切れのコードです（${md(c.until)}まで）`, `This code expired on ${md(c.until)}`) }; }
+  const u = usedCodes(); u.push(c.id); localStorage.setItem('sd_codes', JSON.stringify(u));
+  M.gems += c.gems || 0; saveMeta(); gemPop = { amt: c.gems || 0, t: 1.6 }; sfx('jackpot'); buzz([20, 30, 40]);
+  track('code_redeem', { id: c.id, ch: c.ch || '', gems: c.gems || 0 });
+  return { ok: true, msg: L(`보석 +${c.gems} 받았어요! (${md(c.until)}까지 코드)`, `ジェム +${c.gems} ゲット！（${md(c.until)}までのコード）`, `You got ${c.gems} gems! (valid until ${md(c.until)})`) };
+}
+function openCodeDialog() {
+  if (document.getElementById('codedlg')) return;
+  const wrap = document.createElement('div'); wrap.id = 'codedlg';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+  wrap.innerHTML = `<div style="width:min(300px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:18px 16px 14px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+    <div style="font-size:22px;color:#ffd166;margin-bottom:6px">${L('이벤트 코드', 'イベントコード', 'Event Code')}</div>
+    <div style="font-size:12px;opacity:.75;margin-bottom:12px">${L('개발일지·SNS에서 받은 코드를 입력하세요', '開発日記やSNSで配布したコードを入力', 'Enter a code from our posts')}</div>
+    <input id="codein" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" style="width:100%;box-sizing:border-box;font:20px inherit;font-family:inherit;text-align:center;letter-spacing:2px;text-transform:uppercase;padding:10px;border-radius:12px;border:2px solid #8fe3ff;background:#1a1233;color:#fff;outline:none">
+    <div id="codemsg" style="min-height:20px;font-size:13px;margin:10px 0 4px;color:#cfe8ff"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button id="codeno" style="flex:1;font:16px inherit;font-family:inherit;padding:10px;border-radius:12px;border:0;background:#5a5a6a;color:#fff">${L('닫기', '閉じる', 'Close')}</button>
+      <button id="codeok" style="flex:1.4;font:16px inherit;font-family:inherit;padding:10px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Redeem')}</button>
+    </div></div>`;
+  document.body.appendChild(wrap);
+  const inp = wrap.querySelector('#codein'), msg = wrap.querySelector('#codemsg'), ok = wrap.querySelector('#codeok');
+  const close = () => wrap.remove();
+  wrap.querySelector('#codeno').onclick = close;
+  wrap.addEventListener('pointerdown', e => { if (e.target === wrap) close(); });
+  let busy = false;
+  const go = async () => { if (busy) return; busy = true; const r = await redeemCode(inp.value); busy = false; msg.textContent = r.msg; msg.style.color = r.ok ? '#9be36d' : '#ffb0b0'; if (r.ok) { inp.value = ''; ok.textContent = L('확인', 'OK', 'OK'); ok.onclick = close; } else sfx('error'); };
+  ok.onclick = go; inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  setTimeout(() => inp.focus(), 50);
+}
 function claimAtt() {
   if (!canClaimAtt()) return;
   const r = ATT_REWARD[attDay()]; M.gems += r; saveMeta();
@@ -1787,6 +1834,7 @@ function drawMissions() {
   ctx.fillStyle = 'rgba(14,8,32,.88)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   button(BTN.achb, '#b07a1a', true, (cx, cy) => { icon('chest', cx - 20, cy, 20); text(L('업적', '実績', 'Awards'), cx + 12, cy, 14, '#fff', 'center', 3); }, 'achb');
   if (claimableAch()) redDot(BTN.achb.x + BTN.achb.w - 4, BTN.achb.y + 4);
+  if (!PORTAL) { button(BTN.codeb, '#2f8ae0', true, (cx, cy) => { icon('gem', cx - 20, cy, 18); text(L('코드', 'コード', 'Code'), cx + 12, cy, 14, '#fff', 'center', 3); }, 'codeb'); if (activeCodeCount() > 0) redDot(BTN.codeb.x + BTN.codeb.w - 4, BTN.codeb.y + 4); }
   text(L('오늘의 보상', '今日の報酬', 'Daily Rewards'), W / 2, 46, 30, '#ffd166', 'center', 6);
   icon('gem', W / 2 - 40, 82, 22); text(L(`보유 보석 ${M.gems}`, `所持ジェム ${M.gems}`, `Gems ${M.gems}`), W / 2 + 8, 82, 16, '#8fe3ff', 'center', 3);
   // 출석
@@ -2086,7 +2134,7 @@ function hitKey(x, y) {
   if (screen === 'title' && installEvt && inRect(x, y, BTN.install)) return 'install';
   if (screen === 'title') return inRect(x, y, BTN.chal) ? 'chal' : inRect(x, y, BTN.notice) && NOTICES.length ? 'notice' : inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : inRect(x, y, BTN.reward) ? 'reward' : inRect(x, y, BTN.tmute) ? 'tmute' : null;
   if (screen === 'ach') { if (inRect(x, y, BTN.back)) return 'back'; if (y < ACH_TOP || y > ACH_BOT) return null; for (let i = 0; i < ACH.length; i++) { const yy = 108 + i * 66 - achScroll; if (inRect(x, y, { x: 250, y: yy + 11, w: 92, h: 36 })) return 'ach_' + ACH[i].id; } return null; }
-  if (screen === 'missions') { if (inRect(x, y, BTN.achb)) return 'achb'; if (inRect(x, y, BTN.back)) return 'back'; if (inRect(x, y, BTN.attc)) return 'attc'; for (let i = 0; i < 3; i++) if (inRect(x, y, missionClaimRect(i))) return 'mc_' + i; return null; }
+  if (screen === 'missions') { if (inRect(x, y, BTN.achb)) return 'achb'; if (!PORTAL && inRect(x, y, BTN.codeb)) return 'codeb'; if (inRect(x, y, BTN.back)) return 'back'; if (inRect(x, y, BTN.attc)) return 'attc'; for (let i = 0; i < 3; i++) if (inRect(x, y, missionClaimRect(i))) return 'mc_' + i; return null; }
   if (screen === 'shop') {
     if (inRect(x, y, BTN.back)) return 'back';
     for (const k of Object.keys(SHOP_TAB)) if (inRect(x, y, SHOP_TAB[k])) return 'tab_' + k;
@@ -2118,6 +2166,7 @@ function activate(key) {
     case 'notice': noticeOpen = true; sfx('click'); track('notice_open', { id: NOTICES[0] && NOTICES[0].id }); break;
     case 'nclose': closeNotice(); sfx('click'); break;
     case 'achb': screen = 'ach'; achScroll = 0; sfx('click'); break;
+    case 'codeb': sfx('click'); openCodeDialog(); break;
     case 'chal': chalOpen = true; sfx('click'); break;
     case 'install': if (installEvt) { const ev = installEvt; ev.prompt(); ev.userChoice.then(r => { track('pwa_prompt', { outcome: r && r.outcome }); if (r && r.outcome === 'accepted') installEvt = null; }).catch(() => {}); } sfx('click'); break;
     case 'cback': chalOpen = false; sfx('click'); break;
