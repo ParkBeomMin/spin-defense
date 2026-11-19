@@ -654,6 +654,33 @@ async function checkWeekReward() {
   } catch (e) {}
 }
 setTimeout(checkWeekReward, 3500);
+// ===== 친구 초대: 공유 링크에 ?r=내 기기ID. 새 친구가 그 링크로 와서 웨이브 5를 넘기면 친구도 나도 보석 50 (초대 보상은 최대 10명) =====
+const INVITE_GEM = 50, INVITE_MAX = 10;
+(() => { try { const r = new URLSearchParams(location.search).get('r'); if (!PORTAL && r && /^[a-z0-9]{6,24}$/.test(r) && store.best === 0 && !localStorage.getItem('sd_ref_done') && !localStorage.getItem('sd_ref')) localStorage.setItem('sd_ref', r); } catch (e) {} })();
+async function inviteJoin() {
+  const ref = localStorage.getItem('sd_ref'); if (!ref || localStorage.getItem('sd_ref_done')) return;
+  localStorage.setItem('sd_ref_done', '1'); if (ref === deviceId()) return;
+  try {
+    const r = await fetch(`${RANK_ROOT}/sd_inv/${ref}/joins/${deviceId()}?currentDocument.exists=false`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { at: { integerValue: String(Date.now()) } } }) });
+    if (!r.ok) return;
+    M.gems += INVITE_GEM; saveMeta(); gemPop = { amt: INVITE_GEM, t: 1.6 }; track('invite_join', { reward: INVITE_GEM });
+    if (screen === 'play') { banner(L('친구 초대 보상!', '招待ボーナス！', 'Invite bonus!'), L(`친구 링크로 시작해서 보석 +${INVITE_GEM}`, `友だちのリンクから始めたのでジェム +${INVITE_GEM}`, `You joined via a friend's link: Gems +${INVITE_GEM}`), '#9be36d', 2.4); sfx('jackpot'); }
+  } catch (e) {}
+}
+async function checkInvites() {
+  if (PORTAL) return;
+  try {
+    const r = await fetch(`${RANK_ROOT}/sd_inv/${deviceId()}/joins?pageSize=50&mask.fieldPaths=at`); if (!r.ok) return;
+    const j = await r.json(), n = Math.min(INVITE_MAX, (j.documents || []).length), got = +(localStorage.getItem('sd_invc') || 0);
+    if (n <= got) return;
+    const k = n - got, g = k * INVITE_GEM; localStorage.setItem('sd_invc', n); M.gems += g; saveMeta(); gemPop = { amt: g, t: 1.8 }; track('invite_reward', { n: k, gems: g });
+    const show = () => { if (document.getElementById('codedlg')) return setTimeout(show, 1500); const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+      w.innerHTML = `<div style="width:min(290px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="font-size:15px;color:#cfe8ff">${L('친구 초대', '友だち招待', 'Friend invites')}</div><div style="font-size:24px;color:#ffd166;margin:8px 0">${L(`친구 ${k}명이 내 링크로 왔어요!`, `友だち${k}人が来てくれた！`, `${k} friend${k > 1 ? 's' : ''} joined!`)}</div><div style="font-size:16px;margin-bottom:14px">${L(`보석 +${g}`, `ジェム +${g}`, `Gems +${g}`)}</div><button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
+      document.body.appendChild(w); w.querySelector('button').onclick = () => { w.remove(); sfx('jackpot'); }; };
+    show();
+  } catch (e) {}
+}
+setTimeout(checkInvites, 5000);
 function rankAfterGame() {
   if (PORTAL || S.chal || S.mode === 'hard') return;
   const tab = S.mode === 'boss' ? 'boss' : S.mode === 'weekly' ? 'deck' : 'main';
@@ -1011,6 +1038,7 @@ function startWave() {
   if (S.chal && S.wave >= S.chal.target && !S.chalWin) { S.chalWin = true; if (!chalDone()) { D.chalDone = true; saveDaily(); stInc('chal'); M.gems += S.chal.reward; saveMeta(); S.chalPaid = true; track('challenge_clear', { mod: S.chal.mod.id, deck: S.chal.deck.join(',') }); } setTimeout(() => { banner(L('도전 성공!', 'チャレンジ成功！', 'Challenge cleared!'), S.chalPaid ? L(`보석 +${S.chal.reward}`, `ジェム +${S.chal.reward}`, `Gems +${S.chal.reward}`) : L('오늘 보상은 이미 받았어요', '今日の報酬は受け取り済み', 'Today\'s reward already claimed'), '#ffd166', 2.4); sfx('jackpot'); }, 1400); } if (S.wave % 5 === 0) track('wave_reached', { wave: S.wave });
   if (S.wave % 5 === 0 && !S.skipPick) openPick();
   S.skipPick = false; saveRun(); preloadFor(S.wave);
+  if (S.wave === 6 && localStorage.getItem('sd_ref')) inviteJoin();
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
   S.spawnGap = Math.min(1.2, 14 / Math.max(1, S.spawnLeft)); S.spawnT = 0;
@@ -2251,7 +2279,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.1 베타', 'v2.1 ベータ', 'v2.1 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.2 베타', 'v2.2 ベータ', 'v2.2 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -2391,8 +2419,8 @@ async function makeShareCard() {
   return new Promise(res => c.toBlob(b => res(b), 'image/png'));
 }
 async function shareRecord() {
-  const url = LANG === 'ja' ? 'https://parkbeommin.github.io/spin-defense/ja/' : LANG === 'en' ? 'https://parkbeommin.github.io/spin-defense/en/' : 'https://parkbeommin.github.io/spin-defense/';
-  const txt = L(`스핀 디펜스 웨이브 ${S.wave} 달성! 너는 몇 웨이브까지 가?`, `スピンディフェンスでウェーブ${S.wave}到達！あなたは何ウェーブまで行ける？`, `I reached wave ${S.wave} in Spin Defense! How far can you go?`);
+  const url = (LANG === 'ja' ? 'https://parkbeommin.github.io/spin-defense/ja/' : LANG === 'en' ? 'https://parkbeommin.github.io/spin-defense/en/' : 'https://parkbeommin.github.io/spin-defense/') + '?r=' + deviceId();
+  const txt = L(`스핀 디펜스 웨이브 ${S.wave} 달성! 너는 몇 웨이브까지 가?\n(이 링크로 시작하면 보석 +${INVITE_GEM})`, `スピンディフェンスでウェーブ${S.wave}到達！あなたは何ウェーブまで行ける？\n（このリンクから始めるとジェム +${INVITE_GEM}）`, `I reached wave ${S.wave} in Spin Defense! How far can you go?\n(Start from this link for ${INVITE_GEM} gems)`);
   let method = 'none';
   try {
     const blob = await makeShareCard();
