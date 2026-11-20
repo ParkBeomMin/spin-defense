@@ -32,7 +32,7 @@
 html,body{margin:0;height:100%;background:#1a1233;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 body{display:block}
 body.withbar{justify-content:flex-start}
-#adbar{position:fixed;left:0;right:0;bottom:0;display:none;flex-direction:column;align-items:center;padding-bottom:env(safe-area-inset-bottom);background:#1a1233}
+#adbar{position:fixed;left:0;right:0;bottom:0;display:none;flex-direction:column;align-items:center;padding-bottom:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px));background:#1a1233}
 #adbar .lbl{font:10px sans-serif;color:rgba(255,255,255,.45);padding:2px 0}
 #adbar .ph{width:320px;height:50px;border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.5);font:12px sans-serif;display:flex;align-items:center;justify-content:center}
 canvas{display:block;touch-action:none}
@@ -119,9 +119,17 @@ function layoutBanner() {
 // 남는 세로 공간(EX)은 필드와 아래 조작부 사이 풀밭으로, 남는 가로(OX)는 양옆 배경으로 채운다
 let VW = W, VH = H, OX = 0, EX = 0, BASE_T = [1, 0, 0, 1, 0, 0];
 const SPLIT = 380; // 이 y보다 아래(강화 줄, 슬롯, 버튼)는 화면 맨 아래에 붙인다
+// 안전 영역(앱 전체 화면의 상태바·제스처 바, 아이폰 노치): 그 안쪽에만 게임을 그린다
+// 앱(Capacitor)은 --safe-area-inset-* 변수로, 브라우저는 env()로 알려 준다. 둘 다 없으면 0
+const SAFE = { t: 0, b: 0 };
+const safeProbe = document.createElement('div');
+safeProbe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:0;visibility:hidden;pointer-events:none;box-sizing:content-box;padding-top:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));padding-bottom:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px))';
+document.body.appendChild(safeProbe);
+function readSafe() { const cs = getComputedStyle(safeProbe); SAFE.t = Math.max(0, Math.round(parseFloat(cs.paddingTop) || 0)); SAFE.b = ADS.bannerOn ? 0 : Math.max(0, Math.round(parseFloat(cs.paddingBottom) || 0)); }
 function resize() {
-  const bannerH = layoutBanner();
-  const cw = innerWidth, ch = Math.max(200, innerHeight - bannerH);
+  const bannerH = layoutBanner(); readSafe();
+  const cw = innerWidth, ch = Math.max(200, innerHeight - bannerH - SAFE.t - SAFE.b);
+  cv.style.marginTop = SAFE.t + 'px';
   const s = Math.min(cw / W, ch / H);
   scale = s; VW = cw / s; VH = ch / s; OX = (VW - W) / 2; EX = VH - H;
   const dpr = Math.min(3, window.devicePixelRatio || 1);
@@ -132,6 +140,8 @@ function resize() {
   ctx.imageSmoothingQuality = 'high';
 }
 addEventListener('resize', resize); resize();
+// 앱이 상태바 높이를 늦게 알려 주거나 화면이 돌아가면 다시 맞춘다
+if (window.ResizeObserver) new ResizeObserver(() => { const t = SAFE.t, b = SAFE.b; readSafe(); if (t !== SAFE.t || b !== SAFE.b) resize(); }).observe(safeProbe);
 const FONT = 'Jua,MPR,"Hiragino Maru Gothic ProN","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
 
 // ===== 에셋 =====
@@ -2353,7 +2363,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.4 베타', 'v2.4 ベータ', 'v2.4 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.5 베타', 'v2.5 ベータ', 'v2.5 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
