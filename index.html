@@ -118,6 +118,11 @@ function layoutBanner() {
 // 화면 꽉 채우기: 캔버스는 (화면 - 배너) 전체. 게임 기본판(360x640)은 가로에 맞추고
 // 남는 세로 공간(EX)은 필드와 아래 조작부 사이 풀밭으로, 남는 가로(OX)는 양옆 배경으로 채운다
 let VW = W, VH = H, OX = 0, EX = 0, BASE_T = [1, 0, 0, 1, 0, 0];
+// 세로로 긴 화면: 남는 세로(EX)를 필드 아래에 한꺼번에 몰지 않는다
+// FY = 필드를 HUD 아래로 내리는 양(최대 40), INFO = 필드와 강화 줄 사이에 넣는 '다음 보스·버프' 정보 띠(공간이 충분할 때만)
+let FY = 0, INFO = null;
+const HUD_H = 80; // 이 높이 위는 HUD(일시정지·소리 버튼). 필드 이동과 무관
+function layoutPlay() { FY = EX > 0 ? Math.round(Math.min(40, EX * 0.25)) : 0; const top = 388 + FY, gap = 384 + EX - top, h = 42; INFO = gap >= h + 20 ? { x: 12, y: Math.round(top + (gap - h) / 2), w: 336, h } : null; }
 const SPLIT = 380; // 이 y보다 아래(강화 줄, 슬롯, 버튼)는 화면 맨 아래에 붙인다
 // 안전 영역(앱 전체 화면의 상태바·제스처 바, 아이폰 노치): 그 안쪽에만 게임을 그린다
 // 값은 고정하지 않고 기기에서 읽는다. 세 곳 중 가장 큰 값:
@@ -141,6 +146,7 @@ function resize() {
   BASE_T = [s * dpr, 0, 0, s * dpr, 0, 0];
   ctx.setTransform(...BASE_T);
   ctx.imageSmoothingQuality = 'high';
+  layoutPlay();
 }
 addEventListener('resize', resize); resize();
 // 앱이 상태바 높이를 늦게 알려 주거나 화면이 돌아가면 다시 맞춘다
@@ -1582,7 +1588,7 @@ function thirdOf(i, j) {
 // 자동 합치기: 켜져 있으면 0.35초마다 한 쌍씩, 전설(4등급)이 되는 합치기까지만. 신화·초월은 손으로
 const AUTO_MAX_RESULT = 4;
 function autoMergeTick(dt) {
-  if (!store.auto || S.first || drag || S.pick || paused) return;
+  if (!store.auto || !autoAvail() || drag || S.pick || paused) return;
   S.autoT = (S.autoT || 0) - dt; if (S.autoT > 0) return;
   for (let g = 1; g < AUTO_MAX_RESULT; g++) for (let i = 0; i < S.units.length; i++) {
     const a = S.units[i]; if (!a || a.grade !== g || a.born > 0.2) continue;
@@ -1875,7 +1881,7 @@ function drawUnitAt(u, x, y, opts = {}) {
   const sw = u.grade >= 6 ? 7 : u.grade >= 5 ? 8 : 10; for (let s = 0; s < u.grade; s++) icon('star', x - (u.grade - 1) * sw / 2 + s * sw, y + 22, u.grade >= 5 ? (u.grade >= 6 ? 8 : 9) : 11);
   ctx.restore();
 }
-const bossOnTop = e => e.boss && e.y < PT + 12;
+const bossOnTop = e => e.boss && e.y + FY < PT + 12;
 function drawEnemy(e) {
   const BD = e.boss ? BOSSES[e.bk || 'ogre'] : null;
   const k = e.boss ? BD.spr : e.kind;
@@ -1949,7 +1955,7 @@ function drawHUD() {
   if (S.chal) { rr(-OX + 4, 86, 66, 18, 9); ctx.fillStyle = S.chalWin ? 'rgba(80,160,60,.85)' : 'rgba(217,84,43,.85)'; ctx.fill(); drawFlame(-OX + 14, 95, 0.45); text(S.chalWin ? L('도전 성공', '成功', 'Cleared') : `→ W${S.chal.target}`, -OX + 42, 95, 10, '#fff', 'center', 2); }
   if (!S.chal && S.mode && S.mode !== 'normal') { const lbl = S.mode === 'boss' ? mmss(S.rushSec ?? S.time) : S.mode === 'hard' ? L('하드', 'ハード', 'HARD') : L('주간 덱', '週間', 'WEEKLY'); rr(-OX + 4, 86, 66, 18, 9); ctx.fillStyle = S.mode === 'boss' ? 'rgba(200,60,60,.85)' : S.mode === 'hard' ? 'rgba(120,30,30,.9)' : 'rgba(60,110,200,.85)'; ctx.fill(); text(lbl, -OX + 37, 95, 10, '#fff', 'center', 2); }
   // 이번 판 버프 아이콘
-  S.picked.slice(-8).forEach((c, i) => { rr(60 + i * 17, 50, 15, 15, 4); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); if (TYPES[c.icon]) sprite(c.icon, 67.5 + i * 17, 64, 14); else icon(c.icon, 67.5 + i * 17, 57.5, 12); });
+  if (!INFO) S.picked.slice(-8).forEach((c, i) => { rr(60 + i * 17, 50, 15, 15, 4); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); if (TYPES[c.icon]) sprite(c.icon, 67.5 + i * 17, 64, 14); else icon(c.icon, 67.5 + i * 17, 57.5, 12); });
   // 사운드
   const b = BTN.sound; ctx.globalAlpha = 0.8; drawSpeaker(b.x + 16, b.y + 13, store.mute); ctx.globalAlpha = 1;
   // 일시정지
@@ -2050,7 +2056,7 @@ function drawSlot() {
       text(L('배속', '倍速', 'Speed'), cx + 12, cy + 13, 11, 'rgba(255,255,255,.75)', 'center', 2);
     }, 'speed');
   }
-  if (!S.first && !paused && screen === 'play') drawAutoToggle();
+  if (autoAvail() && !paused && screen === 'play') drawAutoToggle();
   if (adMode()) {
     const adOk = S.adSpins > 0 && can;
     button(BTN.ad, '#2f8ae0', adOk, (cx, cy) => {
@@ -2075,7 +2081,7 @@ function drawField() {
   const showIdx = drag && drag.moved ? drag.idx : selected;
   if (showIdx >= 0 && S.units[showIdx]) {
     const u = S.units[showIdx], st = stats(u);
-    const [cx, cy] = drag && drag.moved ? [drag.rx, drag.ry] : cellCenter(showIdx);
+    const [cx, cy] = drag && drag.moved ? [drag.rx, drag.ry - FY] : cellCenter(showIdx);
     ctx.beginPath(); ctx.arc(cx, cy, st.range, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fill(); ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
   }
@@ -2236,7 +2242,7 @@ function drawField() {
   for (const c of S.coins) {
     if (c.t < 0) continue;
     const q = Math.min(1, c.t / c.dur), e = q * q;
-    const x = c.sx + (GOLD_POS[0] - 38 - c.sx) * e, y = c.sy + (GOLD_POS[1] - c.sy) * e - Math.sin(q * Math.PI) * 40;
+    const x = c.sx + (GOLD_POS[0] - 38 - c.sx) * e, y = c.sy + (GOLD_POS[1] - FY - c.sy) * e - Math.sin(q * Math.PI) * 40;
     icon('coin', x, y, 14);
   }
 }
@@ -2382,7 +2388,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.5.1 베타', 'v2.5.1 ベータ', 'v2.5.1 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.6 베타', 'v2.6 ベータ', 'v2.6 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -2490,8 +2496,28 @@ function drawComeback() {
   if (S.msgT > 0) return;
   comebackLines().forEach((l, i) => { const y = 600 + i * 22, sz = fitSize(l.txt, 12, 270); ctx.font = `${sz}px ${FONT}`; const w = ctx.measureText(l.txt).width; icon('gem', W / 2 - w / 2 - 10, y, 13); text(l.txt, W / 2 + 4, y, sz, l.col, 'center', 3); });
 }
+const autoAvail = () => !S.first || store.tut >= 3 || S.wave >= 4;
+// 필드와 강화 줄 사이 정보 띠: 다음 보스(초상·이름·남은 웨이브)와 이번 판 버프
+function drawInfoStrip() {
+  const I = INFO; if (!I || !S) return;
+  rr(I.x, I.y, I.w, I.h, 14); ctx.fillStyle = 'rgba(20,12,40,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1.5; ctx.stroke();
+  const cy = I.y + I.h / 2;
+  if (S.mode === 'boss') {
+    text(L(`보스 러시 ${Math.min(10, (S.rushN || 0) + 1)} / 10`, `ボスラッシュ ${Math.min(10, (S.rushN || 0) + 1)} / 10`, `Boss Rush ${Math.min(10, (S.rushN || 0) + 1)} / 10`), I.x + 16, cy + 1, 14, '#ffd166', 'left', 3);
+  } else {
+    const live = S.enemies.some(e => e.boss), nb = live ? S.wave : Math.max(10, Math.ceil((S.wave + 1) / 10) * 10), bd = BOSSES[bossKindFor(nb)], left = nb - S.wave;
+    if (LATE_IMGS.includes(bd.spr)) ensureImg(bd.spr);
+    ctx.save(); rr(I.x + 5, I.y + 4, 36, I.h - 8, 10); ctx.fillStyle = 'rgba(255,93,93,.18)'; ctx.fill(); ctx.clip(); sprite(bd.spr, I.x + 23, I.y + I.h + 2, 40); ctx.restore();
+    text(live ? L('보스전!', 'ボス戦！', 'Boss fight!') : L(`다음 보스 · W${nb}`, `次のボス · W${nb}`, `Next boss · W${nb}`), I.x + 48, I.y + 13, 11, live ? '#ff8a8a' : '#ffd166', 'left', 2.5);
+    const nm = bd.name + (live ? '' : L(`  ${left}웨이브 뒤`, `  あと${left}`, `  in ${left}`));
+    text(nm, I.x + 48, I.y + 29, fitSize(nm, 13, 150), '#fff', 'left', 3);
+  }
+  const pk = S.picked.slice(-6), n = pk.length;
+  pk.forEach((c, i) => { const x = I.x + I.w - 10 - (n - i) * 25; rr(x, cy - 11, 22, 22, 6); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill(); if (TYPES[c.icon]) sprite(c.icon, x + 11, cy + 10, 20); else icon(c.icon, x + 11, cy, 17); });
+}
 function drawAutoToggle() {
-  const b = BTN.amerge, on = store.auto, hint = !store.autoHint && S.time > 4 && S.time < 16;
+  if (S.autoAt == null) S.autoAt = S.time;
+  const b = BTN.amerge, on = store.auto, since = S.time - S.autoAt, hint = !store.autoHint && (S.first ? since > 1 && since < 13 : S.time > 4 && S.time < 16);
   ctx.save();
   if (hint) { const p = 0.5 + 0.5 * Math.sin(T * 6); ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10 + 14 * p; }
   rr(b.x, b.y, b.w, b.h, 12); ctx.fillStyle = on ? 'rgba(40,120,70,.95)' : 'rgba(30,20,60,.85)'; ctx.fill();
@@ -2663,12 +2689,14 @@ function draw() {
   if (S.shake > 0) { const m = Math.min(1, S.shake / 0.4); ctx.translate((Math.random() - 0.5) * 10 * m, (Math.random() - 0.5) * 10 * m); }
   if (S.kick) { const q = S.kick.t / 0.12; ctx.translate(S.kick.x * q, S.kick.y * q); }
   drawBG();
-  ctx.save(); ctx.translate(OX, 0); drawField(); ctx.restore();
+  ctx.save(); ctx.translate(OX, FY); drawField(); ctx.restore();
+  if (INFO) { ctx.save(); ctx.translate(OX, 0); drawInfoStrip(); ctx.restore(); }
   ctx.save(); ctx.translate(OX, EX); drawUpgrades(); drawSlot(); ctx.restore();
-  ctx.save(); ctx.translate(OX, 0); drawHUD(); for (const e of S.enemies) if (bossOnTop(e)) drawEnemy(e); ctx.restore();
+  ctx.save(); ctx.translate(OX, 0); drawHUD(); ctx.restore();
+  ctx.save(); ctx.translate(OX, FY); for (const e of S.enemies) if (bossOnTop(e)) drawEnemy(e); ctx.restore();
   if (S.flash) { ctx.save(); ctx.globalAlpha = Math.min(1, S.flash.a); ctx.fillStyle = S.flash.col; ctx.fillRect(-20, -20, VW + 40, VH + 40); ctx.restore(); }
   ctx.save(); ctx.translate(OX, 0); drawBanner(); ctx.restore();
-  ctx.save(); ctx.translate(OX, store.tut === 1 && !S.hold ? 0 : EX); drawTutorial(); ctx.restore();
+  ctx.save(); ctx.translate(OX, store.tut === 1 && !S.hold ? FY : EX); drawTutorial(); ctx.restore();
   if (drag && drag.moved) { ctx.save(); ctx.translate(OX, 0); drawUnitAt(S.units[drag.idx], drag.rx, drag.ry - 10, { alpha: 0.95, still: true }); ctx.restore(); }
   ctx.restore();
   ctx.save(); ctx.translate(OX, EX / 2);
@@ -2699,7 +2727,9 @@ function rawPos(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - 
 function pos(e) {
   const [x, y] = rawPos(e);
   if (screen !== 'play' || paused || ad || (S && S.pick)) return [x, y - EX / 2];
-  return [x, y < SPLIT ? y : Math.max(SPLIT, y - EX)];
+  if (y < HUD_H) return [x, y];
+  const mid = (388 + FY + 384 + EX) / 2; // 필드와 강화 줄 사이 공간의 가운데
+  return [x, y < mid ? Math.min(SPLIT - 1, y - FY) : Math.max(SPLIT, y - EX)];
 }
 function hitKey(x, y) {
   if (screen === 'title' && noticeOpen) return 'nclose';
@@ -2726,7 +2756,7 @@ function hitKey(x, y) {
   { const sr = sellRect(); if (sr && inRect(x, y, sr)) return 'sellsel'; }
   if (paused) return inRect(x, y, BTN.resume) ? 'resume' : inRect(x, y, BTN.quit) ? 'quit' : null;
   for (const k of ['spin', 'ad', 'speed', 'sound', 'pause']) if (inRect(x, y, BTN[k])) return k;
-  if (!S.first && inRect(x, y, BTN.amerge)) return 'amerge';
+  if (autoAvail() && inRect(x, y, BTN.amerge)) return 'amerge';
   for (const b of UPG) if (inRect(x, y, b)) return 'up_' + b.t;
   return null;
 }
