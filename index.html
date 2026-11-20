@@ -560,7 +560,7 @@ function weekKey(off = 0) {
 }
 function weekRange() { const d = new Date(Date.now() + 9 * 3600e3), day = (d.getUTCDay() + 6) % 7, mon = new Date(d - day * 86400e3), sun = new Date(+mon + 6 * 86400e3); const f = x => `${x.getUTCMonth() + 1}/${x.getUTCDate()}`; return `${f(mon)}~${f(sun)}`; }
 const deviceId = () => { let id = localStorage.getItem('sd_did'); if (!id) { id = Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-4); localStorage.setItem('sd_did', id); } return id; };
-const nick = () => localStorage.getItem('sd_nick') || '';
+const nick = () => { const n = cleanNick(localStorage.getItem('sd_nick')); return n && !badNick(n) ? n : ''; };
 const weekBestRaw = (tab = 'main') => { try { const b = JSON.parse(localStorage.getItem(BOARDS[tab].wb)); return b && b.week === weekKey() ? b : null; } catch (e) { return null; } };
 const weekBest = (tab = 'main') => { const b = weekBestRaw(tab); return b ? b.wave : 0; };
 const RANK = { tab: 'main', D: { main: {}, deck: {}, boss: {} },
@@ -576,7 +576,7 @@ async function loadRank(force, tab = RANK.tab) {
     const r = await fetch(`${RANK_ROOT}/${B.col}/${weekKey()}:runQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: B.f }, direction: 'DESCENDING' }], limit: 20 } }) });
     const j = await r.json(); if (!Array.isArray(j)) throw new Error('bad');
     const iv = (f, k) => +(f[k] && f[k].integerValue || 0);
-    d.list = j.filter(x => x.document).map(x => { const f = x.document.fields, id = x.document.name.split('/').pop(); return { id, name: (f.name && f.name.stringValue || '???').slice(0, 10), wave: iv(f, 'wave'), score: iv(f, 'score'), boss: iv(f, 'boss'), sec: iv(f, 'sec') }; });
+    d.list = j.filter(x => x.document).map(x => { const f = x.document.fields, id = x.document.name.split('/').pop(); return { id, name: showNick((f.name && f.name.stringValue || '???').slice(0, 10)), wave: iv(f, 'wave'), score: iv(f, 'score'), boss: iv(f, 'boss'), sec: iv(f, 'sec') }; });
     d.at = performance.now();
   } catch (e) { d.err = true; }
   d.loading = false;
@@ -593,7 +593,24 @@ async function submitScore(val, tab = 'main', extra = {}, week = weekKey()) {
     return true;
   } catch (e) { return false; }
 }
-const cleanNick = s => String(s || '').replace(/[<>"'`\\/]/g, '').replace(/\s+/g, ' ').trim().slice(0, 10);
+const cleanNick = s => String(s || '').normalize('NFC').replace(/[<>"'\x60\\/\p{Cc}\p{Cf}]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 10);
+// 한국어·영어·일본어 기본 필터. 짧고 일반 이름에 자주 섞이는 표현은 단독 또는 숫자 접미사일 때만 검사한다.
+const normalizeNick = s => String(s || '').normalize('NFKC').toLowerCase();
+const lettersNick = s => normalizeNick(s).replace(/[^\p{L}\p{N}\p{M}]/gu, '').normalize('NFC');
+const latinNick = s => normalizeNick(s).replace(/\p{Cf}/gu, '').replace(/[01345@!$]/g, ch => ({0:'o',1:'i',3:'e',4:'a',5:'s','@':'a','!':'i','$':'s'})[ch]);
+const BAD_CJK_NICK = ['시발','씨발','씨바','씨빨','병신','좆','존나','지랄','개새끼','개새꺄','섹스','야동','창녀','느금마','니애미','엠창','한남충','짱깨','쪽바리','조센징','死ね','ちんこ','まんこ','セックス','レイプ','ガイジ'].map(lettersNick);
+const SHORT_CJK_NICK = ['ㅅㅂ','ㅆㅂ','ㅂㅅ','ㅈㄹ','しね','운영자','관리자','運営','管理者'].map(lettersNick);
+const BAD_LATIN_NICK = ['fuck','bitch','cunt','nigger','nigga','faggot','pussy','asshole','porn','hitler','slut','whore'];
+const SHORT_LATIN_NICK = /^(?:shit|dick|sex|rape|nazi|admin)$/;
+const badNick = s => {
+  const key = lettersNick(s), bare = key.replace(/\p{N}/gu, '');
+  if (!key || BAD_CJK_NICK.some(w => key.includes(w)) || SHORT_CJK_NICK.includes(bare)) return true;
+  const latin = latinNick(s), compact = latin.replace(/[^a-z]/g, '');
+  return BAD_LATIN_NICK.some(w => compact.includes(w)) || SHORT_LATIN_NICK.test(compact)
+    || SHORT_LATIN_NICK.test(latinNick(normalizeNick(s).replace(/^\d+|\d+$/g, '')).replace(/[^a-z]/g, ''))
+    || latin.split(/[^a-z]+/).some(w => SHORT_LATIN_NICK.test(w));
+};
+const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '***'; };
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 function openSettings() {
   if (document.getElementById('codedlg')) return;
@@ -631,14 +648,15 @@ function openNickDialog(after) {
   wrap.innerHTML = `<div style="width:min(300px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:18px 16px 14px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
     <div style="font-size:21px;color:#ffd166;margin-bottom:6px">${L('주간 랭킹에 올릴 이름', '週間ランキングの名前', 'Name for the weekly ranking')}</div>
     <div style="font-size:12px;opacity:.75;margin-bottom:12px">${L('최대 10자 · 나중에 랭킹 화면에서 바꿀 수 있어요', '最大10文字・あとで変更できます', 'Up to 10 characters, you can change it later')}</div>
-    <input id="nickin" maxlength="10" autocomplete="off" spellcheck="false" value="${nick()}" style="width:100%;box-sizing:border-box;font:20px inherit;font-family:inherit;text-align:center;padding:10px;border-radius:12px;border:2px solid #8fe3ff;background:#1a1233;color:#fff;outline:none">
+    <input id="nickin" maxlength="10" autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;font:20px inherit;font-family:inherit;text-align:center;padding:10px;border-radius:12px;border:2px solid #8fe3ff;background:#1a1233;color:#fff;outline:none">
     <div id="nickmsg" style="min-height:18px;font-size:12px;margin:8px 0 4px;color:#ffb0b0"></div>
     <div style="display:flex;gap:8px"><button id="nickno" style="flex:1;font:15px inherit;font-family:inherit;padding:10px;border-radius:12px;border:0;background:#5a5a6a;color:#fff">${L('나중에', 'あとで', 'Later')}</button>
     <button id="nickok" style="flex:1.4;font:16px inherit;font-family:inherit;padding:10px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('등록', '登録', 'Save')}</button></div></div>`;
   document.body.appendChild(wrap);
   const inp = wrap.querySelector('#nickin');
+  inp.value = nick();
   wrap.querySelector('#nickno').onclick = () => { wrap.remove(); localStorage.setItem('sd_nick_skip', '1'); };
-  const ok = () => { const n = cleanNick(inp.value); if (!n) { wrap.querySelector('#nickmsg').textContent = L('이름을 입력해 주세요', '名前を入力してね', 'Please enter a name'); return; } localStorage.setItem('sd_nick', n); localStorage.removeItem('sd_nick_skip'); wrap.remove(); sfx('click'); if (after) after(); };
+  const ok = () => { const n = cleanNick(inp.value); if (!n) { wrap.querySelector('#nickmsg').textContent = L('이름을 입력해 주세요', '名前を入力してね', 'Please enter a name'); return; } if (badNick(n)) { wrap.querySelector('#nickmsg').textContent = L('다른 이름을 써 주세요', '別の名前にしてください', 'Please choose a different name'); sfx('error'); return; } localStorage.setItem('sd_nick', n); localStorage.removeItem('sd_nick_skip'); wrap.remove(); sfx('click'); if (after) after(); };
   wrap.querySelector('#nickok').onclick = ok; inp.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
   setTimeout(() => inp.focus(), 50);
 }
@@ -1828,6 +1846,7 @@ function drawUnitAt(u, x, y, opts = {}) {
   const sw = u.grade >= 6 ? 7 : u.grade >= 5 ? 8 : 10; for (let s = 0; s < u.grade; s++) icon('star', x - (u.grade - 1) * sw / 2 + s * sw, y + 22, u.grade >= 5 ? (u.grade >= 6 ? 8 : 9) : 11);
   ctx.restore();
 }
+const bossOnTop = e => e.boss && e.y < PT + 12;
 function drawEnemy(e) {
   const BD = e.boss ? BOSSES[e.bk || 'ogre'] : null;
   const k = e.boss ? BD.spr : e.kind;
@@ -1858,7 +1877,7 @@ function drawEnemy(e) {
   if (e.charging > 0) { ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = '#ff8a6a'; ctx.lineWidth = 3; for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(e.x - e.dir * (8 + k * 7), e.y - h * 0.3 - k * 4); ctx.lineTo(e.x - e.dir * (20 + k * 9), e.y - h * 0.3 - k * 4); ctx.stroke(); } ctx.restore(); }
   if (e.stunT > 0) { for (let k = 0; k < 3; k++) { const ang = T * 6 + k * 2.09; icon('star', e.x + Math.cos(ang) * (e.boss ? 14 : 9), e.y - h + 2 + Math.sin(ang) * 3, e.boss ? 9 : 7); } }
   if (e.poisonT > 0) { e.poisonT -= 1 / 60; ctx.save(); ctx.globalAlpha = 0.7; ctx.fillStyle = '#a8f07c'; for (let k = 0; k < 2; k++) { const ph = (T * 1.4 + k * 0.5 + e.bob * 0.05) % 1; ctx.beginPath(); ctx.arc(e.x - 4 + k * 8, e.y - h * 0.6 - ph * 10, 1.5 + ph * 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
-  if (e.hp < e.max || e.boss) {
+  if ((e.hp < e.max || e.boss) && !bossOnTop(e)) {
     const bw = e.boss ? 44 : 22, by = e.y - h + 2;
     rr(e.x - bw / 2 - 1, by - 1, bw + 2, 6, 3); ctx.fillStyle = 'rgba(20,10,30,.8)'; ctx.fill();
     rr(e.x - bw / 2, by, Math.max(0, bw * e.hp / e.max), 4, 2); ctx.fillStyle = e.boss ? '#ff5d5d' : '#7be36d'; ctx.fill();
@@ -1875,27 +1894,29 @@ function drawHUD() {
   ctx.strokeStyle = S.waveT < 4 ? '#ff7b5c' : '#ffcf5a'; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(32, 31, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pr); ctx.stroke(); ctx.lineCap = 'butt';
   text(rushM ? 'BOSS' : 'WAVE', 32, 23, 9, 'rgba(255,255,255,.7)');
   text(rushM ? `${S.rushN}/10` : String(S.wave), 32, 38, rushM ? 14 : 18, '#fff', 'center', 3);
-  // 몬스터 게이지
+  // 몬스터 게이지 (보스전에서는 이 자리에 보스 체력·제한시간 바를 보여 주고, 몬스터 수는 숫자로만. 길 위의 보스를 가리지 않게)
   const aw = aliveWeight(), ratio = Math.min(1, aw / LIMIT), danger = ratio > 0.75;
+  const bs = S.enemies.find(e => e.boss), bossBar = !!(bs && S.bossT > 0);
   text(L(`몬스터 ${aw} / ${LIMIT}`, `モンスター ${aw} / ${LIMIT}`, `Monsters ${aw} / ${LIMIT}`), 150, 19, 13, danger ? '#ff8a8a' : '#fff', 'center', 3);
-  rr(70, 30, 160, 14, 7); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill();
-  const bg = ctx.createLinearGradient(70, 0, 230, 0); bg.addColorStop(0, '#7be36d'); bg.addColorStop(0.55, '#ffcf5a'); bg.addColorStop(1, '#ff5d5d');
-  ctx.save(); rr(72, 32, 156 * ratio, 10, 5); ctx.clip(); ctx.fillStyle = bg; ctx.fillRect(72, 32, 156, 10); ctx.restore();
-  if (danger) { ctx.strokeStyle = `rgba(255,80,80,${0.5 + 0.5 * Math.sin(T * 10)})`; ctx.lineWidth = 2; rr(70, 30, 160, 14, 7); ctx.stroke(); }
+  if (!bossBar) {
+    rr(70, 30, 160, 14, 7); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill();
+    const bg = ctx.createLinearGradient(70, 0, 230, 0); bg.addColorStop(0, '#7be36d'); bg.addColorStop(0.55, '#ffcf5a'); bg.addColorStop(1, '#ff5d5d');
+    ctx.save(); rr(72, 32, 156 * ratio, 10, 5); ctx.clip(); ctx.fillStyle = bg; ctx.fillRect(72, 32, 156, 10); ctx.restore();
+    if (danger) { ctx.strokeStyle = `rgba(255,80,80,${0.5 + 0.5 * Math.sin(T * 10)})`; ctx.lineWidth = 2; rr(70, 30, 160, 14, 7); ctx.stroke(); }
+  } else {
+    const hpR = clamp(bs.hp / bs.max, 0, 1), tR = Math.max(0, S.bossT / (S.bossMax || TUNE.bossTime)), urgent = S.bossT < 8;
+    rr(62, 29, 176, 15, 7.5); ctx.fillStyle = 'rgba(20,10,30,.85)'; ctx.fill();
+    if (hpR > 0.02) { rr(64, 31, 172 * hpR, 11, 5.5); ctx.fillStyle = '#ff5d5d'; ctx.fill(); }
+    const bl = L(`${BOSSES[bs.bk || 'ogre'].name}  ${Math.ceil(S.bossT)}초`, `${BOSSES[bs.bk || 'ogre'].name}  ${Math.ceil(S.bossT)}秒`, `${BOSSES[bs.bk || 'ogre'].name}  ${Math.ceil(S.bossT)}s`);
+    text(bl, 150, 36.5, fitSize(bl, 10.5, 164), urgent && Math.sin(T * 12) > 0 ? '#ffd166' : '#fff', 'center', 3);
+    rr(64, 42, 172 * tR, 2, 1); ctx.fillStyle = urgent ? '#ffd166' : 'rgba(255,255,255,.6)'; ctx.fill();
+    if (danger) { ctx.strokeStyle = `rgba(255,80,80,${0.5 + 0.5 * Math.sin(T * 10)})`; ctx.lineWidth = 2; rr(62, 29, 176, 15, 7.5); ctx.stroke(); }
+  }
   // 골드
   rr(246, 14, 106, 32, 16); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,207,90,.5)'; ctx.lineWidth = 1.5; ctx.stroke();
   const coinPulse = S.coins.some(c => c.done && c.t < c.dur) ? 1.15 : 1;
   icon('coin', 262, 30, 26 * coinPulse);
   text(Math.round(S.goldShown).toLocaleString(), 342, 31, 18, '#ffd166', 'right', 3);
-  // 보스 체력·제한시간 바
-  const bs = S.enemies.find(e => e.boss);
-  if (bs && S.bossT > 0) {
-    const hpR = Math.max(0, bs.hp / bs.max), tR = Math.max(0, S.bossT / (S.bossMax || TUNE.bossTime)), urgent = S.bossT < 8;
-    rr(70, 64, 220, 16, 8); ctx.fillStyle = 'rgba(20,10,30,.85)'; ctx.fill();
-    rr(72, 66, 216 * hpR, 12, 6); ctx.fillStyle = '#ff5d5d'; ctx.fill();
-    text(L(`${BOSSES[bs.bk || 'ogre'].name}  ${Math.ceil(S.bossT)}초`, `${BOSSES[bs.bk || 'ogre'].name}  ${Math.ceil(S.bossT)}秒`, `${BOSSES[bs.bk || 'ogre'].name}  ${Math.ceil(S.bossT)}s`), 180, 72, 11, urgent && Math.sin(T * 12) > 0 ? '#ffd166' : '#fff', 'center', 3);
-    rr(72, 79, 216 * tR, 3, 1.5); ctx.fillStyle = urgent ? '#ffd166' : 'rgba(255,255,255,.6)'; ctx.fill();
-  }
   if (S.chal) { rr(-OX + 4, 86, 66, 18, 9); ctx.fillStyle = S.chalWin ? 'rgba(80,160,60,.85)' : 'rgba(217,84,43,.85)'; ctx.fill(); drawFlame(-OX + 14, 95, 0.45); text(S.chalWin ? L('도전 성공', '成功', 'Cleared') : `→ W${S.chal.target}`, -OX + 42, 95, 10, '#fff', 'center', 2); }
   if (!S.chal && S.mode && S.mode !== 'normal') { const lbl = S.mode === 'boss' ? mmss(S.rushSec ?? S.time) : S.mode === 'hard' ? L('하드', 'ハード', 'HARD') : L('주간 덱', '週間', 'WEEKLY'); rr(-OX + 4, 86, 66, 18, 9); ctx.fillStyle = S.mode === 'boss' ? 'rgba(200,60,60,.85)' : S.mode === 'hard' ? 'rgba(120,30,30,.9)' : 'rgba(60,110,200,.85)'; ctx.fill(); text(lbl, -OX + 37, 95, 10, '#fff', 'center', 2); }
   // 이번 판 버프 아이콘
@@ -2052,7 +2073,8 @@ function drawField() {
   }
   // 적 (위쪽 먼저)
   const es = S.enemies.slice().sort((a, b) => a.y - b.y);
-  for (const e of es) if (e.y < GY) drawEnemy(e);
+  // 위쪽 길의 보스는 HUD에 가려지지 않게 HUD를 그린 뒤 따로 그린다 (bossOnTop)
+  for (const e of es) if (e.y < GY && !bossOnTop(e)) drawEnemy(e);
   // 유닛
   S.units.forEach((u, i) => {
     if (!u) return;
@@ -2331,7 +2353,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.3 베타', 'v2.3 ベータ', 'v2.3 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.4 베타', 'v2.4 ベータ', 'v2.4 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -2614,7 +2636,7 @@ function draw() {
   drawBG();
   ctx.save(); ctx.translate(OX, 0); drawField(); ctx.restore();
   ctx.save(); ctx.translate(OX, EX); drawUpgrades(); drawSlot(); ctx.restore();
-  ctx.save(); ctx.translate(OX, 0); drawHUD(); ctx.restore();
+  ctx.save(); ctx.translate(OX, 0); drawHUD(); for (const e of S.enemies) if (bossOnTop(e)) drawEnemy(e); ctx.restore();
   if (S.flash) { ctx.save(); ctx.globalAlpha = Math.min(1, S.flash.a); ctx.fillStyle = S.flash.col; ctx.fillRect(-20, -20, VW + 40, VH + 40); ctx.restore(); }
   ctx.save(); ctx.translate(OX, 0); drawBanner(); ctx.restore();
   ctx.save(); ctx.translate(OX, store.tut === 1 && !S.hold ? 0 : EX); drawTutorial(); ctx.restore();
