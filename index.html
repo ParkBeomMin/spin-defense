@@ -120,12 +120,15 @@ function layoutBanner() {
 let VW = W, VH = H, OX = 0, EX = 0, BASE_T = [1, 0, 0, 1, 0, 0];
 const SPLIT = 380; // 이 y보다 아래(강화 줄, 슬롯, 버튼)는 화면 맨 아래에 붙인다
 // 안전 영역(앱 전체 화면의 상태바·제스처 바, 아이폰 노치): 그 안쪽에만 게임을 그린다
-// 앱(Capacitor)은 --safe-area-inset-* 변수로, 브라우저는 env()로 알려 준다. 둘 다 없으면 0
-const SAFE = { t: 0, b: 0 };
+// 값은 고정하지 않고 기기에서 읽는다. 세 곳 중 가장 큰 값:
+//  1) env(safe-area-inset-*): 브라우저·WebView 표준 (아이폰 노치, 최신 Android WebView)
+//  2) --safe-area-inset-*: Capacitor SystemBars가 Android WindowInsets(상태바·제스처 바·카메라 홈)로 계산해 넣는 값
+//  3) 앱에서만: StatusBar 플러그인 getInfo().height (Android WindowInsets.Type.statusBars 높이, dp)
+const SAFE = { t: 0, b: 0 }, NATIVE_SAFE = { t: 0 };
 const safeProbe = document.createElement('div');
 safeProbe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:0;visibility:hidden;pointer-events:none;box-sizing:content-box;padding-top:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));padding-bottom:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px))';
 document.body.appendChild(safeProbe);
-function readSafe() { const cs = getComputedStyle(safeProbe); SAFE.t = Math.max(0, Math.round(parseFloat(cs.paddingTop) || 0)); SAFE.b = ADS.bannerOn ? 0 : Math.max(0, Math.round(parseFloat(cs.paddingBottom) || 0)); }
+function readSafe() { const cs = getComputedStyle(safeProbe); SAFE.t = Math.max(0, Math.round(parseFloat(cs.paddingTop) || 0), NATIVE_SAFE.t); SAFE.b = ADS.bannerOn ? 0 : Math.max(0, Math.round(parseFloat(cs.paddingBottom) || 0)); }
 function resize() {
   const bannerH = layoutBanner(); readSafe();
   const cw = innerWidth, ch = Math.max(200, innerHeight - bannerH - SAFE.t - SAFE.b);
@@ -141,7 +144,23 @@ function resize() {
 }
 addEventListener('resize', resize); resize();
 // 앱이 상태바 높이를 늦게 알려 주거나 화면이 돌아가면 다시 맞춘다
-if (window.ResizeObserver) new ResizeObserver(() => { const t = SAFE.t, b = SAFE.b; readSafe(); if (t !== SAFE.t || b !== SAFE.b) resize(); }).observe(safeProbe);
+// 앱: 네이티브 상태바 높이를 직접 물어본다 (상태바가 웹뷰 위에 겹쳐 있고 보일 때만). 화면 회전·복귀·상태바 변화 때 다시 확인
+async function readNativeSafe() {
+  if (!window.SD_APP) return;
+  const SB = appPlugin('StatusBar'); if (!SB || !SB.getInfo) return;
+  try { const i = await SB.getInfo(); const t = i && i.visible !== false && i.overlays !== false ? Math.max(0, Math.round(+i.height || 0)) : 0; if (t !== NATIVE_SAFE.t) { NATIVE_SAFE.t = t; resize(); } } catch (e) {}
+}
+if (window.SD_APP) {
+  readNativeSafe(); setTimeout(readNativeSafe, 600); setTimeout(readNativeSafe, 2000);
+  addEventListener('resize', () => setTimeout(readNativeSafe, 150));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(readNativeSafe, 150); });
+  try { const SB = appPlugin('StatusBar'); if (SB && SB.addListener) { SB.addListener('statusBarVisibilityChanged', readNativeSafe); SB.addListener('statusBarOverlayChanged', readNativeSafe); } } catch (e) {}
+}
+// 값이 바뀌면 다시 맞춘다: Capacitor는 <html> style 에 --safe-area-inset-* 를 넣으므로 그 변화를 직접 감시하고,
+// env() 변화(회전 등)는 탐침 요소의 테두리 크기 변화로 잡는다
+const recheckSafe = () => { const t = SAFE.t, b = SAFE.b; readSafe(); if (t !== SAFE.t || b !== SAFE.b) resize(); };
+if (window.MutationObserver) new MutationObserver(recheckSafe).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+if (window.ResizeObserver) try { new ResizeObserver(recheckSafe).observe(safeProbe, { box: 'border-box' }); } catch (e) { new ResizeObserver(recheckSafe).observe(safeProbe); }
 const FONT = 'Jua,MPR,"Hiragino Maru Gothic ProN","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
 
 // ===== 에셋 =====
@@ -1660,7 +1679,7 @@ function revive() {
 const adMode = () => APP ? APPAD.ready : (ADS.enabled && ADS.ready);
 // ===== 앱(AdMob) 보상형 광고: 보상은 플러그인의 보상 이벤트를 받았을 때만. 광고가 없으면 기존 시간 방식으로 =====
 const APPAD = { ready: false, loading: false, fails: 0, unit: window.SD_AD_UNIT || '', test: window.SD_AD_TEST !== false, plug: null };
-function appPlugin(name) { try { return window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.registerPlugin ? Capacitor.registerPlugin(name) : null; } catch (e) { return null; } }
+function appPlugin(name) { const APP_PLUGS = window.__sdPlugs || (window.__sdPlugs = {}); if (name in APP_PLUGS) return APP_PLUGS[name]; let p = null; try { p = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.registerPlugin ? Capacitor.registerPlugin(name) : null; } catch (e) { p = null; } return (APP_PLUGS[name] = p); }
 function appAdLoad() {
   const A = APPAD.plug; if (!A || APPAD.loading || APPAD.ready) return;
   APPAD.loading = true;
@@ -2363,7 +2382,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.5 베타', 'v2.5 ベータ', 'v2.5 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.5.1 베타', 'v2.5.1 ベータ', 'v2.5.1 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
