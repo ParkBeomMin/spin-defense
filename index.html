@@ -68,6 +68,12 @@ ADS.enabled = !/[?&](rec|noads|embed)=1/.test(location.search); // embed=1: 다�
 // 게임 포털 업로드용 빌드(itch.io, CrazyGames 등): 외부 광고·서비스워커·공유·앱 설치 끔
 const PORTAL = window.SD_PORTAL === true || /[?&]portal=1/.test(location.search);
 if (PORTAL) ADS.enabled = false;
+// 안드로이드 앱(Capacitor) 빌드: window.SD_APP=true 를 동기화 스크립트가 넣는다. 웹 빌드에는 영향 없음
+// 앱에서는 AdSense(배너·H5 광고)·서비스워커·PWA 설치를 끄고, 보상형 광고는 AdMob 플러그인으로
+const APP = window.SD_APP === true;
+if (APP) ADS.enabled = false;
+// 앱은 공지·이벤트 코드를 실제 사이트에서 받아 최신으로 (실패하면 앱에 들어 있는 사본)
+const LIVE = APP ? 'https://parkbeommin.github.io/spin-defense/' : '';
 ADS.test = !ADS.prod || /[?&]adtest=1/.test(location.search);
 ADS.preview = /[?&]adpreview=1/.test(location.search);   // 로컬에서 배너 자리 미리보기
 ADS.wantBanner = ADS.enabled && (!!ADS.bannerSlot || ADS.preview);
@@ -76,12 +82,13 @@ window.adsbygoogle = window.adsbygoogle || [];
 function adBreak(o) { window.adsbygoogle.push(o); }
 function adConfig(o) { window.adsbygoogle.push(o); }
 // ===== Google Analytics 4 (실서비스 주소에서만, 광고 개인화·Google 신호 끔) =====
-const GA = { id: 'G-RGKGFFP9N5', on: ADS.prod && !/[?&](rec|noga)=1/.test(location.search) };
+const GA = { id: 'G-RGKGFFP9N5', on: (ADS.prod || APP) && !/[?&](rec|noga)=1/.test(location.search) };
 window.dataLayer = window.dataLayer || [];
 function gtag() { window.dataLayer.push(arguments); }
 if (GA.on) {
   const gs = document.createElement('script'); gs.async = true; gs.src = `https://www.googletagmanager.com/gtag/js?id=${GA.id}`; document.head.appendChild(gs);
   gtag('js', new Date()); gtag('config', GA.id, { allow_google_signals: false, allow_ad_personalization_signals: false });
+  if (APP) gtag('set', 'user_properties', { app_platform: 'android' });
 }
 function track(name, params = {}) { if (GA.on) try { gtag('event', name, params); } catch (e) {} }
 if (ADS.enabled) {
@@ -276,13 +283,13 @@ const easeOutBack = p => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow
 
 // ===== 홈 화면 설치 (PWA) =====
 let installEvt = null;
-if (!PORTAL && 'serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+if (!PORTAL && !APP && 'serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); if (!APP) installEvt = e; });
 window.addEventListener('appinstalled', () => { installEvt = null; track('pwa_installed'); });
 if (/[?&]src=pwa/.test(location.search)) setTimeout(() => track('pwa_launch'), 1500);
 // ===== 공지사항 (assets/notices.json, 새 공지는 빨간 점 + 첫 화면에서 한 번 자동으로 열림) =====
 let NOTICES = [], noticeOpen = false, noticeAuto = false;
-fetch('assets/notices.json?t=' + Date.now()).then(r => r.json()).then(n => { NOTICES = Array.isArray(n) ? n : []; }).catch(() => {});
+fetch(LIVE + 'assets/notices.json?t=' + Date.now()).catch(() => fetch('assets/notices.json')).then(r => r.json()).then(n => { NOTICES = Array.isArray(n) ? n : []; }).catch(() => {});
 const noticeUnseen = () => NOTICES.length && localStorage.getItem('sd_notice_seen') !== NOTICES[0].id;
 function closeNotice() { noticeOpen = false; if (NOTICES.length) localStorage.setItem('sd_notice_seen', NOTICES[0].id); }
 function wrapText(str, maxW, size) {
@@ -752,7 +759,7 @@ function openModes() {
 // ===== 이벤트 코드: assets/codes.json 에 코드의 해시·기간·보상을 적어두고, 기기마다 코드당 한 번 받기 =====
 // codes.json 항목: { id, h: sha256('sd:' + 대문자 코드), from: 'YYYY-MM-DD', until: 'YYYY-MM-DD'(그날까지 포함), gems, ch(채널) }
 let CODES = [];
-fetch('assets/codes.json?t=' + Date.now()).then(r => r.json()).then(c => { CODES = Array.isArray(c) ? c : []; }).catch(() => {});
+fetch(LIVE + 'assets/codes.json?t=' + Date.now()).catch(() => fetch('assets/codes.json')).then(r => r.json()).then(c => { CODES = Array.isArray(c) ? c : []; }).catch(() => {});
 const usedCodes = () => { try { return JSON.parse(localStorage.getItem('sd_codes')) || []; } catch (e) { return []; } };
 // 지금 받을 수 있는 코드가 있는지(빨간 점용): 기간 안 + 아직 안 씀
 const activeCodeCount = () => { const t = dayKey(), u = usedCodes(); return CODES.filter(c => c.from <= t && t <= c.until && !u.includes(c.id) && c.dot).length; };
@@ -1135,6 +1142,7 @@ function doSpin(free) {
   if (!emptyCells().length) { flash(L('칸이 꽉 찼어요! 합체하거나 판매하세요', 'マスがいっぱい！合体か売却をしよう', 'Board is full! Merge or sell'), '#ffb35c'); sfx('error'); return; }
   const cost = spinCost();
   if (!free) { if (S.gold < cost) { flash(L('골드가 부족해요', 'ゴールドが足りません', 'Not enough gold'), '#ffb35c', 1.2); sfx('error'); return; } S.gold -= cost; S.spins++; }
+  if (S.hold) { S.hold = false; track('first_spin', { play_sec: Math.round(performance.now() / 1000) }); }
   S.spinning = true; S.spinRes = [rollSym(), rollSym(), rollSym()]; S.spinPaid = free ? 0 : cost;
   // 첫 판 연출: 1번째 소환 뒤 2번째에 같은 영웅이 나와 바로 합체를 배우고, 4번째에 대성공을 한 번 맛보게
   if (S.first) { S.tutSpin++; const [a, b, c] = TYPE_KEYS; if (S.tutSpin === 1) S.spinRes = [a, b, c]; else if (S.tutSpin === 2) { const ex = S.units.find(u => u && u.grade === 1), x = ex ? ex.type : a, y = TYPE_KEYS.find(t => t !== x); S.spinRes = [x, x, y]; } else if (S.tutSpin === 4) S.spinRes = ['star', c, c]; }
@@ -1257,6 +1265,7 @@ function damage(e, dmg, showNum, fx, fy, crit = false) {
   if (e.hp <= 0) killEnemy(e);
 }
 function update(dt) {
+  if (S.hold) { if (S.msgT > 0) S.msgT -= dt; if (S.banner) S.banner.t = Math.max(1.4, S.banner.t - dt); return; }
   S.time += dt;
   if (S.msgT > 0) S.msgT -= dt;
   if (S.banner) { S.banner.t -= dt; if (S.banner.t <= 0) S.banner = null; }
@@ -1620,9 +1629,52 @@ function revive() {
 // 실제 앱에서는 AdMob 보상형 광고로 교체
 // 보상형 광고: 실제 광고(H5 Games Ads)가 준비되면 그걸 쓰고, 아니면 테스트용 가짜 광고
 // H5 게임 광고 승인 전에는 '시간' 방식: 무료 스핀은 90초마다 충전, 부활은 8초 기다리기
-const adMode = () => ADS.enabled && ADS.ready;
+const adMode = () => APP ? APPAD.ready : (ADS.enabled && ADS.ready);
+// ===== 앱(AdMob) 보상형 광고: 보상은 플러그인의 보상 이벤트를 받았을 때만. 광고가 없으면 기존 시간 방식으로 =====
+const APPAD = { ready: false, loading: false, fails: 0, unit: window.SD_AD_UNIT || '', test: window.SD_AD_TEST !== false, plug: null };
+function appPlugin(name) { try { return window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.registerPlugin ? Capacitor.registerPlugin(name) : null; } catch (e) { return null; } }
+function appAdLoad() {
+  const A = APPAD.plug; if (!A || APPAD.loading || APPAD.ready) return;
+  APPAD.loading = true;
+  A.prepareRewardVideoAd({ adId: APPAD.unit, isTesting: APPAD.test }).then(() => { APPAD.ready = true; APPAD.loading = false; APPAD.fails = 0; }).catch(() => { APPAD.loading = false; APPAD.fails++; setTimeout(appAdLoad, Math.min(120000, 15000 * APPAD.fails)); });
+}
+async function appAdInit() {
+  if (!APP || !APPAD.unit) return; const A = appPlugin('AdMob'); if (!A) return; APPAD.plug = A;
+  try {
+    await A.initialize({ initializeForTesting: APPAD.test });
+    try { const ci = await A.requestConsentInfo(); if (ci && ci.isConsentFormAvailable && ci.status === 'REQUIRED') await A.showConsentForm(); } catch (e) {}
+    appAdLoad();
+  } catch (e) { track('app_ad_init_fail', {}); }
+}
+async function appShowReward(onReward, name) {
+  const A = APPAD.plug; if (!A || !APPAD.ready) { flash(L('지금은 보여줄 광고가 없어요. 잠시 후 다시 눌러주세요', '今は表示できる広告がありません。少し待ってから押してね', 'No ad available right now. Try again soon'), '#ffb35c'); appAdLoad(); return; }
+  APPAD.ready = false; ADS.inAd = true; let got = false, closed = false, onClose = null;
+  // showRewardVideoAd 는 보상을 받는 순간 끝나고(광고는 아직 화면에 있음), 보상 없이 닫히면 실패로 끝난다.
+  // 보상은 '보상 이벤트를 받았고 + 광고가 닫힌 뒤'에만 준다
+  const hs = [await A.addListener('onRewardedVideoAdReward', () => { got = true; }),
+    await A.addListener('onRewardedVideoAdDismissed', () => { closed = true; if (onClose) onClose(); }),
+    await A.addListener('onRewardedVideoAdFailedToShow', () => { closed = true; if (onClose) onClose(); })];
+  try { await A.showRewardVideoAd(); got = true; } catch (e) { closed = true; }
+  if (!closed) await new Promise(r => { onClose = r; setTimeout(r, 120000); });
+  hs.forEach(h => { try { h.remove(); } catch (e) {} });
+  ADS.inAd = false; paused = false;
+  if (got) onReward(); else flash(L('광고를 끝까지 보면 보상을 받아요', '広告を最後まで見ると報酬がもらえます', 'Watch the whole ad to get the reward'), '#ffb35c');
+  track('app_reward', { name, got: got ? 1 : 0 });
+  appAdLoad();
+}
+// 안드로이드 뒤로 가기: 창 닫기 → 게임 중이면 일시정지/재개 → 하위 화면이면 처음 화면 → 처음 화면이면 앱 종료
+function appBack() {
+  const dlg = document.getElementById('codedlg'); if (dlg) { dlg.remove(); return; }
+  if (ADS.inAd || ad) return;
+  if (screen === 'title') { if (noticeOpen) { closeNotice(); return; } if (chalOpen) { chalOpen = false; return; } const A = appPlugin('App'); if (A) A.exitApp(); return; }
+  if (screen === 'play') { paused = !paused; quitAsk = 0; sfx('click'); return; }
+  if (screen === 'ach') { screen = 'missions'; return; }
+  screen = 'title'; sfx('click');
+}
+if (APP) window.addEventListener('load', () => { appAdInit(); const A = appPlugin('App'); if (A) A.addListener('backButton', appBack); });
 const mmss = t => { t = Math.max(0, Math.ceil(t)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 function showRewardAd(onReward, name = 'reward') {
+  if (APP) { if (APPAD.ready) appShowReward(onReward, name); else ad = { t: 3, onReward }; return; }
   if (!ADS.enabled || !ADS.ready) { ad = { t: 3, onReward }; return; }
   let got = false;
   adBreak({
@@ -2156,7 +2208,7 @@ function drawHand(x, y, press) {
   ctx.restore();
 }
 function drawTutorial() {
-  const tut = store.tut; if (tut >= 3 || drag) return;
+  const tut = S.hold ? 0 : store.tut; if (tut >= 3 || drag) return;
   let tx, ty, label, box = null;
   if (tut === 0 && !S.spinning) { box = BTN.spin; tx = box.x + box.w / 2; ty = box.y + 4; label = L('눌러서 영웅 뽑기!', '押してヒーロー召喚！', 'Tap to summon heroes!'); }
   else if (tut === 1) {
@@ -2279,7 +2331,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.2 베타', 'v2.2 ベータ', 'v2.2 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.3 베타', 'v2.3 ベータ', 'v2.3 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
@@ -2425,7 +2477,9 @@ async function shareRecord() {
   try {
     const blob = await makeShareCard();
     const file = blob && new File([blob], `spin-defense-wave${S.wave}.png`, { type: 'image/png' });
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: `${txt}\n${url}` }); method = 'file'; }
+    const capShare = APP ? appPlugin('Share') : null;
+    if (capShare) { await capShare.share({ text: txt, url, dialogTitle: L('기록 공유', '記録シェア', 'Share') }); method = 'link'; }
+    else if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: `${txt}\n${url}` }); method = 'file'; }
     else if (navigator.share) { await navigator.share({ text: txt, url }); method = 'link'; }
     else { await navigator.clipboard.writeText(`${txt} ${url}`); method = 'copy'; flash(L('링크를 복사했어요! 친구에게 붙여넣어 보세요', 'リンクをコピーしました！', 'Link copied! Paste it to a friend'), '#9be36d', 2); }
   } catch (e) {
@@ -2563,7 +2617,7 @@ function draw() {
   ctx.save(); ctx.translate(OX, 0); drawHUD(); ctx.restore();
   if (S.flash) { ctx.save(); ctx.globalAlpha = Math.min(1, S.flash.a); ctx.fillStyle = S.flash.col; ctx.fillRect(-20, -20, VW + 40, VH + 40); ctx.restore(); }
   ctx.save(); ctx.translate(OX, 0); drawBanner(); ctx.restore();
-  ctx.save(); ctx.translate(OX, store.tut === 1 ? 0 : EX); drawTutorial(); ctx.restore();
+  ctx.save(); ctx.translate(OX, store.tut === 1 && !S.hold ? 0 : EX); drawTutorial(); ctx.restore();
   if (drag && drag.moved) { ctx.save(); ctx.translate(OX, 0); drawUnitAt(S.units[drag.idx], drag.rx, drag.ry - 10, { alpha: 0.95, still: true }); ctx.restore(); }
   ctx.restore();
   ctx.save(); ctx.translate(OX, EX / 2);
@@ -2741,7 +2795,7 @@ function mergeFx(j, nt, ng, auto = false) {
   }
 }
 cv.addEventListener('pointercancel', () => { drag = null; press = null; shopDrag = null; });
-document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'play' && !ADS.inAd) paused = true; });
+document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'play' && !ADS.inAd && !(S && S.hold)) paused = true; });
 
 // ===== 루프 =====
 let last = performance.now();
@@ -2760,7 +2814,15 @@ function loop(now) {
   if (!window.__manual) stepFrame(dt);
   requestAnimationFrame(loop);
 }
-loadAssets().then(() => { screen = 'title'; });
+// 처음 온 사람(최고 기록 0)은 첫 화면을 건너뛰고 바로 첫 판으로. 영웅을 처음 소환할 때까지 몬스터는 기다린다(S.hold)
+function autoFirstRun() {
+  if (store.best !== 0 || loadRun() || /[?&](title|rec)=1/.test(location.search)) return false;
+  newGame(); S.hold = true; S.autoStart = true; screen = 'play';
+  banner(L('영웅을 소환해서 몬스터를 막아요!', 'ヒーローを召喚してモンスターを止めよう！', 'Summon heroes to stop the monsters!'), L('아래 소환 버튼을 눌러 시작', '下の召喚ボタンでスタート', 'Tap Summon below to start'), '#ffe9a0', 3.2);
+  track('game_start', { deck: M.deck.join(','), best_wave: 0, gems: M.gems, lang: LANG, auto: 1 });
+  return true;
+}
+loadAssets().then(() => { if (!autoFirstRun()) screen = 'title'; });
 requestAnimationFrame(loop);
 
 // 테스트용 훅
