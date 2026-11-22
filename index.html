@@ -742,6 +742,26 @@ async function checkInvites() {
   } catch (e) {}
 }
 setTimeout(checkInvites, 5000);
+// ===== 베타 테스터 보상: 앱 비공개 테스트 빌드(window.SD_BETA)에서만. 받은 보석과 '베타 테스터' 표시는 정식 출시 뒤에도 기기에 남는다 =====
+// 테스트에 참여한 날마다(연속 아니어도 됨) 보석 30, 1일·7일·14일째 보너스. 14일 = 구글 플레이 비공개 테스트 최소 기간
+const BETA = APP && window.SD_BETA === true;
+const BETA_DAY = 30, BETA_BONUS = { 1: 300, 7: 300, 14: 700 }, BETA_GOAL = 14;
+const betaState = () => { try { const b = JSON.parse(localStorage.getItem('sd_beta') || 'null'); return b && Array.isArray(b.days) ? b : null; } catch (e) { return null; } };
+function checkBeta() {
+  if (!BETA) return;
+  const b = betaState() || { days: [] }, t = dayKey(); if (b.days.includes(t)) return;
+  b.days.push(t); const n = b.days.length, bonus = BETA_BONUS[n] || 0, g = BETA_DAY + bonus;
+  localStorage.setItem('sd_beta', JSON.stringify(b)); M.gems += g; saveMeta(); gemPop = { amt: g, t: 1.8 }; track('beta_reward', { n, gems: g });
+  const head = n === 1 ? L('베타 테스터가 되어 주셔서 고마워요!', 'ベータテスターになってくれてありがとう！', 'Thanks for being a beta tester!') : n >= BETA_GOAL && bonus ? L(`베타 테스트 ${BETA_GOAL}일 완주!`, `ベータテスト${BETA_GOAL}日達成！`, `${BETA_GOAL}-day beta complete!`) : L(`베타 테스트 ${n}일째`, `ベータテスト${n}日目`, `Beta test day ${n}`);
+  const sub = n < BETA_GOAL ? L(`매일 앱을 켜면 보석 ${BETA_DAY}개, 7일째·14일째엔 보너스도 있어요 (${n}/${BETA_GOAL}일)`, `毎日アプリを開くとジェム${BETA_DAY}個、7日目・14日目はボーナスも (${n}/${BETA_GOAL}日)`, `Open the app daily for ${BETA_DAY} gems, with bonuses on day 7 and 14 (${n}/${BETA_GOAL})`) : L('끝까지 함께해 줘서 고마워요. 의견은 언제든 환영이에요', '最後まで一緒にありがとう。ご意見いつでも歓迎です', 'Thank you for testing with us. Feedback is always welcome');
+  const show = () => { if (document.getElementById('codedlg') || (screen === 'play' && !paused) || screen === 'loading') return setTimeout(show, 2000);
+    const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+    w.innerHTML = `<div style="width:min(300px,86vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="display:inline-block;font-size:12px;color:#1a1233;background:#9be36d;border-radius:10px;padding:2px 10px;margin-bottom:8px">β ${L('베타 테스터', 'ベータテスター', 'Beta Tester')}</div><div style="font-size:19px;color:#ffd166;margin-bottom:6px">${head}</div><div style="font-size:30px;margin:6px 0">💎 +${g}</div><div style="font-size:12px;opacity:.8;margin-bottom:12px;line-height:1.5">${sub}</div><button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
+    document.body.appendChild(w); w.querySelector('button').onclick = () => { w.remove(); sfx('jackpot'); buzz([20, 30]); }; };
+  show();
+}
+setTimeout(checkBeta, 2500);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkBeta, 1500); });
 function rankAfterGame() {
   if (PORTAL || S.chal || S.mode === 'hard') return;
   const tab = S.mode === 'boss' ? 'boss' : S.mode === 'weekly' ? 'deck' : 'main';
@@ -2389,7 +2409,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.6.1 베타', 'v2.6.1 ベータ', 'v2.6.1 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  { const bt = betaState(); if (bt) text(L(`v2.7 · β 베타 테스터 ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}일`, `v2.7 · β ベータテスター ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}日`, `v2.7 · β Beta Tester ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}`), W / 2, 628, 10, bt.days.length >= BETA_GOAL ? '#ffd166' : '#9be36d'); else text(L('v2.7 베타', 'v2.7 ベータ', 'v2.7 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)'); }
   drawGemPop();
 }
 function drawGemPop() {
