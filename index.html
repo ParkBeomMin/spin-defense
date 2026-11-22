@@ -661,7 +661,8 @@ function openSettings() {
       ${row(L('효과음', '効果音', 'Sound effects'), seg('sfx', [[1, L('켜기', 'ON', 'On')], [0, L('끄기', 'OFF', 'Off')]], store.mute ? 0 : (store.sfxOn ? 1 : 0)))}
       ${row(L('진동', 'バイブ', 'Vibration'), seg('vib', [[1, L('켜기', 'ON', 'On')], [0, L('끄기', 'OFF', 'Off')]], store.vib ? 1 : 0))}
       ${row(L('언어', '言語', 'Language'), seg('lang', [['auto', L('자동', '自動', 'Auto')], ['ko', '한국어'], ['ja', '日本語'], ['en', 'English']], langCur))}
-      <button id="setok" style="width:100%;margin-top:14px;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('닫기', '閉じる', 'Close')}</button></div>`;
+      <button id="setok" style="width:100%;margin-top:14px;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('닫기', '閉じる', 'Close')}</button>
+      <a href="https://parkbeommin.github.io/spin-defense/privacy.html" target="_blank" rel="noopener" style="display:block;margin-top:10px;font-size:12px;color:#cfe8ff;text-decoration:underline">${L('개인정보처리방침', 'プライバシーポリシー', 'Privacy Policy')}</a></div>`;
     wrap.querySelectorAll('[data-seg] button').forEach(b => b.onclick = () => {
       const id = b.parentElement.dataset.seg, v = b.dataset.v;
       if (id === 'music') { store.music = +v; if (+v > 0) store.mute = false; }
@@ -2388,7 +2389,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  text(L('v2.6 베타', 'v2.6 ベータ', 'v2.6 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
+  text(L('v2.6.1 베타', 'v2.6.1 ベータ', 'v2.6.1 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)');
   drawGemPop();
 }
 function drawGemPop() {
