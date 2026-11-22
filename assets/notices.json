@@ -1,5 +1,37 @@
 [
  {
+  "id": "2026-11-22-v2.8",
+  "date": "2026.11.22",
+  "title": {
+   "ko": "v2.8: 웨이브 200까지! 새 지역·보스 10종 + 원정 모드",
+   "ja": "v2.8：ウェーブ200まで！新エリア・ボス10種＋遠征モード",
+   "en": "v2.8: Up to wave 200! 10 new areas & bosses + Expedition"
+  },
+  "body": {
+   "ko": [
+    "웨이브 101~200에 새 지역 10곳과 새 보스 10마리가 나와요 (버섯 숲, 유령선, 천공 시계탑…)",
+    "보스마다 패턴이 달라요: 포자 여왕, 유령 선장, 태엽 기사, 히드라, 공허 고래…",
+    "웨이브 200의 태초의 용을 잡으면 진 엔딩! 업적: 웨이브 150 보석 1200 · 웨이브 200 보석 2000",
+    "새 모드 「원정 모드」: 지면 처음부터가 아니라 최고 웨이브에서 다시 도전, 누적 원정 랭킹",
+    "랭킹 탭: 본편 · 보스 러시 · 원정 (주간 덱은 본편 탭의 버튼으로)"
+   ],
+   "ja": [
+    "ウェーブ101〜200に新エリア10か所と新ボス10体（キノコの森、幽霊船、天空の時計塔…）",
+    "ボスごとに違う技：胞子の女王、幽霊船長、ゼンマイの騎士、ヒドラ、虚空のクジラ…",
+    "ウェーブ200の始まりの竜を倒すと真エンディング！実績：ウェーブ150 ジェム1200・ウェーブ200 ジェム2000",
+    "新モード「遠征モード」：負けても最初からではなく最高ウェーブから再挑戦、累計ランキング",
+    "ランキングのタブ：本編・ボスラッシュ・遠征（週間デッキは本編タブのボタンから）"
+   ],
+   "en": [
+    "Waves 101-200 bring 10 new areas and 10 new bosses (Mushroom Forest, Ghost Ship, Sky Clock Tower...)",
+    "Every boss has its own pattern: Spore Queen, Ghost Captain, Clockwork Knight, Hydra, Void Whale...",
+    "Beat the Primordial Dragon at wave 200 for the true ending! Achievements: wave 150 (1200 gems), wave 200 (2000 gems)",
+    "New Expedition mode: lose and retry from your highest wave, with an all-time ranking",
+    "Ranking tabs: Main, Boss Rush, Expedition (Weekly Deck is a button inside Main)"
+   ]
+  }
+ },
+ {
   "id": "2026-11-19-v2.2",
   "date": "2026.11.19",
   "title": {
