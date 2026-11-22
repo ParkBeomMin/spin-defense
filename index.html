@@ -1026,8 +1026,8 @@ let S, screen = 'loading', drag = null, selected = -1, ad = null, press = null, 
 // ===== 이어하기: 웨이브가 시작될 때마다 판 상태를 저장, 앱을 닫았다 와도 그 웨이브 처음부터 이어서 =====
 const RUN_KEY = 'sd_run';
 function saveRun() {
-  if (!S || S.first || S.chal || S.mode === 'boss' || S.wave < 3 || screen !== 'play') return;
-  try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), mode: S.mode || 'normal', wk: S.wk, wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, speed: S.speed, endless: S.endless || 0, cleared: !!S.cleared })); } catch (e) {}
+  if (!S || S.chal || S.mode === 'boss' || S.wave < 3 || screen !== 'play') return;
+  try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), best0: S.best0, mode: S.mode || 'normal', wk: S.wk, wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, speed: S.speed, endless: S.endless || 0, cleared: !!S.cleared })); } catch (e) {}
 }
 function loadRun() { try { const r = JSON.parse(localStorage.getItem(RUN_KEY)); if (!r || r.v !== 1 || !r.wave || Date.now() - r.at > 14 * 86400000) return null; if (r.mode === 'weekly' && r.wk !== weekKey()) return null; return r; } catch (e) { return null; } }
 function clearRun() { localStorage.removeItem(RUN_KEY); runCache = null; }
@@ -1035,7 +1035,7 @@ let runCache = null, runCacheT = 0;
 const loadRunCached = () => { if (T - runCacheT > 1 || T < runCacheT) { runCache = loadRun(); runCacheT = T; } return runCache; };
 function resumeRun(r) {
   const deck = M.deck.slice(); M.deck = r.deck.slice(); newGame(null, r.mode || 'normal'); M.deck = deck;
-  Object.assign(S, { gold: r.gold, goldShown: r.gold, kills: r.kills || 0, time: r.time || 0, spins: r.spins || 0, bossKills: r.bossKills || 0, revived: !!r.revived, gemsGiven: r.gemsGiven || 0, freeCharges: r.freeCharges ?? 1, freeT: r.freeT ?? freeRecharge(), adSpins: r.adSpins ?? MAX_AD_SPINS, speed: r.speed || 1, first: false, endless: r.endless || 0, cleared: !!r.cleared });
+  Object.assign(S, { best0: r.best0 ?? store.best, gold: r.gold, goldShown: r.gold, kills: r.kills || 0, time: r.time || 0, spins: r.spins || 0, bossKills: r.bossKills || 0, revived: !!r.revived, gemsGiven: r.gemsGiven || 0, freeCharges: r.freeCharges ?? 1, freeT: r.freeT ?? freeRecharge(), adSpins: r.adSpins ?? MAX_AD_SPINS, speed: r.speed || 1, first: false, endless: r.endless || 0, cleared: !!r.cleared });
   for (const k in r.lv) S.lv[k] = r.lv[k];
   r.units.forEach((u, i) => { S.units[i] = u ? { type: u[0], grade: u[1], cd: Math.random() * 0.4, anim: 0, born: 0.3 } : null; });
   for (const ci of r.picked || []) { const c = CARDS[ci]; if (c) { c.apply(S.B); S.picked.push(c); } }
@@ -1070,7 +1070,7 @@ function newGame(chal = null, mode = 'normal') {
     msg: '', msgT: 0, msgCol: '#fff', banner: null,
     reels: [0, 1, 2].map(i => ({ strip: [TYPE_KEYS[i]], pos: 0, from: 0, to: 0, t: 0, dur: 0, done: true })),
     spinning: false, spinRes: null, spinPaid: 0, lastWin: 0,
-    chal, cm: chal ? chal.mod : wk ? wk.mod : mode === 'hard' ? { hp: HARD.hp, bossTime: HARD.bossTime } : {}, first: !chal && mode === 'normal' && store.best === 0, tutSpin: 0,
+    chal, cm: chal ? chal.mod : wk ? wk.mod : mode === 'hard' ? { hp: HARD.hp, bossTime: HARD.bossTime } : {}, first: !chal && mode === 'normal' && store.best === 0, tutSpin: 0, best0: store.best,
     mode, wk: wk ? wk.week : null, rushN: 0,
   };
   if (mode === 'boss') { S.gold = S.goldShown = RUSH.gold0 + 25 * metaLv('gold'); LATE_IMGS.forEach(ensureImg); loadBg(THEMES[themeIdx(10)].bg); }
@@ -1116,6 +1116,7 @@ function rushBossDown() {
 function startWave() {
   if (S.mode === 'boss') return startRushBoss();
   S.wave++; S.waveT = WAVE_LEN; mission('wave', 0, S.wave);
+  if (S.mode === 'normal' && !S.chal && S.wave > store.best) store.best = S.wave; // 진행 중에도 기록 저장(게임 오버 전에 앱을 꺼도 남게)
   if (S.chal && S.wave >= S.chal.target && !S.chalWin) { S.chalWin = true; if (!chalDone()) { D.chalDone = true; saveDaily(); stInc('chal'); M.gems += S.chal.reward; saveMeta(); S.chalPaid = true; track('challenge_clear', { mod: S.chal.mod.id, deck: S.chal.deck.join(',') }); } setTimeout(() => { banner(L('도전 성공!', 'チャレンジ成功！', 'Challenge cleared!'), S.chalPaid ? L(`보석 +${S.chal.reward}`, `ジェム +${S.chal.reward}`, `Gems +${S.chal.reward}`) : L('오늘 보상은 이미 받았어요', '今日の報酬は受け取り済み', 'Today\'s reward already claimed'), '#ffd166', 2.4); sfx('jackpot'); }, 1400); } if (S.wave % 5 === 0) track('wave_reached', { wave: S.wave });
   if (S.wave % 5 === 0 && !S.skipPick) openPick();
   S.skipPick = false; saveRun(); preloadFor(S.wave);
@@ -1217,6 +1218,7 @@ function doSpin(free) {
   const cost = spinCost();
   if (!free) { if (S.gold < cost) { flash(L('골드가 부족해요', 'ゴールドが足りません', 'Not enough gold'), '#ffb35c', 1.2); sfx('error'); return; } S.gold -= cost; S.spins++; }
   if (S.hold) { S.hold = false; track('first_spin', { play_sec: Math.round(performance.now() / 1000) }); }
+  if (!localStorage.getItem('sd_started')) localStorage.setItem('sd_started', '1');
   S.spinning = true; S.spinRes = [rollSym(), rollSym(), rollSym()]; S.spinPaid = free ? 0 : cost;
   // 첫 판 연출: 1번째 소환 뒤 2번째에 같은 영웅이 나와 바로 합체를 배우고, 4번째에 대성공을 한 번 맛보게
   if (S.first) { S.tutSpin++; const [a, b, c] = TYPE_KEYS; if (S.tutSpin === 1) S.spinRes = [a, b, c]; else if (S.tutSpin === 2) { const ex = S.units.find(u => u && u.grade === 1), x = ex ? ex.type : a, y = TYPE_KEYS.find(t => t !== x); S.spinRes = [x, x, y]; } else if (S.tutSpin === 4) S.spinRes = ['star', c, c]; }
@@ -1683,7 +1685,7 @@ function gameOver() {
   screen = 'over'; drag = null; selected = -1; sfx(S.rushClear ? 'jackpot' : 'lose'); buzz(120);
   if (!S.playCounted) { S.playCounted = true; mission('play'); stInc('games'); }
   track('game_over', { wave: S.wave, kills: S.kills, boss_fail: S.bossFail ? 1 : 0, revived: S.revived ? 1 : 0, cards: S.picked.length, spins: S.spins, play_sec: Math.round(S.time), deck: TYPE_KEYS.join(','), gems: S.gemsEarned || 0, auto: store.auto ? 1 : 0, gm: S.mode });
-  if (S.mode === 'normal' && S.wave > store.best) { store.best = S.wave; S.newBest = true; }
+  if (S.mode === 'normal' && S.wave > (S.best0 ?? store.best)) { if (S.wave > store.best) store.best = S.wave; S.newBest = true; }
   if (S.mode === 'hard' && S.wave > hardBest()) { localStorage.setItem('sd_hbest', S.wave); S.newBest = true; }
   if (S.mode === 'boss') { if (S.rushSec == null) S.rushSec = Math.max(10, Math.round(S.rushLast ?? S.time)); S.rushScore = rushScore(S.bossKills, S.rushSec); const rb = rushBest(); if (!rb || S.rushScore > rushScore(rb.boss, rb.sec)) { localStorage.setItem('sd_rbest', JSON.stringify({ boss: S.bossKills, sec: S.rushSec })); S.newBest = S.bossKills > 0; } }
   // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
@@ -2409,7 +2411,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  { const bt = betaState(); if (bt) text(L(`v2.7 · β 베타 테스터 ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}일`, `v2.7 · β ベータテスター ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}日`, `v2.7 · β Beta Tester ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}`), W / 2, 628, 10, bt.days.length >= BETA_GOAL ? '#ffd166' : '#9be36d'); else text(L('v2.7 베타', 'v2.7 ベータ', 'v2.7 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)'); }
+  { const bt = betaState(); if (bt) text(L(`v2.7.1 · β 베타 테스터 ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}일`, `v2.7.1 · β ベータテスター ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}日`, `v2.7.1 · β Beta Tester ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}`), W / 2, 628, 10, bt.days.length >= BETA_GOAL ? '#ffd166' : '#9be36d'); else text(L('v2.7.1 베타', 'v2.7.1 ベータ', 'v2.7.1 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)'); }
   drawGemPop();
 }
 function drawGemPop() {
@@ -2918,7 +2920,7 @@ function loop(now) {
 }
 // 처음 온 사람(최고 기록 0)은 첫 화면을 건너뛰고 바로 첫 판으로. 영웅을 처음 소환할 때까지 몬스터는 기다린다(S.hold)
 function autoFirstRun() {
-  if (store.best !== 0 || loadRun() || /[?&](title|rec)=1/.test(location.search)) return false;
+  if (store.best !== 0 || localStorage.getItem('sd_started') || loadRun() || /[?&](title|rec)=1/.test(location.search)) return false;
   newGame(); S.hold = true; S.autoStart = true; screen = 'play';
   banner(L('영웅을 소환해서 몬스터를 막아요!', 'ヒーローを召喚してモンスターを止めよう！', 'Summon heroes to stop the monsters!'), L('아래 소환 버튼을 눌러 시작', '下の召喚ボタンでスタート', 'Tap Summon below to start'), '#ffe9a0', 3.2);
   track('game_start', { deck: M.deck.join(','), best_wave: 0, gems: M.gems, lang: LANG, auto: 1 });
