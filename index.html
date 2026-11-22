@@ -192,10 +192,10 @@ function drawAnim(type, anim, p, x, foot, h, flip = false, alpha = 1, sc = 1, wh
 // 발 위치 기준점 (스프라이트 폭 대비). 공격 포즈는 이펙트 때문에 폭이 넓어서 따로 지정
 const ANCH = { bomber: 0.52, chrono: 0.53, sword: 0.435, bow: 0.435, magic: 0.441, ice: 0.395, bard: 0.485, ninja: 0.536, storm: 0.463, dwarf: 0.532, alch: 0.419, sniper: 0.438, cat: 0.537, slimeking: 0.486, lich: 0.431, sword_atk: 0.34, bow_atk: 0.386, magic_atk: 0.367, ice_atk: 0.343 };
 // 후반 보스 그림은 처음에 받지 않고, 해당 보스 8웨이브 전에 받는다 (첫 로딩을 가볍게)
-const LATE_IMGS = ['dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos'];
+const LATE_IMGS = ['dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos', 'sporequeen', 'ghostcaptain', 'clockknight', 'magmatitan', 'sphinx', 'mirrorwitch', 'hydra', 'frostempress', 'voidwhale', 'primordial'];
 function ensureImg(n) { if (IMG[n]) return; const im = new Image(); im.src = `assets/${n}.png?v=${ASSET_V}`; IMG[n] = im; }
 const IMG_NAMES = ['slimeking', 'lich', 'sword', 'bow', 'magic', 'ice', 'bard', 'ninja', 'storm', 'dwarf', 'alch', 'sniper', 'cat', 'bomber', 'chrono', 'sword_atk', 'bow_atk', 'magic_atk', 'ice_atk', 'slime', 'slime_hurt', 'goblin', 'skeleton', 'boss', 'coin', 'star', 'heart', 'gem', 'bolt', 'chest'];
-const ASSET_V = 12; // 그림 파일을 바꿔 배포할 때 올림 (서비스워커 저장본 갱신용)
+const ASSET_V = 13; // 그림 파일을 바꿔 배포할 때 올림 (서비스워커 저장본 갱신용)
 let ANIM_META = null, ANIM_LOAD = () => {}; const ANIM_REQ = new Set();
 function needAnims(keys) { keys.forEach(k => ANIM_LOAD(k)); }
 function loadAssets() {
@@ -257,6 +257,7 @@ const ENEMY = {
   slime:    { hp: 1.0, spd: 46, h: 22 },
   goblin:   { hp: 0.8, spd: 62, h: 30 },
   skeleton: { hp: 1.6, spd: 38, h: 32 },
+  mirrorwitch: { hp: 1, spd: 26, h: 44 }, // 거울 마녀 분신(보스 아님)
 };
 
 // ===== 레이아웃 =====
@@ -502,7 +503,7 @@ const CHAL_TARGET = 15, CHAL_REWARD = 60;
 const HARD = { hp: 1.6, bossTime: 35, gem: 2 };
 // 보스 러시: 보스 10마리 연속, 사이사이 준비 시간. 체력은 '가상 웨이브' 기준(본편보다 가볍게)
 const RUSH = { gold0: 700, prep: 8, vw: k => Math.round(6 + k * 5), gold: k => 220 + 90 * k, gem: 15, clearGem: 100 };
-const MODE_NAME = { normal: L('본편', '本編', 'Main'), boss: L('보스 러시', 'ボスラッシュ', 'Boss Rush'), hard: L('하드 모드', 'ハードモード', 'Hard Mode'), weekly: L('주간 덱', '週間デッキ', 'Weekly Deck') };
+const MODE_NAME = { exp: L('원정 모드', '遠征モード', 'Expedition'), normal: L('본편', '本編', 'Main'), boss: L('보스 러시', 'ボスラッシュ', 'Boss Rush'), hard: L('하드 모드', 'ハードモード', 'Hard Mode'), weekly: L('주간 덱', '週間デッキ', 'Weekly Deck') };
 function weeklyDeck(wk = weekKey()) {
   let h = 2166136261; for (const ch of 'deck:' + wk) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
   const rand = () => { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; h = Math.imul(h ^ (h >>> 13), 3266489909) >>> 0; return ((h ^= h >>> 16) >>> 0) / 4294967296; };
@@ -512,6 +513,7 @@ function weeklyDeck(wk = weekKey()) {
 }
 const hardUnlocked = () => store.best > 100 || localStorage.getItem('sd_clear') === '1';
 const hardBest = () => +(localStorage.getItem('sd_hbest') || 0);
+const expBest = () => +(localStorage.getItem('sd_expbest') || 0);
 const rushBest = () => { try { return JSON.parse(localStorage.getItem('sd_rbest')) || null; } catch (e) { return null; } };
 const rushScore = (boss, sec) => boss * 10000 + Math.max(0, 9999 - Math.round(sec));
 function todayChallenge() {
@@ -542,7 +544,9 @@ const ACH = [
   { id: 'w40',   icon: 'chest', name: L('웨이브 40 돌파', 'ウェーブ40突破', 'Pass wave 40'),     goal: 40,    val: () => store.best,  r: 200 },
   { id: 'w50',   icon: 'chest', name: L('웨이브 50 돌파 (마왕 처치)', 'ウェーブ50突破（魔王撃破）', 'Pass wave 50 (beat the Demon Lord)'), goal: 50, val: () => store.best, r: 300 },
   { id: 'w75',   icon: 'chest', name: L('웨이브 75 돌파', 'ウェーブ75突破', 'Pass wave 75'), goal: 75, val: () => store.best, r: 400 },
-  { id: 'w100',  icon: 'chest', name: L('웨이브 100 돌파 (혼돈의 군주 처치)', 'ウェーブ100突破（混沌の君主撃破）', 'Pass wave 100 (beat the Chaos Overlord)'), goal: 100, val: () => store.best, r: 1000 },
+  { id: 'w100',  icon: 'chest', name: L('웨이브 100 돌파 (혼돈의 군주 처치)', 'ウェーブ100突破（混沌の君主撃破）', 'Pass wave 100 (beat the Chaos Overlord)'), goal: 100, val: () => Math.max(store.best, expBest()), r: 1000 },
+  { id: 'w150',  icon: 'chest', name: L('웨이브 150 돌파 (별의 스핑크스 처치)', 'ウェーブ150突破（星のスフィンクス撃破）', 'Pass wave 150 (beat the Star Sphinx)'), goal: 150, val: () => Math.max(store.best, expBest()), r: 1200 },
+  { id: 'w200',  icon: 'chest', name: L('웨이브 200 돌파 (태초의 용 처치, 진 엔딩)', 'ウェーブ200突破（始まりの竜撃破・真エンディング）', 'Pass wave 200 (beat the Primordial Dragon)'), goal: 200, val: () => Math.max(store.best, expBest()), r: 2000 },
   { id: 'k1k',   icon: 'sword', name: L('몬스터 1,000마리 처치', 'モンスター1,000体撃破', 'Defeat 1,000 monsters'),  goal: 1000,  val: () => M.st.kills, r: 50 },
   { id: 'k10k',  icon: 'sword', name: L('몬스터 10,000마리 처치', 'モンスター10,000体撃破', 'Defeat 10,000 monsters'), goal: 10000, val: () => M.st.kills, r: 150 },
   { id: 'b5',    icon: 'heart', name: L('보스 5마리 처치', 'ボス5体撃破', 'Defeat 5 bosses'),        goal: 5,     val: () => M.st.boss,  r: 60 },
@@ -587,7 +591,7 @@ let gemPop = null;
 const RANK_ROOT = 'https://firestore.googleapis.com/v1/projects/myapplication5-71719/databases/(default)/documents';
 const RANK_BASE = RANK_ROOT + '/sd_rank';
 // 랭킹판 3개: 본편(웨이브), 주간 덱(웨이브), 보스 러시(점수 = 처치 수 x 10000 + (9999 - 초))
-const BOARDS = { main: { col: 'sd_rank', f: 'wave', wb: 'sd_wbest' }, deck: { col: 'sd_deck', f: 'wave', wb: 'sd_wbest_deck' }, boss: { col: 'sd_boss', f: 'score', wb: 'sd_wbest_boss' } };
+const BOARDS = { main: { col: 'sd_rank', f: 'wave', wb: 'sd_wbest' }, deck: { col: 'sd_deck', f: 'wave', wb: 'sd_wbest_deck' }, boss: { col: 'sd_boss', f: 'score', wb: 'sd_wbest_boss' }, exp: { col: 'sd_exp', f: 'wave', all: true } };
 function weekKey(off = 0) {
   const d = new Date(Date.now() + 9 * 3600e3 + off * 7 * 86400e3); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day + 3);
   const y = d.getUTCFullYear(), w1 = new Date(Date.UTC(y, 0, 4)), wk = 1 + Math.round(((d - w1) / 86400e3 - 3 + ((w1.getUTCDay() + 6) % 7)) / 7);
@@ -598,7 +602,7 @@ const deviceId = () => { let id = localStorage.getItem('sd_did'); if (!id) { id 
 const nick = () => { const n = cleanNick(localStorage.getItem('sd_nick')); return n && !badNick(n) ? n : ''; };
 const weekBestRaw = (tab = 'main') => { try { const b = JSON.parse(localStorage.getItem(BOARDS[tab].wb)); return b && b.week === weekKey() ? b : null; } catch (e) { return null; } };
 const weekBest = (tab = 'main') => { const b = weekBestRaw(tab); return b ? b.wave : 0; };
-const RANK = { tab: 'main', D: { main: {}, deck: {}, boss: {} },
+const RANK = { tab: 'main', D: { main: {}, deck: {}, boss: {}, exp: {} },
   get list() { return this.D[this.tab].list; }, set list(v) { this.D[this.tab].list = v; },
   get at() { return this.D[this.tab].at || 0; }, set at(v) { this.D[this.tab].at = v; },
   get err() { return !!this.D[this.tab].err; }, set err(v) { this.D[this.tab].err = v; },
@@ -608,7 +612,7 @@ async function loadRank(force, tab = RANK.tab) {
   if (d.loading || (!force && d.list && performance.now() - (d.at || 0) < 30000)) return;
   d.loading = true; d.err = false;
   try {
-    const r = await fetch(`${RANK_ROOT}/${B.col}/${weekKey()}:runQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: B.f }, direction: 'DESCENDING' }], limit: 20 } }) });
+    const r = await fetch(`${RANK_ROOT}/${B.col}/${B.all ? 'all' : weekKey()}:runQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: B.f }, direction: 'DESCENDING' }], limit: 20 } }) });
     const j = await r.json(); if (!Array.isArray(j)) throw new Error('bad');
     const iv = (f, k) => +(f[k] && f[k].integerValue || 0);
     d.list = j.filter(x => x.document).map(x => { const f = x.document.fields, id = x.document.name.split('/').pop(); return { id, name: showNick((f.name && f.name.stringValue || '???').slice(0, 10)), wave: iv(f, 'wave'), score: iv(f, 'score'), boss: iv(f, 'boss'), sec: iv(f, 'sec') }; });
@@ -772,19 +776,22 @@ function rankAfterGame() {
   const go = () => submitScore(val, tab, extra, week).then(ok => { if (ok && screen === 'over') { const i = (RANK.D[tab].list || []).findIndex(x => x.id === deviceId()), nm = tab === 'main' ? '' : MODE_NAME[tab === 'boss' ? 'boss' : 'weekly'] + ' '; S.rankMsg = i >= 0 ? L(`${nm}이번 주 랭킹 ${i + 1}위!`, `${nm}今週のランキング ${i + 1}位！`, `${nm}weekly rank #${i + 1}!`) : L(`${nm}이번 주 기록 등록`, `${nm}今週の記録 登録`, `${nm}weekly best saved`); } });
   if (nick()) go(); else if (!localStorage.getItem('sd_nick_skip')) setTimeout(() => { if (screen === 'over') openNickDialog(go); }, 900);
 }
-const RTABS = ['main', 'deck', 'boss'];
+const RTABS = ['main', 'boss', 'exp']; // 주간 덱 랭킹은 본편 탭 안의 작은 버튼으로
+const RDECK_BTN = { x: 266, y: 25, w: 84, h: 22 };
 const rtabRect = i => ({ x: 16 + i * 112, y: 60, w: 104, h: 30 });
 function rankVal(r, tab) { return tab === 'boss' ? (r.boss >= 10 ? L(`클리어 ${mmss(r.sec)}`, `クリア ${mmss(r.sec)}`, `Clear ${mmss(r.sec)}`) : L(`보스 ${r.boss}/10`, `ボス ${r.boss}/10`, `Boss ${r.boss}/10`)) : `WAVE ${r.wave}`; }
 function drawRank() {
   ctx.fillStyle = 'rgba(14,8,32,.9)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   const tab = RANK.tab;
-  text(L('주간 랭킹', '週間ランキング', 'Weekly Ranking'), W / 2, 36, 26, '#ffd166', 'center', 6);
-  RTABS.forEach((t, i) => { const b = rtabRect(i), on = t === tab; rr(b.x, b.y, b.w, b.h, 10); ctx.fillStyle = on ? '#6b5bb8' : 'rgba(255,255,255,.08)'; ctx.fill(); if (on) { ctx.strokeStyle = '#ffcf5a'; ctx.lineWidth = 2; ctx.stroke(); } text(t === 'main' ? MODE_NAME.normal : t === 'deck' ? MODE_NAME.weekly : MODE_NAME.boss, b.x + b.w / 2, b.y + 15, 13, on ? '#fff' : 'rgba(255,255,255,.65)', 'center', 2); });
+  text(tab === 'exp' ? L('원정 랭킹', '遠征ランキング', 'Expedition Ranking') : L('주간 랭킹', '週間ランキング', 'Weekly Ranking'), W / 2, 36, 26, '#ffd166', 'center', 6);
+  RTABS.forEach((t, i) => { const b = rtabRect(i), on = t === tab || (t === 'main' && tab === 'deck'); rr(b.x, b.y, b.w, b.h, 10); ctx.fillStyle = on ? '#6b5bb8' : 'rgba(255,255,255,.08)'; ctx.fill(); if (on) { ctx.strokeStyle = '#ffcf5a'; ctx.lineWidth = 2; ctx.stroke(); } text(t === 'main' ? MODE_NAME.normal : t === 'deck' ? MODE_NAME.weekly : t === 'exp' ? MODE_NAME.exp : MODE_NAME.boss, b.x + b.w / 2, b.y + 15, 13, on ? '#fff' : 'rgba(255,255,255,.65)', 'center', 2); });
   const wd = tab === 'deck' ? weeklyDeck() : null;
   const sub = tab === 'main' ? L(`${weekRange()} · 월요일 보상: 1위 500 · 2위 300 · 3위 200 · TOP10 100`, `${weekRange()}・月曜報酬 1位500・2位300・3位200・TOP10 100`, `${weekRange()} · Monday rewards: #1 500, #2 300, #3 200, TOP10 100`)
     : tab === 'deck' ? L(`이번 주 덱: ${wd.deck.map(k => TYPES[k].name).join('·')} · ${wd.mod.name}`, `今週: ${wd.deck.map(k => TYPES[k].name).join('・')}・${wd.mod.name}`, `This week: ${wd.deck.map(k => TYPES[k].name).join(', ')} · ${wd.mod.name}`)
+    : tab === 'exp' ? L('누적 · 초기화 없음 · 도달한 최고 웨이브 순', '累計・リセットなし・最高到達ウェーブ順', 'All-time · never resets · highest wave reached')
     : L(`${weekRange()} · 보스 처치 수, 같으면 빠른 시간 순`, `${weekRange()}・ボス撃破数、同じなら速い順`, `${weekRange()} · Bosses beaten, then fastest time`);
   text(sub, W / 2, 104, fitSize(sub, 12, 330), tab === 'main' ? '#ffd166' : '#cfe8ff', 'center', 2);
+  if (tab === 'main' || tab === 'deck') { const bt = RDECK_BTN; rr(bt.x, bt.y - 2, bt.w, bt.h, 8); ctx.fillStyle = 'rgba(143,200,255,.18)'; ctx.fill(); ctx.strokeStyle = 'rgba(143,200,255,.6)'; ctx.lineWidth = 1.2; ctx.stroke(); text(tab === 'deck' ? L('‹ 본편 랭킹', '‹ 本編', '‹ Main') : L('주간 덱 ›', '週間デッキ ›', 'Weekly deck ›'), bt.x + bt.w / 2, bt.y + 9, 11, '#cfe8ff', 'center', 2); }
   const list = RANK.list, me = deviceId();
   if (!list) text(RANK.err ? L('랭킹을 불러오지 못했어요', '読み込めませんでした', 'Could not load the ranking') : L('불러오는 중...', '読み込み中...', 'Loading...'), W / 2, 260, 15, '#cfe8ff', 'center', 3);
   else if (!list.length) text(L('아직 기록이 없어요. 첫 1등이 되어보세요!', 'まだ記録がありません。1位を狙おう！', 'No scores yet. Be the first!'), W / 2, 260, 14, '#cfe8ff', 'center', 3);
@@ -796,8 +803,8 @@ function drawRank() {
     text(r.name, 66, y + 18, 15, '#fff', 'left', 3);
     text(rankVal(r, tab), 330, y + 18, 15, '#8fe3ff', 'right', 3);
   });
-  const myI = list ? list.findIndex(r => r.id === me) : -1, wbr = weekBestRaw(tab), wbt = wbr ? (tab === 'boss' ? rankVal({ boss: wbr.extra && wbr.extra.boss || 0, sec: wbr.extra && wbr.extra.sec || 0 }, 'boss') : 'WAVE ' + wbr.wave) : '';
-  text(nick() ? L(`내 이름: ${nick()} · 이번 주 최고 ${wbt || '없음'}${myI >= 10 ? ` (${myI + 1}위)` : ''}`, `名前：${nick()}・今週の最高 ${wbt || 'なし'}`, `Name: ${nick()} · Best this week ${wbt || '-'}`) : L('게임이 끝나면 이름을 등록할 수 있어요', 'ゲーム終了後に名前を登録できます', 'You can register a name after a game'), W / 2, 556, fitSize(L(`내 이름: ${nick()} · 이번 주 최고 ${wbt || '없음'}`, `名前：${nick()}・今週の最高 ${wbt || 'なし'}`, `Name: ${nick()} · Best this week ${wbt || '-'}`), 12, 330), '#cfe8ff', 'center', 3);
+  const myI = list ? list.findIndex(r => r.id === me) : -1, wbr = tab === 'exp' ? (expBest() ? { wave: expBest() } : null) : weekBestRaw(tab), wbt = wbr ? (tab === 'boss' ? rankVal({ boss: wbr.extra && wbr.extra.boss || 0, sec: wbr.extra && wbr.extra.sec || 0 }, 'boss') : 'WAVE ' + wbr.wave) : '';
+  text(nick() ? L(`내 이름: ${nick()} · ${tab === 'exp' ? '최고' : '이번 주 최고'} ${wbt || '없음'}${myI >= 10 ? ` (${myI + 1}위)` : ''}`, `名前：${nick()}・${tab === 'exp' ? '最高' : '今週の最高'} ${wbt || 'なし'}`, `Name: ${nick()} · ${tab === 'exp' ? 'Best' : 'Best this week'} ${wbt || '-'}`) : L('게임이 끝나면 이름을 등록할 수 있어요', 'ゲーム終了後に名前を登録できます', 'You can register a name after a game'), W / 2, 556, fitSize(L(`내 이름: ${nick()} · ${tab === 'exp' ? '최고' : '이번 주 최고'} ${wbt || '없음'}`, `名前：${nick()}・${tab === 'exp' ? '最高' : '今週の最高'} ${wbt || 'なし'}`, `Name: ${nick()} · ${tab === 'exp' ? 'Best' : 'Best this week'} ${wbt || '-'}`), 12, 330), '#cfe8ff', 'center', 3);
   button(BTN.rname, '#5a49a8', true, (cx, cy) => text(L('이름 바꾸기', '名前を変更', 'Change name'), cx, cy, 13, '#fff', 'center', 3), 'rname');
   button({ x: 20, y: 590, w: 140, h: 36 }, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る', 'Back'), cx, cy, 15, '#fff', 'center', 3), 'rback');
 }
@@ -814,6 +821,7 @@ function openModes() {
     <div style="font-size:12px;margin-top:4px;color:#8fe3ff">${ok ? best : lockTxt}</div></div>`;
   wrap.innerHTML = `<div style="width:min(330px,90vw);max-height:92vh;overflow:auto;background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:14px 14px 12px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
     <div style="font-size:22px;color:#ffd166">${L('게임 모드', 'ゲームモード', 'Game Modes')}</div>
+    ${card('exp', '#9be36d', MODE_NAME.exp, L('지면 처음부터가 아니라 <b>최고 웨이브에서 다시 도전</b>! 웨이브마다 자동 저장. 누적 원정 랭킹', '負けても最初からではなく<b>最高ウェーブから再挑戦</b>！ウェーブごとに自動セーブ。累計の遠征ランキング', 'Lose and <b>retry from your highest wave</b>, not from 1. Auto-saves every wave. All-time ranking'), (() => { const r = loadExp(); return expBest() ? L(`내 최고 WAVE ${expBest()}${r ? ` · W${r.wave}부터 이어하기` : ''}`, `自己ベスト WAVE ${expBest()}${r ? `・W${r.wave}から続き` : ''}`, `Best WAVE ${expBest()}${r ? ` · continue from W${r.wave}` : ''}`) : L('아직 기록 없음 · 웨이브 1부터 출발', 'まだ記録なし・ウェーブ1から', 'No record yet · starts at wave 1'); })())}
     ${card('boss', '#ff8a8a', MODE_NAME.boss, L('보스 10마리와 연속 대결! 골드 넉넉히 시작, 보스 사이 8초 준비. 처치 수와 시간으로 랭킹', 'ボス10体と連続バトル！ボス間に8秒の準備。撃破数とタイムでランキング', 'Fight all 10 bosses in a row with 8s breaks. Ranked by bosses beaten and time'), rb ? L(`내 최고: ${rankVal(rb, 'boss')}`, `自己ベスト：${rankVal(rb, 'boss')}`, `Best: ${rankVal(rb, 'boss')}`) : L('아직 기록 없음', 'まだ記録なし', 'No record yet'))}
     ${card('weekly', '#8fc8ff', MODE_NAME.weekly, L(`이번 주 모두 같은 덱: <b>${wd.deck.map(k => TYPES[k].name).join(' · ')}</b><br>규칙: ${wd.mod.name} (${wd.mod.desc})<br>영웅 강화 효과 없이 공평하게! 따로 랭킹`, `今週はみんな同じデッキ：<b>${wd.deck.map(k => TYPES[k].name).join('・')}</b><br>ルール：${wd.mod.name}（${wd.mod.desc}）<br>強化なしの公平勝負！専用ランキング`, `Same deck for everyone this week: <b>${wd.deck.map(k => TYPES[k].name).join(', ')}</b><br>Rule: ${wd.mod.name} (${wd.mod.desc})<br>No upgrades, fair play. Own ranking`), wdb ? L(`이번 주 최고 WAVE ${wdb}`, `今週の最高 WAVE ${wdb}`, `This week best WAVE ${wdb}`) : L('이번 주 기록 없음', '今週の記録なし', 'No record this week'))}
     ${card('hard', '#ff6b4a', MODE_NAME.hard, L('몬스터 체력 1.6배 · 보스 제한 35초 · <b>보석 2배</b>', 'モンスター体力1.6倍・ボス制限35秒・<b>ジェム2倍</b>', 'Monster HP x1.6 · Boss limit 35s · <b>2x gems</b>'), hardBest() ? L(`내 최고 WAVE ${hardBest()}`, `自己ベスト WAVE ${hardBest()}`, `Best WAVE ${hardBest()}`) : L('아직 기록 없음', 'まだ記録なし', 'No record yet'), hu, L(`본편 웨이브 100을 깨면 열려요 (내 최고 WAVE ${store.best})`, `本編ウェーブ100クリアで解放（最高 WAVE ${store.best}）`, `Unlocks after clearing wave 100 (best WAVE ${store.best})`))}
@@ -824,6 +832,7 @@ function openModes() {
   wrap.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
     const m = b.dataset.m; if (m === 'hard' && !hardUnlocked()) return;
     wrap.remove(); track('game_start', { gm: m, best_wave: store.best, lang: LANG });
+    if (m === 'exp') { startExp(); sfx('click'); banner(MODE_NAME.exp, S.wave > 0 ? L(`WAVE ${S.wave + 1}부터 다시 도전!`, `WAVE ${S.wave + 1}から再挑戦！`, `Retry from WAVE ${S.wave + 1}!`) : L('지면 최고 웨이브부터 다시! 웨이브마다 자동 저장', '負けても最高ウェーブから！自動セーブ', 'Lose and retry from your best wave'), '#9be36d', 2.4); return; }
     newGame(null, m); screen = 'play'; sfx('click');
     if (m === 'weekly') banner(MODE_NAME.weekly, S.cm.desc || '', '#8fc8ff', 2.2);
     if (m === 'hard') banner(MODE_NAME.hard, L('몬스터 체력 1.6배 · 보석 2배', 'モンスター体力1.6倍・ジェム2倍', 'HP x1.6 · 2x gems'), '#ff6b4a', 2.2);
@@ -900,8 +909,19 @@ const THEMES = [
   { id: 'crystal', bg: 'bg_crystal', name: L('수정 동굴', '水晶の洞窟', 'Crystal Cave'), path: ['#2b3a5c', '#45608c', 'rgba(110,200,255,.45)'] },
   { id: 'temple', bg: 'bg_temple', name: L('고대 신전', '古代神殿', 'Ancient Temple'), path: ['#8a7442', '#b39a5e', 'rgba(110,90,40,.5)'] },
   { id: 'chaos',  bg: 'bg_chaos',  name: L('혼돈의 끝', '混沌の果て', 'Edge of Chaos'), path: ['#2a1838', '#46285c', 'rgba(230,80,255,.45)'] },
+  // 2부: 웨이브 101~200 (200 이후는 이 10곳을 반복)
+  { id: 'mushroom', bg: 'bg_mushroom', name: L('버섯 숲', 'キノコの森', 'Mushroom Forest'), path: ['#4a3a2a', '#6e5a3e', 'rgba(80,220,200,.35)'] },
+  { id: 'ghostship', bg: 'bg_ghostship', name: L('유령선', '幽霊船', 'Ghost Ship'), path: ['#3a3226', '#5c4e38', 'rgba(90,255,200,.3)'] },
+  { id: 'clocktower', bg: 'bg_clocktower', name: L('천공 시계탑', '天空の時計塔', 'Sky Clock Tower'), path: ['#6a5634', '#a8894e', 'rgba(255,210,120,.4)'] },
+  { id: 'magmacity', bg: 'bg_magmacity', name: L('용암 지하도시', '溶岩の地下都市', 'Magma City'), path: ['#2e1e1a', '#4c3028', 'rgba(255,110,40,.5)'] },
+  { id: 'stardesert', bg: 'bg_stardesert', name: L('별빛 사막', '星明かりの砂漠', 'Starlight Desert'), path: ['#2a3466', '#43508e', 'rgba(255,230,140,.45)'] },
+  { id: 'mirror', bg: 'bg_mirror', name: L('거울 미궁', '鏡の迷宮', 'Mirror Labyrinth'), path: ['#5a4a7a', '#8676ac', 'rgba(230,200,255,.45)'] },
+  { id: 'swamp', bg: 'bg_swamp', name: L('독 늪', '毒の沼', 'Poison Swamp'), path: ['#3a3a1e', '#5a5a2c', 'rgba(200,90,255,.4)'] },
+  { id: 'frostthrone', bg: 'bg_frostthrone', name: L('얼음 왕좌', '氷の玉座', 'Frozen Throne'), path: ['#3e6a8e', '#7fb0d4', 'rgba(200,240,255,.5)'] },
+  { id: 'voidsky', bg: 'bg_voidsky', name: L('뒤틀린 하늘', '歪んだ空', 'Twisted Sky'), path: ['#241838', '#3c2a5c', 'rgba(190,110,255,.5)'] },
+  { id: 'worldend', bg: 'bg_worldend', name: L('세계의 끝', '世界の果て', "World's End"), path: ['#8a7a5a', '#c8b688', 'rgba(255,220,120,.5)'] },
 ];
-const themeIdx = w => w < 1 ? 0 : Math.floor((w - 1) / 10) % THEMES.length;
+const themeIdx = w => w < 1 ? 0 : w <= 100 ? Math.floor((w - 1) / 10) % 10 : 10 + Math.floor((w - 101) / 10) % 10;
 // 지역 배경도 필요할 때만: 지금 지역과, 다음 지역 5웨이브 전부터 미리 받기
 function loadBg(n) { if (IMG[n]) return; const im = new Image(); im.src = `assets/${n}.jpg?v=${ASSET_V}`; IMG[n] = im; }
 function preloadFor(w) {
@@ -1026,8 +1046,26 @@ let S, screen = 'loading', drag = null, selected = -1, ad = null, press = null, 
 // ===== 이어하기: 웨이브가 시작될 때마다 판 상태를 저장, 앱을 닫았다 와도 그 웨이브 처음부터 이어서 =====
 const RUN_KEY = 'sd_run';
 function saveRun() {
-  if (!S || S.chal || S.mode === 'boss' || S.wave < 3 || screen !== 'play') return;
+  if (!S || S.chal || S.mode === 'boss' || S.mode === 'exp' || S.wave < 3 || screen !== 'play') return;
   try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), best0: S.best0, mode: S.mode || 'normal', wk: S.wk, wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, speed: S.speed, endless: S.endless || 0, cleared: !!S.cleared })); } catch (e) {}
+}
+// ===== 원정 모드: 웨이브가 시작될 때마다 판 전체를 sd_exp 에 저장. 지면 그 웨이브(= 최고 웨이브) 시작 상태로 다시 도전 =====
+const EXP_KEY = 'sd_exp';
+function saveExp() {
+  if (!S || S.mode !== 'exp') return;
+  try { localStorage.setItem(EXP_KEY, JSON.stringify({ v: 1, at: Date.now(), mode: 'exp', wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: false, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: MAX_AD_SPINS, speed: S.speed, cleared: !!S.cleared, cleared2: !!S.cleared2 })); } catch (e) {}
+}
+function loadExp() { try { const r = JSON.parse(localStorage.getItem(EXP_KEY)); return r && r.v === 1 && r.wave ? r : null; } catch (e) { return null; } }
+function resumeExp(r) {
+  resumeRun(r); S.mode = 'exp'; S.revived = false; S.gemsGiven = 0; S.expGem = 0; S.expBest0 = expBest(); S.cleared2 = !!r.cleared2; S.endless = 0;
+  track('exp_resume', { wave: r.wave });
+}
+function startExp() { const r = loadExp(); if (r) resumeExp(r); else { newGame(null, 'exp'); screen = 'play'; } }
+async function submitExp(w) {
+  if (PORTAL || !nick() || !(w > 0)) return false;
+  w = Math.min(1000, Math.floor(w)); if (w <= +(localStorage.getItem('sd_expsub') || 0)) return false;
+  const fields = { name: { stringValue: nick().slice(0, 10) }, wave: { integerValue: String(w) }, at: { integerValue: String(Date.now()) }, lang: { stringValue: LANG } };
+  try { const r = await fetch(`${RANK_ROOT}/sd_exp/all/scores/${deviceId()}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) }); if (!r.ok) return false; localStorage.setItem('sd_expsub', w); RANK.D.exp.at = 0; track('rank_submit', { wave: w, kind: 'exp' }); return true; } catch (e) { return false; }
 }
 function loadRun() { try { const r = JSON.parse(localStorage.getItem(RUN_KEY)); if (!r || r.v !== 1 || !r.wave || Date.now() - r.at > 14 * 86400000) return null; if (r.mode === 'weekly' && r.wk !== weekKey()) return null; return r; } catch (e) { return null; } }
 function clearRun() { localStorage.removeItem(RUN_KEY); runCache = null; }
@@ -1071,7 +1109,7 @@ function newGame(chal = null, mode = 'normal') {
     reels: [0, 1, 2].map(i => ({ strip: [TYPE_KEYS[i]], pos: 0, from: 0, to: 0, t: 0, dur: 0, done: true })),
     spinning: false, spinRes: null, spinPaid: 0, lastWin: 0,
     chal, cm: chal ? chal.mod : wk ? wk.mod : mode === 'hard' ? { hp: HARD.hp, bossTime: HARD.bossTime } : {}, first: !chal && mode === 'normal' && store.best === 0, tutSpin: 0, best0: store.best,
-    mode, wk: wk ? wk.week : null, rushN: 0,
+    mode, wk: wk ? wk.week : null, rushN: 0, expGem: 0, expBest0: mode === 'exp' ? expBest() : 0,
   };
   if (mode === 'boss') { S.gold = S.goldShown = RUSH.gold0 + 25 * metaLv('gold'); LATE_IMGS.forEach(ensureImg); loadBg(THEMES[themeIdx(10)].bg); }
   if (S.cm.star) S.B.star *= S.cm.star;
@@ -1084,9 +1122,9 @@ function banner(text, sub, col = '#fff', t = 1.6) { S.banner = { text, sub, col,
 const spinCost = () => Math.round((20 + S.spins * 2) * S.B.spinCost * ((S.cm && S.cm.spin) || 1));
 const upCost = t => 40 + S.lv[t] * 35;
 // 난이도 곡선: 초반 5웨이브는 순하게, 이후 가파르게 (TUNE은 시뮬레이션으로 맞춘 값)
-const TUNE = { A: 32, G: 1.17, G2: 1.09, G3: 1.04, L: 0.5, from: 7, boss: 16, bossGrow: 0.2, bossTime: 40, upPct: 0.2 };
+const TUNE = { A: 32, G: 1.17, G2: 1.09, G3: 1.04, G4: 1.05, bossCap: 100, L: 0.5, from: 7, boss: 16, bossGrow: 0.2, bossTime: 40, upPct: 0.2 };
 // 체력 성장: 30웨이브까지 1.17배씩, 31~60은 G2, 61부터는 G3 (웨이브 100까지 갈 수 있게 후반 성장을 완만하게)
-const hpCurve = w => Math.pow(TUNE.G, Math.min(w, 30) - 1) * (w > 30 ? Math.pow(TUNE.G2, Math.min(w, 60) - 30) : 1) * (w > 60 ? Math.pow(TUNE.G3, w - 60) : 1);
+const hpCurve = w => Math.pow(TUNE.G, Math.min(w, 30) - 1) * (w > 30 ? Math.pow(TUNE.G2, Math.min(w, 60) - 30) : 1) * (w > 60 ? Math.pow(TUNE.G3, Math.min(w, 100) - 60) : 1) * (w > 100 ? Math.pow(TUNE.G4, w - 100) : 1); // 101부터는 G4 (2부를 끝까지 가려면 성장이 필요)
 const hpW = () => S.hpWave || S.wave;
 const enemyHP = () => Math.round(TUNE.A * hpCurve(hpW()) * (1 + TUNE.L * Math.max(0, hpW() - TUNE.from)) * ((S.cm && S.cm.hp) || 1) * (S.first && S.wave <= 8 ? 0.75 : 1));
 function aliveWeight() { let w = 0; for (const e of S.enemies) w += e.boss ? 10 : 1; return w; }
@@ -1120,6 +1158,7 @@ function startWave() {
   if (S.chal && S.wave >= S.chal.target && !S.chalWin) { S.chalWin = true; if (!chalDone()) { D.chalDone = true; saveDaily(); stInc('chal'); M.gems += S.chal.reward; saveMeta(); S.chalPaid = true; track('challenge_clear', { mod: S.chal.mod.id, deck: S.chal.deck.join(',') }); } setTimeout(() => { banner(L('도전 성공!', 'チャレンジ成功！', 'Challenge cleared!'), S.chalPaid ? L(`보석 +${S.chal.reward}`, `ジェム +${S.chal.reward}`, `Gems +${S.chal.reward}`) : L('오늘 보상은 이미 받았어요', '今日の報酬は受け取り済み', 'Today\'s reward already claimed'), '#ffd166', 2.4); sfx('jackpot'); }, 1400); } if (S.wave % 5 === 0) track('wave_reached', { wave: S.wave });
   if (S.wave % 5 === 0 && !S.skipPick) openPick();
   S.skipPick = false; saveRun(); preloadFor(S.wave);
+  if (S.mode === 'exp') { saveExp(); if (S.wave > S.expBest0 && S.wave > 1) S.expGem += 2; if (S.wave > expBest()) { localStorage.setItem('sd_expbest', S.wave); if (S.wave % 10 === 0) submitExp(S.wave); } }
   if (S.wave === 6 && localStorage.getItem('sd_ref')) inviteJoin();
   const boss = S.wave % 10 === 0;
   S.spawnLeft = boss ? 0 : 10 + Math.floor(S.wave * 1.5);
@@ -1143,9 +1182,20 @@ const BOSSES = {
   golem:     { spr: 'golem',     h: 54, hp: 0.85, name: L('수정 골렘', 'クリスタルゴーレム', 'Crystal Golem'), hint: L('수정 갑옷이 피해를 막아요. 기절시키면 깨져요', '水晶の鎧はスタンで壊れる', 'Crystal armor blocks damage. Stun it to break it') },
   medusa:    { spr: 'medusa',    h: 52, hp: 0.85, name: L('메두사', 'メドゥーサ', 'Medusa'),      hint: L('영웅 한 줄을 돌로 만들어요', 'ヒーロー1列を石にする', 'Turns a row of heroes to stone') },
   chaos:     { spr: 'chaos',     h: 58, hp: 0.9,  name: L('혼돈의 군주', '混沌の君主', 'Chaos Overlord'), hint: L('최종 보스! 모든 패턴을 섞어 써요', 'ラスボス！すべての技を使う', 'Final boss! Uses every pattern') },
+  // 2부 보스 (웨이브 110~200)
+  sporequeen:   { spr: 'sporequeen',   h: 54, hp: 0.9,  name: L('포자 여왕', '胞子の女王', 'Spore Queen'), hint: L('포자 구름에 닿은 영웅은 공격이 느려져요', '胞子に触れたヒーローは攻撃が遅くなる', 'Spores slow down heroes they touch') },
+  ghostcaptain: { spr: 'ghostcaptain', h: 54, hp: 0.9,  name: L('유령 선장', '幽霊船長', 'Ghost Captain'), hint: L('대포알이 떨어진 칸의 영웅은 잠시 못 싸워요', '砲弾が落ちたマスのヒーローは少し動けない', 'Cannonballs pin down a hero for a while') },
+  clockknight:  { spr: 'clockknight',  h: 54, hp: 0.85, name: L('태엽 기사', 'ゼンマイの騎士', 'Clockwork Knight'), hint: L('시간을 되감아 회복해요. 느리게 만들면 막을 수 있어요', '時間を巻き戻して回復。スロウで防げる', 'Rewinds to heal. Slow it to stop that') },
+  magmatitan:   { spr: 'magmatitan',   h: 56, hp: 0.95, name: L('용암 거인', '溶岩の巨人', 'Magma Titan'), hint: L('체력이 줄수록 화가 나서 빨라져요', '体力が減るほど怒って速くなる', 'Gets faster as it loses HP') },
+  sphinx:       { spr: 'sphinx',       h: 54, hp: 0.55, name: L('별의 스핑크스', '星のスフィンクス', 'Star Sphinx'), hint: L('머리 위 표시된 직업만 제대로 피해를 줘요', '頭上に出た職業だけがしっかり効く', 'Only the class shown above it deals full damage') },
+  mirrorwitch:  { spr: 'mirrorwitch',  h: 54, hp: 0.8,  name: L('거울 마녀', '鏡の魔女', 'Mirror Witch'), hint: L('분신이 있는 동안 본체는 단단해요. 분신부터!', '分身がいる間は本体が硬い。分身から！', 'Tough while clones are up. Break the clones!') },
+  hydra:        { spr: 'hydra',        h: 56, hp: 0.5,  name: L('히드라', 'ヒドラ', 'Hydra'), hint: L('머리가 3개! 두 번 되살아나요', '頭が3つ！2回よみがえる', 'Three heads! Revives twice') },
+  frostempress: { spr: 'frostempress', h: 56, hp: 0.85, name: L('서리 여제', '氷の女帝', 'Frost Empress'), hint: L('영웅을 얼려요. 옆의 마법사·폭탄 공병이 녹여요', 'ヒーローを凍らせる。隣の魔法使い・ボム工兵が溶かす', 'Freezes heroes. Adjacent Mages or Bombers thaw them') },
+  voidwhale:    { spr: 'voidwhale',    h: 50, hp: 0.9,  name: L('공허 고래', '虚空のクジラ', 'Void Whale'), hint: L('살아 있는 동안 골드를 빨아들여요. 빨리 잡아요!', '生きている間ゴールドを吸い取る。急いで！', 'Drains your gold while alive. Be quick!') },
+  primordial:   { spr: 'primordial',   h: 62, hp: 1.0,  name: L('태초의 용', '始まりの竜', 'Primordial Dragon'), hint: L('진짜 최종 보스! 3단계로 변해요', '真のラスボス！3段階に変化', 'The true final boss! Three phases') },
 };
-const BOSS_ORDER = ['ogre', 'slimeking', 'lich', 'dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos'];
-const bossKindFor = w => BOSS_ORDER[Math.max(0, Math.floor(w / 10) - 1) % BOSS_ORDER.length];
+const BOSS_ORDER = ['ogre', 'slimeking', 'lich', 'dragon', 'demonlord', 'griffin', 'kraken', 'golem', 'medusa', 'chaos', 'sporequeen', 'ghostcaptain', 'clockknight', 'magmatitan', 'sphinx', 'mirrorwitch', 'hydra', 'frostempress', 'voidwhale', 'primordial'];
+const bossKindFor = w => w <= 100 ? BOSS_ORDER[Math.max(0, Math.floor(w / 10) - 1) % 10] : BOSS_ORDER[10 + (Math.floor(w / 10) - 11) % 10];
 function dragonBreath(e) {
   const idx = S.units.map((u, i) => u ? i : -1).filter(i => i >= 0).sort(() => Math.random() - 0.5).slice(0, 3);
   for (const i of idx) { const u = S.units[i], [cx0, cy0] = cellCenter(i); u.burnT = 2.5; u.atk = null; S.fx.push({ k: 'shock', x: cx0, y: cy0, col: '#ff8a2a', r0: 6, r1: 30, w: 5, t: 0.4, max: 0.4 }); puffs(cx0, cy0, 8, '255,140,50', 9); }
@@ -1179,6 +1229,42 @@ function lordWarp(e) {
   setTimeout(() => { if (!e.dead) { puffs(e.x, e.y - 20, 14, '160,90,240', 12); spawnMinion('skeleton', e, 1.3, 2); } }, 60);
   flash(L('마왕이 뒤로 순간이동했어요!', '魔王が後ろへワープ！', 'The Demon Lord warped back!'), '#c58bff', 2);
 }
+// ===== 2부 보스 패턴 =====
+const occCells = () => S.units.map((u, i) => u && !(drag && drag.idx === i) ? i : -1).filter(i => i >= 0);
+function sporeCloud(e) {
+  const occ = occCells(); if (!occ.length) return; const c = rnd(occ), [cx, cy] = cellCenter(c); let n = 0;
+  S.units.forEach((u, i) => { if (!u) return; const [x, y] = cellCenter(i); if (Math.hypot(x - cx, y - cy) <= 62) { u.sporeT = 5; n++; puffs(x, y, 4, '200,110,255', 9); } });
+  S.fx.push({ k: 'shock', x: cx, y: cy, col: '#c77dff', r0: 10, r1: 66, w: 6, t: 0.55, max: 0.55 }); puffs(cx, cy, 14, '190,100,255', 14); sfx('poof'); addShake(0.15);
+  flash(L(`포자 구름! 영웅 ${n}명의 공격이 5초 동안 느려져요`, `胞子の雲！ヒーロー${n}人の攻撃が5秒遅くなる`, `Spore cloud! ${n} heroes attack slower for 5s`), '#d29bff', 2);
+}
+function cannonShot(e, c) {
+  const u = S.units[c]; const [cx, cy] = cellCenter(c);
+  S.fx.push({ k: 'shock', x: cx, y: cy, col: '#5affc8', r0: 6, r1: 40, w: 6, t: 0.45, max: 0.45 }); puffs(cx, cy, 10, '90,255,200', 11); sfx('bigboom'); addShake(0.25);
+  if (u) { u.blockT = 4; u.atk = null; flash(L('대포알! 영웅 하나가 4초 동안 못 싸워요', '砲弾！ヒーロー1人が4秒動けない', 'Cannonball! A hero is pinned for 4s'), '#5affc8', 1.8); }
+}
+function frostLock(e) {
+  const occ = occCells().filter(i => !(S.units[i].frozeT > 0)); if (!occ.length) return;
+  const picks = occ.sort(() => Math.random() - 0.5).slice(0, 2);
+  for (const c of picks) { const u = S.units[c], [cx, cy] = cellCenter(c); u.frozeT = 7; u.atk = null; shardsFx(cx, cy, 8, '#d8f3ff'); S.fx.push({ k: 'shock', x: cx, y: cy, col: '#bfefff', r0: 6, r1: 34, w: 5, t: 0.4, max: 0.4 }); }
+  sfx('shatter'); flash(L('얼음! 옆에 있는 마법사·폭탄 공병이 공격하면 녹아요', '凍結！隣の魔法使い・ボム工兵の攻撃で溶ける', 'Frozen! An adjacent Mage or Bomber attack thaws it'), '#bfefff', 2.2);
+}
+function thawAround(u) {
+  const i = S.units.indexOf(u); if (i < 0) return; const r = Math.floor(i / COLS), c = i % COLS;
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr2 = r + dr, cc = c + dc; if (rr2 < 0 || rr2 >= ROWS || cc < 0 || cc >= COLS) continue; const o = S.units[rr2 * COLS + cc]; if (o && o.frozeT > 0) { o.frozeT = 0; const [x, y] = cellCenter(rr2 * COLS + cc); shardsFx(x, y, 6, '#d8f3ff'); puffs(x, y, 4, '200,240,255', 8); } }
+}
+function mirrorClones(e) {
+  for (let k = 0; k < 2; k++) {
+    const hp = Math.round(e.max * 0.05);
+    S.enemies.push({ roarT: 0, kind: 'mirrorwitch', clone: true, cloneT: 9, bk: null, d: Math.max(0, e.d + (k ? 26 : -26)), hp, max: hp, spd: e.spd, slowT: 0, slowF: 1, boss: false, r: 14, hit: 0, bob: Math.random() * 6, x: e.x, y: e.y, dir: e.dir, lane: k ? 8 : -8 });
+  }
+  puffs(e.x, e.y - 20, 14, '220,200,255', 12); shardsFx(e.x, e.y - 20, 10, '#e6dcff'); sfx('zap');
+  flash(L('거울 분신! 분신이 있는 동안 본체는 피해를 덜 받아요', '鏡の分身！分身がいる間は本体が硬い', 'Mirror clones! The witch is tougher while they live'), '#e6dcff', 2);
+}
+function hydraRegrow(e) {
+  e.heads = (e.heads ?? 2) - 1; e.hp = e.max * 0.5; e.roarT = 0.6;
+  puffs(e.x, e.y - 24, 16, '120,200,90', 13); S.fx.push({ k: 'shock', x: e.x, y: e.y - 24, col: '#9be36d', r0: 8, r1: 70, w: 6, t: 0.5, max: 0.5 }); sfx('boss'); addShake(0.35);
+  banner(L('머리가 다시 자랐어요!', '頭がまた生えた！', 'A head grew back!'), L(`남은 머리 ${e.heads + 1}`, `残りの頭 ${e.heads + 1}`, `Heads left: ${e.heads + 1}`), '#9be36d', 1.6);
+}
 function spawnMinion(kind, near, hpMul, n) {
   for (let i = 0; i < n; i++) { const k = ENEMY[kind], hp = Math.round(enemyHP() * hpMul); const e = { roarT: 0, kind, d: Math.max(0, near.d - 6 - i * 9), hp, max: hp, spd: k.spd, slowT: 0, slowF: 1, boss: false, r: 10, hit: 0, bob: Math.random() * 6, x: near.x + (Math.random() - 0.5) * 18, y: near.y + (Math.random() - 0.5) * 10, placed: true, dir: 1, lane: (Math.random() * 2 - 1) * 9 }; S.enemies.push(e); }
   puffs(near.x, near.y - 6, 8, kind === 'slime' ? '255,120,120' : '200,190,230', 9);
@@ -1191,8 +1277,8 @@ function enemyKind() {
 function spawn(boss) {
   const kind = boss ? 'boss' : enemyKind(), k = ENEMY[kind];
   const bk = boss ? bossKindFor(S.wave) : null;
-  const hp = boss ? enemyHP() * TUNE.boss * (1 + TUNE.bossGrow * (S.wave / 10 - 1)) * BOSSES[bk].hp : Math.round(enemyHP() * k.hp);
-  S.enemies.push({ roarT: boss ? ROAR_T : 0, kind, bk, d: 0, hp, max: hp, spd: (boss ? 26 : k.spd) * (S.cm.spd || 1), slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7, chargeT: 5, vanT: 4.5, breathT: 4.5, curseT: 5, swirlT: 4, stoneT: 4.5, chaosT: 3.5, armorT: 9 });
+  const hp = boss ? enemyHP() * TUNE.boss * (1 + TUNE.bossGrow * (Math.min(S.wave, TUNE.bossCap) / 10 - 1)) * BOSSES[bk].hp : Math.round(enemyHP() * k.hp); // 보스 추가 성장은 웨이브 100까지만(그 뒤는 일반 체력 곡선만)
+  S.enemies.push({ sporeT: 4, cannonT: 4, rewT: 6, favT: 0, cloneT: 1.5, frostT: 4.5, drainT: 1, primT: 3, phase: 1, roarT: boss ? ROAR_T : 0, kind, bk, d: 0, hp, max: hp, spd: (boss ? 26 : k.spd) * (S.cm.spd || 1), slowT: 0, slowF: 1, boss, r: boss ? 18 : 10, hit: 0, bob: Math.random() * 6, x: PL, y: PT, dir: 1, lane: boss ? 0 : (Math.random() * 2 - 1) * 7, chargeT: 5, vanT: 4.5, breathT: 4.5, curseT: 5, swirlT: 4, stoneT: 4.5, chaosT: 3.5, armorT: 9 });
 }
 
 // ===== 슬롯 =====
@@ -1306,9 +1392,12 @@ function killEnemy(e) {
   e.dead = true; S.kills++; mission('kill'); if (e.boss) mission('boss'); stInc('kills'); if (e.boss) stInc('boss');
   if (e.bk === 'slimeking') spawnMinion('slime', e, 2.5, 4);
   const g = Math.round((e.boss ? 60 + S.wave * 6 : 2 + Math.floor(S.wave / 4)) * S.B.gold * (1 + 0.08 * metaLv('bounty')));
-  if (e.boss && S.wave > 100) { const eb = 30 + Math.floor((S.wave - 100) / 2); S.endless = (S.endless || 0) + eb; setTimeout(() => { if (screen === 'play') { banner(L('무한 모드 보너스!', 'エンドレスボーナス！', 'Endless bonus!'), L(`보석 +${eb} (게임이 끝나면 받아요)`, `ジェム +${eb}（終了時に獲得）`, `Gems +${eb} (paid at game over)`), '#8fe3ff', 2.2); sfx('jackpot'); } }, 900); }
+  if (e.bk === 'mirrorwitch') S.enemies.forEach(o => { if (o.clone && !o.dead) { o.dead = true; puffs(o.x, o.y - 20, 8, '220,200,255', 10); shardsFx(o.x, o.y - 20, 6, '#e6dcff'); } });
+  if (e.boss && S.mode === 'exp' && S.wave > (S.expBest0 || 0)) S.expGem = (S.expGem || 0) + 5;
+  if (e.boss && S.wave > 100 && (S.mode !== 'exp' || S.wave > (S.expBest0 || 0))) { const eb = 30 + Math.floor((S.wave - 100) / 2); S.endless = (S.endless || 0) + eb; setTimeout(() => { if (screen === 'play' && !(e.bk === 'primordial' && S.wave === 200)) { banner(L('무한 모드 보너스!', 'エンドレスボーナス！', 'Endless bonus!'), L(`보석 +${eb} (게임이 끝나면 받아요)`, `ジェム +${eb}（終了時に獲得）`, `Gems +${eb} (paid at game over)`), '#8fe3ff', 2.2); sfx('jackpot'); } }, 900); }
   if (e.boss && S.mode === 'boss' && !S.enemies.some(x => x !== e && x.boss && x.hp > 0)) rushBossDown();
-  if (e.boss) { S.bossKills++; S.bossT = 0; if (e.bk === 'chaos' && S.wave >= 100 && !S.cleared && S.mode !== 'boss') { S.cleared = true; localStorage.setItem('sd_clear', '1'); setTimeout(() => { if (screen !== 'play') return; banner(L('엔딩! 혼돈의 군주 처치', 'エンディング！混沌の君主撃破', 'ENDING! Chaos Overlord defeated'), L('축하해요! 이제부터는 끝없는 도전이에요', 'おめでとう！ここからはエンドレス', 'Congrats! Endless mode from here'), '#ffe9a0', 4.5); flashScreen(0.5, '#fff6d6'); sfx('jackpot'); buzz([80, 60, 160]); S.units.forEach(q => { if (q) q.cheer = 3; }); for (let k = 0; k < 6; k++) setTimeout(() => { if (screen === 'play') { const [cx0, cy0] = cellCenter(Math.floor(Math.random() * 20)); burst(cx0, cy0, ['#ffd166', '#ff7ab6', '#8fe3ff', '#9be36d'][k % 4], 22); } }, k * 260); }, 700); track('game_clear', { wave: S.wave, play_sec: Math.round(S.time) }); } }
+  if (e.boss) { S.bossKills++; S.bossT = 0; if (e.bk === 'chaos' && S.wave >= 100 && !S.cleared && S.mode !== 'boss') { S.cleared = true; localStorage.setItem('sd_clear', '1'); setTimeout(() => { if (screen !== 'play') return; banner(L('엔딩! 혼돈의 군주 처치', 'エンディング！混沌の君主撃破', 'ENDING! Chaos Overlord defeated'), L('축하해요! 이제부터는 끝없는 도전이에요', 'おめでとう！ここからはエンドレス', 'Congrats! Endless mode from here'), '#ffe9a0', 4.5); flashScreen(0.5, '#fff6d6'); sfx('jackpot'); buzz([80, 60, 160]); S.units.forEach(q => { if (q) q.cheer = 3; }); for (let k = 0; k < 6; k++) setTimeout(() => { if (screen === 'play') { const [cx0, cy0] = cellCenter(Math.floor(Math.random() * 20)); burst(cx0, cy0, ['#ffd166', '#ff7ab6', '#8fe3ff', '#9be36d'][k % 4], 22); } }, k * 260); }, 700); track('game_clear', { wave: S.wave, play_sec: Math.round(S.time) }); }
+    if (e.bk === 'primordial' && S.wave >= 200 && !S.cleared2 && S.mode !== 'boss') { S.cleared2 = true; localStorage.setItem('sd_clear2', '1'); setTimeout(() => { if (screen !== 'play') return; banner(L('진 엔딩! 태초의 용 처치', '真エンディング！始まりの竜撃破', 'TRUE ENDING! Primordial Dragon defeated'), L('세계의 끝까지 지켜냈어요. 정말 대단해요!', '世界の果てまで守り抜いた。本当にすごい！', "You held the line to World's End. Amazing!"), '#ffe9a0', 5); flashScreen(0.6, '#fff6d6'); sfx('jackpot'); buzz([80, 60, 160, 60, 200]); S.units.forEach(q => { if (q) q.cheer = 3; }); for (let k = 0; k < 10; k++) setTimeout(() => { if (screen === 'play') { const [cx0, cy0] = cellCenter(Math.floor(Math.random() * 20)); burst(cx0, cy0, ['#ffd166', '#ff7ab6', '#8fe3ff', '#9be36d'][k % 4], 26); } }, k * 220); }, 700); track('game_clear2', { wave: S.wave, play_sec: Math.round(S.time), gm: S.mode }); } }
   S.gold += Math.round(g * (S.cm.gold || 1));
   if (e.boss) {
     flashScreen(0.38); addShake(0.6); S.hsCd = 0; hitstop(0.16); sfx('bigboom');
@@ -1331,6 +1420,8 @@ function damage(e, dmg, showNum, fx, fy, crit = false) {
   if (e.vanish > 0) { if (showNum && S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 30, v: 'MISS', t: 0.5, max: 0.5, vx: 0 }); return; }
   if (crit) critFx(e, fx ?? e.x, fy ?? e.y);
   if (e.boss) dmg *= S.B.boss;
+  if (e.bk === 'sphinx' && e.fav && S.srcType && S.srcType !== e.fav) { dmg *= 0.3; if (showNum && Math.random() < 0.06 && S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 40, v: L('약함', '効きにくい', 'WEAK'), t: 0.4, max: 0.4, vx: 0 }); }
+  if (e.bk === 'mirrorwitch' && S.enemies.some(o => o.clone && !o.dead)) { dmg *= 0.3; if (showNum && Math.random() < 0.06 && S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 40, v: L('반사', '反射', 'MIRROR'), t: 0.4, max: 0.4, vx: 0 }); }
   if (e.bk === 'golem' && !(e.armorOff > 0) && !(e.stunT > 0)) { dmg *= 0.25; if (showNum && Math.random() < 0.08 && S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 40, v: L('막힘', 'ブロック', 'BLOCK'), t: 0.4, max: 0.4, vx: 0 }); }
   e.hp -= dmg; e.hurtT = 0.3;
   if (!(e.hitCd > 0)) { e.hit = 0.08; e.hitCd = 0.18; } // 연타에도 하얗게 덮이지 않게 번쩍임 간격 제한
@@ -1338,6 +1429,7 @@ function damage(e, dmg, showNum, fx, fy, crit = false) {
   if ((showNum || crit) && S.dmg.length < 30) S.dmg.push({ x: e.x + (Math.random() * 10 - 5), y: e.y - 16, v: Math.round(dmg), t: 0.75, max: 0.75, crit, vx: (Math.random() - 0.5) * 20 });
   if (e.boss && !crit && (S.hsCd || 0) <= 0 && dmg > e.max * 0.02) { hitstop(0.03); addShake(0.05); }
   if (e.bk === 'slimeking' && !e.split1 && e.hp > 0 && e.hp < e.max * 0.5) { e.split1 = true; spawnMinion('slime', e, 3, 3); sfx('poof'); addShake(0.15); }
+  if (e.hp <= 0 && e.bk === 'hydra' && (e.heads ?? 2) > 0) { hydraRegrow(e); return; }
   if (e.hp <= 0) killEnemy(e);
 }
 function update(dt) {
@@ -1356,7 +1448,7 @@ function update(dt) {
   for (const e of S.enemies) {
     if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowF = 1; }
     if (e.stunT > 0) { e.stunT -= dt; e.hurtT = Math.max(e.hurtT || 0, 0.05); }
-    if (e.boss && !(e.roarT > 0)) {
+    if (e.boss && !(e.roarT > 0) && !e.dead) {
       if (e.bk === 'ogre') {
         if (e.charging > 0) { e.charging -= dt; if (Math.random() < dt * 14) puffs(e.x - e.dir * 10, e.y + 6, 2, '190,160,120', 6); }
         else { e.chargeT -= dt; e.warn = e.chargeT < 0.7; if (e.chargeT <= 0) { e.charging = 1.0; e.chargeT = 7; e.warn = false; addShake(0.2); sfx('boss'); S.fx.push({ k: 'shock', x: e.x, y: e.y - 10, col: '#ff8a6a', r0: 8, r1: 46, w: 4, t: 0.35, max: 0.35 }); } }
@@ -1384,18 +1476,50 @@ function update(dt) {
         else { e.armorT -= dt; if (e.armorT <= 0) { e.armorT = 10; e.armorOff = 3; golemShatter(e); } }
       } else if (e.bk === 'medusa') {
         e.stoneT -= dt; e.warn = e.stoneT < 0.8; if (e.stoneT <= 0) { e.stoneT = 8; e.warn = false; medusaGaze(e); }
+      } else if (e.bk === 'sporequeen') {
+        e.sporeT -= dt; e.warn = e.sporeT < 0.9; if (e.sporeT <= 0) { e.sporeT = 7; e.warn = false; sporeCloud(e); }
+      } else if (e.bk === 'ghostcaptain') {
+        e.cannonT -= dt;
+        if (e.cannonT < 1 && e.cannonCell == null) { const occ = occCells(); e.cannonCell = occ.length ? rnd(occ) : -1; }
+        e.warn = e.cannonT < 1;
+        if (e.cannonT <= 0) { if (e.cannonCell >= 0) cannonShot(e, e.cannonCell); e.cannonCell = null; e.cannonT = 5.5; e.warn = false; }
+      } else if (e.bk === 'clockknight') {
+        e.rewT -= dt; e.warn = e.rewT < 1;
+        if (e.rewT <= 0) { e.rewT = 6; e.warn = false;
+          if (e.slowT > 0 || e.stunT > 0) { if (S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 60, v: L('되감기 실패!', '巻き戻し失敗！', 'REWIND FAILED!'), t: 1, max: 1, vx: 0 }); sfx('shatter'); }
+          else { const hv = e.max * 0.08; e.hp = Math.min(e.max, e.hp + hv); S.fx.push({ k: 'shock', x: e.x, y: e.y - 24, col: '#ffd27a', r0: 50, r1: 8, w: 5, t: 0.5, max: 0.5 }); if (S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 60, v: L('되감기 +8%', '巻き戻し +8%', 'REWIND +8%'), t: 1, max: 1, vx: 0, heal: true }); sfx('zap'); flash(L('태엽 기사가 시간을 되감았어요! 느리게 만들면 막혀요', '時間を巻き戻した！スロウで防げる', 'It rewound time! Slow it to stop this'), '#ffd27a', 1.8); }
+        }
+      } else if (e.bk === 'magmatitan') {
+        e.rage = 1 - e.hp / e.max;
+      } else if (e.bk === 'sphinx') {
+        e.favT -= dt;
+        if (e.favT <= 0) { const ts = [...new Set(S.units.filter(Boolean).map(u => u.type))]; e.fav = ts.length ? rnd(ts.filter(t => t !== e.fav).length ? ts.filter(t => t !== e.fav) : ts) : null; e.favT = 15; if (e.fav) { S.fx.push({ k: 'shock', x: e.x, y: e.y - 30, col: '#ffe27a', r0: 8, r1: 60, w: 5, t: 0.5, max: 0.5 }); sfx('zap'); flash(L(`스핑크스의 수수께끼: 지금은 ${TYPES[e.fav].name}만 제대로 통해요`, `スフィンクスの謎：今は${TYPES[e.fav].name}だけが効く`, `Sphinx riddle: only ${TYPES[e.fav].name} hits hard now`), '#ffe27a', 2.2); } }
+      } else if (e.bk === 'mirrorwitch') {
+        e.cloneT -= dt; e.warn = e.cloneT < 0.8; if (e.cloneT <= 0) { e.cloneT = 12; e.warn = false; mirrorClones(e); }
+      } else if (e.bk === 'frostempress') {
+        e.frostT -= dt; e.warn = e.frostT < 0.9; if (e.frostT <= 0) { e.frostT = 8; e.warn = false; frostLock(e); }
+      } else if (e.bk === 'voidwhale') {
+        e.drainT -= dt; if (e.drainT <= 0) { e.drainT = 1; const amt = Math.min(S.gold, 3 + Math.floor(S.wave / 10)); if (amt > 0) { S.gold -= amt; if (S.dmg.length < 30) S.dmg.push({ x: e.x + (Math.random() - 0.5) * 16, y: e.y - 50, v: '-' + amt + 'G', t: 0.9, max: 0.9, vx: 0, gold: true }); } }
+      } else if (e.bk === 'primordial') {
+        const ph = e.hp < e.max * 0.33 ? 3 : e.hp < e.max * 0.66 ? 2 : 1;
+        if (ph > e.phase) { e.phase = ph; e.primT = 2; flashScreen(0.35, ph === 3 ? '#ffb070' : '#fff3b0'); addShake(0.6); sfx('boss'); banner(L(`태초의 용 ${ph}단계!`, `始まりの竜 第${ph}形態！`, `Primordial Dragon phase ${ph}!`), ph === 3 ? L('분노! 더 빠르고 강해져요', '激怒！速く強くなる', 'Enraged! Faster and fiercer') : L('새로운 기술을 써요', '新しい技を使う', 'New attacks unlocked'), '#ffd166', 2); if (ph === 3) spawnMinion('skeleton', e, 1.5, 4); }
+        e.primT -= dt; e.warn = e.primT < 0.9;
+        if (e.primT <= 0) { e.primT = e.phase === 3 ? 4.5 : e.phase === 2 ? 5.5 : 6.5; e.warn = false;
+          const pool = ['breath', 'spore'].concat(e.phase >= 2 ? ['cannon', 'frost', 'swirl'] : [], e.phase >= 3 ? ['stone', 'curse'] : []); const pick = rnd(pool);
+          if (pick === 'breath') dragonBreath(e); else if (pick === 'spore') sporeCloud(e); else if (pick === 'cannon') { const occ = occCells(); if (occ.length) cannonShot(e, rnd(occ)); } else if (pick === 'frost') frostLock(e); else if (pick === 'swirl') griffinSwirl(e); else if (pick === 'stone') medusaGaze(e); else lordCurse(); }
       } else if (e.bk === 'chaos') {
         if (!e.warp1 && e.hp < e.max * 0.5) { e.warp1 = true; lordWarp(e); }
         e.chaosT -= dt; e.warn = e.chaosT < 0.8;
         if (e.chaosT <= 0) { e.chaosT = 6; e.warn = false; const pick = rnd(['breath', 'curse', 'stone', 'swirl', 'summon']); if (pick === 'breath') dragonBreath(e); else if (pick === 'curse') lordCurse(); else if (pick === 'stone') medusaGaze(e); else if (pick === 'swirl') griffinSwirl(e); else { spawnMinion('skeleton', e, 1.5, 3); puffs(e.x, e.y - 20, 12, '230,80,255', 12); sfx('zap'); } }
       }
     }
+    if (e.clone) { e.cloneT -= dt; if (e.cloneT <= 0 && !e.dead) { e.dead = true; puffs(e.x, e.y - 20, 8, '220,200,255', 10); } }
     if (e.hurtT > 0) e.hurtT -= dt;
     if (e.roarT > 0) {
       const before = e.roarT; e.roarT -= dt;
       for (const th of [0.95, 0.7, 0.45]) if (before > th && e.roarT <= th) { S.fx.push({ k: 'shock', x: e.x, y: e.y - 28, col: '#ff8a6a', r0: 8, r1: 60, w: 4, t: 0.4, max: 0.4 }); addShake(0.18); }
     } else if (!(e.stunT > 0)) {
-      const bm = (e.charging > 0 ? 3.2 : 1) * (e.vanish > 0 ? 1.5 : 1);
+      const bm = (e.charging > 0 ? 3.2 : 1) * (e.vanish > 0 ? 1.5 : 1) * (e.bk === 'magmatitan' ? 1 + 1.4 * (e.rage || 0) : 1) * (e.bk === 'primordial' && e.phase === 3 ? 1.3 : 1);
       e.d += e.spd * e.slowF * bm * dt; e.bob += dt * 8 * e.slowF * Math.min(2, bm);
       if (e.boss) { const st = Math.floor(e.bob / Math.PI); if (st !== e.step) { e.step = st; puffs(e.x + (st % 2 ? 8 : -8), e.y + 6, 3, '190,160,120', 5); addShake(0.07); sfx('thud'); } }
     }
@@ -1436,7 +1560,10 @@ function update(dt) {
     if (drag && drag.idx === i && drag.moved) { u.atk = null; return; }
     if (u.burnT > 0) { u.burnT -= dt; return; }
     if (u.stoneT > 0) { u.stoneT -= dt; return; }
-    u.cd -= dt * (S.curse > 0 ? 0.55 : 1); if (u.cd > 0 || u.atk != null) return;
+    if (u.frozeT > 0) { u.frozeT -= dt; return; }
+    if (u.blockT > 0) { u.blockT -= dt; return; }
+    if (u.sporeT > 0) u.sporeT -= dt;
+    u.cd -= dt * (S.curse > 0 ? 0.55 : 1) * (u.sporeT > 0 ? 0.5 : 1); if (u.cd > 0 || u.atk != null) return;
     const target = nearestTarget(ux, uy, stats(u).range);
     if (!target) return;
     u.cd = stats(u).rate; u.atk = 0; u.fired = false; u.tgt = target; u.face = target.x < ux ? -1 : 1;
@@ -1486,6 +1613,10 @@ function nearestTarget(ux, uy, range) {
   return target;
 }
 function fireAttack(u, ux, uy) {
+  const np0 = S.proj.length; S.srcType = u.type; if (u.type === 'magic' || u.type === 'bomber') thawAround(u);
+  try { fireAttack0(u, ux, uy); } finally { S.srcType = null; for (let q = np0; q < S.proj.length; q++) if (S.proj[q].src == null) S.proj[q].src = u.type; }
+}
+function fireAttack0(u, ux, uy) {
   const st = stats(u), t = TYPES[u.type];
   let e = u.tgt;
   if (!e || e.dead || Math.hypot(e.x - ux, e.y - uy) > st.range + e.r + 12) e = nearestTarget(ux, uy, st.range);
@@ -1557,6 +1688,9 @@ function fireAttack(u, ux, uy) {
   }
 }
 function projHit(p) {
+  S.srcType = p.src || null; try { projHit0(p); } finally { S.srcType = null; }
+}
+function projHit0(p) {
   const e = p.target;
   if (p.k === 'flask') {
     if (S.pools.length > 10) S.pools.shift();
@@ -1689,10 +1823,11 @@ function gameOver() {
   if (S.mode === 'hard' && S.wave > hardBest()) { localStorage.setItem('sd_hbest', S.wave); S.newBest = true; }
   if (S.mode === 'boss') { if (S.rushSec == null) S.rushSec = Math.max(10, Math.round(S.rushLast ?? S.time)); S.rushScore = rushScore(S.bossKills, S.rushSec); const rb = rushBest(); if (!rb || S.rushScore > rushScore(rb.boss, rb.sec)) { localStorage.setItem('sd_rbest', JSON.stringify({ boss: S.bossKills, sec: S.rushSec })); S.newBest = S.bossKills > 0; } }
   // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
-  const total = S.mode === 'boss' ? S.bossKills * RUSH.gem + (S.rushClear ? RUSH.clearGem : 0) : Math.round((S.wave * 2 + S.kills / 25 + S.bossKills * 5 + (S.endless || 0)) * (S.mode === 'hard' ? HARD.gem : 1));
+  if (S.mode === 'exp') { if (S.wave > expBest()) localStorage.setItem('sd_expbest', S.wave); S.newBest = S.wave > S.expBest0; if (nick()) submitExp(expBest()); else if (expBest() > +(localStorage.getItem('sd_expsub') || 0) && !localStorage.getItem('sd_nick_skip')) setTimeout(() => { if (screen === 'over') openNickDialog(() => submitExp(expBest())); }, 900); }
+  const total = S.mode === 'exp' ? (S.expGem || 0) + (S.endless || 0) : S.mode === 'boss' ? S.bossKills * RUSH.gem + (S.rushClear ? RUSH.clearGem : 0) : Math.round((S.wave * 2 + S.kills / 25 + S.bossKills * 5 + (S.endless || 0)) * (S.mode === 'hard' ? HARD.gem : 1));
   S.gemsEarned = total; M.gems += total - S.gemsGiven; S.gemsGiven = total; saveMeta();
   NOMETA = false;
-  rankAfterGame();
+  if (S.mode !== 'exp') rankAfterGame();
 }
 function revive() {
   track('revive', { wave: S.wave, mode: adMode() ? 'ad' : 'time' });
@@ -1925,12 +2060,16 @@ function drawEnemy(e) {
     else if (e.hurtT > 0 && EA.anims.hurt) drawAnim(k, 'hurt', wi / 2, ex, ey + 7, h, e.dir < 0, 1, 1, hitP * 0.85, 1 + hitP * 0.1, 1 - hitP * 0.08);
     else drawAnim(k, 'walk', wi, ex, ey + 7, h, e.dir < 0, 1, 1, hitP * 0.85, 1 + hitP * 0.1, 1 - hitP * 0.08);
   }
-  else sprite(e.hurtT > 0 && IMG[k + '_hurt'] ? k + '_hurt' : k, ex, ey + 7 - hop, h, e.dir < 0, e.vanish > 0 ? 0.22 + 0.08 * Math.sin(T * 20) : 1, 1 + squash + hitP * 0.1, 1 - squash - hitP * 0.08, 0, hitP * 0.85);
+  else sprite(e.hurtT > 0 && IMG[k + '_hurt'] ? k + '_hurt' : k, ex, ey + 7 - hop, h, e.dir < 0, e.vanish > 0 ? 0.22 + 0.08 * Math.sin(T * 20) : e.clone ? 0.55 + 0.1 * Math.sin(T * 6) : 1, 1 + squash + hitP * 0.1, 1 - squash - hitP * 0.08, 0, hitP * 0.85);
   if (e.slowF < 1) { if (!EA) { ctx.globalAlpha = 0.3; sprite(k, ex, ey + 7 - hop, h, e.dir < 0, 1, 1 + squash, 1 - squash, 0, 0); } ctx.globalAlpha = EA ? 0.16 : 0.3; ctx.fillStyle = '#9fdcff'; ctx.beginPath(); ctx.ellipse(ex, ey - h / 2 + 7, h * 0.42, h * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff'; for (let s = 0; s < 3; s++) { const a = T * 2 + s * 2.1; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * h * 0.35, ey - h / 2 + 7 + Math.sin(a) * h * 0.3, 1.3, 0, Math.PI * 2); ctx.fill(); } }
   ctx.restore();
   ctx.globalAlpha = 1;
   if (e.bk === 'golem' && !(e.armorOff > 0)) { ctx.save(); ctx.globalAlpha = 0.35 + 0.1 * Math.sin(T * 4); ctx.strokeStyle = '#8fe3ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(e.x, e.y - h * 0.45, h * 0.55, h * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
-  if (e.warn && ['dragon', 'demonlord', 'griffin', 'medusa', 'chaos'].includes(e.bk)) { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, { dragon: '#ff8a1f', griffin: '#8fd8ff', medusa: '#e8f080' }[e.bk] || '#c58bff', 'center', 5); }
+  if (e.bk === 'magmatitan' && e.rage > 0.05) { ctx.save(); ctx.globalAlpha = Math.min(0.7, e.rage) * (0.6 + 0.4 * Math.sin(T * 10)); ctx.strokeStyle = '#ff6a2a'; ctx.lineWidth = 3 + e.rage * 4; ctx.beginPath(); ctx.ellipse(e.x, e.y - h * 0.45, h * 0.6, h * 0.62, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+  if (e.bk === 'sphinx' && e.fav) { rr(e.x - 13, e.y - h - 30, 26, 24, 7); ctx.fillStyle = 'rgba(40,30,80,.85)'; ctx.fill(); ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 2; ctx.stroke(); sprite(e.fav, e.x, e.y - h - 8, 20); }
+  if (e.bk === 'hydra') text(L(`머리 ${(e.heads ?? 2) + 1}`, `頭 ${(e.heads ?? 2) + 1}`, `Heads ${(e.heads ?? 2) + 1}`), e.x, e.y - h - 10, 11, '#9be36d', 'center', 3);
+  if (e.bk === 'ghostcaptain' && e.warn && e.cannonCell >= 0) { const [cx0, cy0] = cellCenter(e.cannonCell); ctx.save(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(T * 20); ctx.strokeStyle = '#5affc8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx0, cy0, 22, 0, Math.PI * 2); ctx.moveTo(cx0 - 28, cy0); ctx.lineTo(cx0 + 28, cy0); ctx.moveTo(cx0, cy0 - 28); ctx.lineTo(cx0, cy0 + 28); ctx.stroke(); ctx.restore(); }
+  if (e.warn && ['dragon', 'demonlord', 'griffin', 'medusa', 'chaos', 'sporequeen', 'ghostcaptain', 'clockknight', 'mirrorwitch', 'frostempress', 'primordial'].includes(e.bk)) { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, { dragon: '#ff8a1f', griffin: '#8fd8ff', medusa: '#e8f080' }[e.bk] || '#c58bff', 'center', 5); }
   if (e.warn && e.bk === 'ogre') { const pp = 1 + 0.15 * Math.sin(T * 30); text('!', e.x, e.y - h - 14, 22 * pp, '#ff4f4f', 'center', 5); }
   if (e.charging > 0) { ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = '#ff8a6a'; ctx.lineWidth = 3; for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(e.x - e.dir * (8 + k * 7), e.y - h * 0.3 - k * 4); ctx.lineTo(e.x - e.dir * (20 + k * 9), e.y - h * 0.3 - k * 4); ctx.stroke(); } ctx.restore(); }
   if (e.stunT > 0) { for (let k = 0; k < 3; k++) { const ang = T * 6 + k * 2.09; icon('star', e.x + Math.cos(ang) * (e.boss ? 14 : 9), e.y - h + 2 + Math.sin(ang) * 3, e.boss ? 9 : 7); } }
@@ -1976,7 +2115,7 @@ function drawHUD() {
   icon('coin', 262, 30, 26 * coinPulse);
   text(Math.round(S.goldShown).toLocaleString(), 342, 31, 18, '#ffd166', 'right', 3);
   if (S.chal) { rr(-OX + 4, 86, 66, 18, 9); ctx.fillStyle = S.chalWin ? 'rgba(80,160,60,.85)' : 'rgba(217,84,43,.85)'; ctx.fill(); drawFlame(-OX + 14, 95, 0.45); text(S.chalWin ? L('도전 성공', '成功', 'Cleared') : `→ W${S.chal.target}`, -OX + 42, 95, 10, '#fff', 'center', 2); }
-  if (!S.chal && S.mode && S.mode !== 'normal') { const lbl = S.mode === 'boss' ? mmss(S.rushSec ?? S.time) : S.mode === 'hard' ? L('하드', 'ハード', 'HARD') : L('주간 덱', '週間', 'WEEKLY'); rr(-OX + 4, 86, 66, 18, 9); ctx.fillStyle = S.mode === 'boss' ? 'rgba(200,60,60,.85)' : S.mode === 'hard' ? 'rgba(120,30,30,.9)' : 'rgba(60,110,200,.85)'; ctx.fill(); text(lbl, -OX + 37, 95, 10, '#fff', 'center', 2); }
+  if (!S.chal && S.mode && S.mode !== 'normal') { const lbl = S.mode === 'boss' ? mmss(S.rushSec ?? S.time) : S.mode === 'hard' ? L('하드', 'ハード', 'HARD') : S.mode === 'exp' ? L('원정', '遠征', 'EXPED.') : L('주간 덱', '週間', 'WEEKLY'); rr(-OX + 4, 86, 66, 18, 9); ctx.fillStyle = S.mode === 'boss' ? 'rgba(200,60,60,.85)' : S.mode === 'hard' ? 'rgba(120,30,30,.9)' : S.mode === 'exp' ? 'rgba(60,140,70,.9)' : 'rgba(60,110,200,.85)'; ctx.fill(); text(lbl, -OX + 37, 95, 10, '#fff', 'center', 2); }
   // 이번 판 버프 아이콘
   if (!INFO) S.picked.slice(-8).forEach((c, i) => { rr(60 + i * 17, 50, 15, 15, 4); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill(); if (TYPES[c.icon]) sprite(c.icon, 67.5 + i * 17, 64, 14); else icon(c.icon, 67.5 + i * 17, 57.5, 12); });
   // 사운드
@@ -2140,6 +2279,9 @@ function drawField() {
     if (i === selected) { rr(x - 25, y - 25, 50, 50, 11); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke(); }
     drawUnitAt(u, x, y, { alpha: drag && drag.moved && drag.idx === i ? 0.3 : 1 });
     if (u.burnT > 0) { ctx.save(); rr(x - 25, y - 25, 50, 50, 10); ctx.fillStyle = `rgba(60,20,0,${0.35 + 0.1 * Math.sin(T * 12)})`; ctx.fill(); for (let k = 0; k < 4; k++) { const ph = (T * 2.2 + k * 0.27) % 1, fx0 = x - 15 + k * 10; ctx.globalAlpha = 1 - ph; ctx.fillStyle = k % 2 ? '#ffb24a' : '#ff6a2a'; ctx.beginPath(); ctx.ellipse(fx0, y + 14 - ph * 30, 4 - ph * 2, 7 - ph * 3, 0, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+    if (u.frozeT > 0) { ctx.save(); rr(x - 25, y - 25, 50, 50, 10); ctx.fillStyle = 'rgba(170,225,255,.6)'; ctx.fill(); ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; ctx.moveTo(x + 14 + Math.cos(a) * 6, y - 14 + Math.sin(a) * 6); ctx.lineTo(x + 14 - Math.cos(a) * 6, y - 14 - Math.sin(a) * 6); } ctx.stroke(); ctx.restore(); }
+    if (u.blockT > 0) { ctx.save(); rr(x - 25, y - 25, 50, 50, 10); ctx.fillStyle = 'rgba(20,60,50,.55)'; ctx.fill(); ctx.strokeStyle = '#5affc8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 12, y - 12); ctx.lineTo(x + 12, y + 12); ctx.moveTo(x + 12, y - 12); ctx.lineTo(x - 12, y + 12); ctx.stroke(); ctx.restore(); }
+    if (u.sporeT > 0) { ctx.save(); ctx.fillStyle = 'rgba(200,120,255,.75)'; for (let k = 0; k < 3; k++) { const ph = (T * 0.9 + k * 0.33) % 1; ctx.globalAlpha = 0.8 * (1 - ph); ctx.beginPath(); ctx.arc(x - 12 + k * 12, y + 10 - ph * 26, 3 + ph * 3, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
     if (u.stoneT > 0) { ctx.save(); rr(x - 25, y - 25, 50, 50, 10); ctx.fillStyle = 'rgba(150,150,140,.62)'; ctx.fill(); ctx.strokeStyle = 'rgba(90,90,80,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 14, y - 10); ctx.lineTo(x - 2, y); ctx.lineTo(x - 8, y + 12); ctx.moveTo(x + 10, y - 14); ctx.lineTo(x + 4, y + 2); ctx.stroke(); ctx.restore(); }
     if (S.curse > 0) { ctx.save(); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(T * 8 + i); ctx.strokeStyle = '#b066ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y + 4, 20 + 2 * Math.sin(T * 6 + i), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   });
@@ -2411,7 +2553,7 @@ function drawTitle() {
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  { const bt = betaState(); if (bt) text(L(`v2.7.1 · β 베타 테스터 ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}일`, `v2.7.1 · β ベータテスター ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}日`, `v2.7.1 · β Beta Tester ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}`), W / 2, 628, 10, bt.days.length >= BETA_GOAL ? '#ffd166' : '#9be36d'); else text(L('v2.7.1 베타', 'v2.7.1 ベータ', 'v2.7.1 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)'); }
+  { const bt = betaState(); if (bt) text(L(`v2.8 · β 베타 테스터 ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}일`, `v2.8 · β ベータテスター ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}日`, `v2.8 · β Beta Tester ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}`), W / 2, 628, 10, bt.days.length >= BETA_GOAL ? '#ffd166' : '#9be36d'); else text(L('v2.8 베타', 'v2.8 ベータ', 'v2.8 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)'); }
   drawGemPop();
 }
 function drawGemPop() {
@@ -2497,7 +2639,7 @@ function drawOver() {
   // 다시 하기: 크게 + 숨쉬는 빛
   const rb = BTN.retry, pulse = 0.5 + 0.5 * Math.sin(T * 4);
   ctx.save(); ctx.shadowColor = '#ff5e7e'; ctx.shadowBlur = 14 + 14 * pulse; rr(rb.x, rb.y, rb.w, rb.h, 16); ctx.fillStyle = '#ff4f72'; ctx.fill(); ctx.restore();
-  button(rb, '#ff4f72', true, (cx, cy) => { retryIcon(cx - 64, cy, 1 + 0.08 * pulse); text(L('다시 하기', 'もう一度', 'Play Again'), cx + 12, cy, 24, '#fff', 'center', 5, '#8a1f38'); }, 'retry');
+  button(rb, '#ff4f72', true, (cx, cy) => { retryIcon(cx - 64, cy, 1 + 0.08 * pulse); if (S.mode === 'exp') { const ew = (loadExp() || {}).wave || 1, et = L(`W${ew}부터 다시 도전`, `W${ew}から再挑戦`, `Retry from W${ew}`); text(et, cx + 20, cy, fitSize(et, 21, 150), '#fff', 'center', 5, '#8a1f38'); } else text(L('다시 하기', 'もう一度', 'Play Again'), cx + 12, cy, 24, '#fff', 'center', 5, '#8a1f38'); }, 'retry');
   button(BTN.home, '#6b5bb8', true, (cx, cy) => { icon('gem', cx - 42, cy, 15); text(L('영웅 강화', 'ヒーロー強化', 'Upgrade'), cx + 8, cy, L(15, 12, 15), '#fff', 'center', 3); }, 'home');
   const canUp = Object.keys(UNLOCK_COST).some(k => !M.unlocked[k] && M.gems >= UNLOCK_COST[k]) || META_KEYS.some(k => (!TYPES[k] || M.unlocked[k]) && metaLv(k) < META_DEF[k].max && M.gems >= metaCost(k));
   if (canUp) redDot(BTN.home.x + BTN.home.w - 4, BTN.home.y + 4);
@@ -2759,7 +2901,7 @@ function hitKey(x, y) {
   if (screen === 'title' && chalOpen) return inRect(x, y, BTN.cgo) ? 'cgo' : inRect(x, y, BTN.cback) ? 'cback' : null;
   if (screen === 'title' && installEvt && inRect(x, y, BTN.install)) return 'install';
   if (screen === 'title') return inRect(x, y, BTN.chal) ? 'chal' : inRect(x, y, BTN.notice) && NOTICES.length ? 'notice' : inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : inRect(x, y, BTN.reward) ? 'reward' : (!PORTAL && inRect(x, y, BTN.rank)) ? 'rank' : inRect(x, y, BTN.tmute) ? 'tmute' : inRect(x, y, BTN.modes) ? 'modes' : null;
-  if (screen === 'rank') { for (let i = 0; i < 3; i++) if (inRect(x, y, rtabRect(i))) return 'rt_' + RTABS[i]; }
+  if (screen === 'rank') { for (let i = 0; i < 3; i++) if (inRect(x, y, rtabRect(i))) return 'rt_' + RTABS[i]; if ((RANK.tab === 'main' || RANK.tab === 'deck') && inRect(x, y, RDECK_BTN)) return RANK.tab === 'deck' ? 'rt_main' : 'rt_deck'; }
   if (screen === 'rank') return inRect(x, y, BTN.rname) ? 'rname' : inRect(x, y, { x: 20, y: 590, w: 140, h: 36 }) ? 'rback' : null;
   if (screen === 'ach') { if (inRect(x, y, BTN.back)) return 'back'; if (y < ACH_TOP || y > ACH_BOT) return null; for (let i = 0; i < ACH.length; i++) { const yy = 108 + i * 66 - achScroll; if (inRect(x, y, { x: 250, y: yy + 11, w: 92, h: 36 })) return 'ach_' + ACH[i].id; } return null; }
   if (screen === 'missions') { if (inRect(x, y, BTN.achb)) return 'achb'; if (!PORTAL && inRect(x, y, BTN.codeb)) return 'codeb'; if (inRect(x, y, BTN.back)) return 'back'; if (inRect(x, y, BTN.attc)) return 'attc'; for (let i = 0; i < 3; i++) if (inRect(x, y, missionClaimRect(i))) return 'mc_' + i; return null; }
@@ -2797,9 +2939,9 @@ function activate(key) {
     case 'codeb': sfx('click'); openCodeDialog(); break;
     case 'rank': screen = 'rank'; loadRank(); sfx('click'); track('rank_open', {}); break;
     case 'rback': screen = 'title'; sfx('click'); break;
-    case 'rname': sfx('click'); openNickDialog(() => { for (const t of RTABS) { const b = weekBestRaw(t); if (b) submitScore(b.wave, t, b.extra || {}); } }); break;
+    case 'rname': sfx('click'); openNickDialog(() => { for (const t of ['main', 'deck', 'boss']) { const b = weekBestRaw(t); if (b) submitScore(b.wave, t, b.extra || {}); } if (expBest()) { localStorage.removeItem('sd_expsub'); submitExp(expBest()); } }); break;
     case 'modes': sfx('click'); openModes(); break;
-    case 'rt_main': case 'rt_deck': case 'rt_boss': RANK.tab = key.slice(3); loadRank(); sfx('click'); break;
+    case 'rt_main': case 'rt_deck': case 'rt_boss': case 'rt_exp': RANK.tab = key.slice(3); loadRank(); sfx('click'); break;
     case 'chal': chalOpen = true; sfx('click'); break;
     case 'install': if (installEvt) { const ev = installEvt; ev.prompt(); ev.userChoice.then(r => { track('pwa_prompt', { outcome: r && r.outcome }); if (r && r.outcome === 'accepted') installEvt = null; }).catch(() => {}); } sfx('click'); break;
     case 'cback': chalOpen = false; sfx('click'); break;
@@ -2807,7 +2949,7 @@ function activate(key) {
     case 'back': screen = screen === 'ach' ? 'missions' : 'title'; sfx('click'); break;
     case 'home': screen = 'shop'; sfx('click'); break;
     case 'share': sfx('click'); shareRecord(); break;
-    case 'retry': { track('retry', { last_wave: S.wave, chal: S.chal ? 1 : 0, gm: S.mode }); sfx('click'); const ch = S.chal ? todayChallenge() : null, gm = S.mode || 'normal'; betweenGames(() => { newGame(ch, gm); screen = 'play'; }); break; }
+    case 'retry': if (S.mode === 'exp') { track('retry', { last_wave: S.wave, gm: 'exp' }); sfx('click'); betweenGames(() => startExp()); break; } { track('retry', { last_wave: S.wave, chal: S.chal ? 1 : 0, gm: S.mode }); sfx('click'); const ch = S.chal ? todayChallenge() : null, gm = S.mode || 'normal'; betweenGames(() => { newGame(ch, gm); screen = 'play'; }); break; }
     case 'revive': if (adMode()) showRewardAd(revive, 'revive'); else ad = { t: REVIVE_WAIT, max: REVIVE_WAIT, onReward: revive, kind: 'wait' }; break;
     case 'resume': paused = false; quitAsk = 0; sfx('click'); break;
     case 'pause': paused = true; quitAsk = 0; sfx('click'); break;
