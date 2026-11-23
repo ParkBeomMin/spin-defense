@@ -234,7 +234,7 @@ const TYPES = {
   bomber:{ name: L('폭탄 공병', 'ボム工兵', 'Bomber'), range: 108, dmg: 22, rate: 1.4, splash: 54, knock: 16, color: '#ff9a3c', role: L('큰 폭발, 적을 뒤로 날려요', '大爆発で敵を押し戻す', 'Big blasts that knock enemies back') },
   chrono:{ name: L('시간술사', '時間術師', 'Chronomancer'), range: 118, dmg: 12, rate: 0.95, rewind: 0.14, color: '#8fb8ff', role: L('적을 느리게, 가끔 뒤로 되감아요', '敵をスロー＆時々巻き戻す', 'Slows and sometimes rewinds enemies') },
   cat:   { name: L('냥상인', 'ネコ商人', 'Cat Merchant'), range: 86, dmg: 7, rate: 0.95, income: 3, color: '#ffd166', role: L('몇 초마다 골드를 벌어와요', '数秒ごとにゴールドを稼ぐ', 'Earns gold over time') },
-  // v2.9 베타 한정 영웅 (앱 베타 7일 출석 보상, 상점 판매 없음)
+  // v2.9 베타 한정 영웅 (앱 베타 14일 출석 보상, 상점 판매 없음)
   pioneer: { name: L('개척자', '開拓者', 'Pioneer'), range: 100, dmg: 16, rate: 0.8, rally: 0.12, color: '#ff9ad5', role: L('주변 8칸 영웅 공격력 증가', '周囲の攻撃力アップ', 'Boosts ATK of nearby heroes') },
 };
 TYPES.sword.role = L('근접 강타, 사거리 짧음', '近接の強打、射程は短め', 'Strong melee, short range'); TYPES.bow.role = L('빠른 원거리 연사', '素早い遠距離連射', 'Fast ranged shots'); TYPES.magic.role = L('범위 폭발', '範囲爆発', 'Area explosion'); TYPES.ice.role = L('적을 느리게', '敵をスローに', 'Slows enemies');
@@ -674,7 +674,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.9.0';
+const GAME_VER = 'v2.9.1';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -784,14 +784,14 @@ setTimeout(checkInvites, 5000);
 const BETA = APP && window.SD_BETA === true;
 const BETA_DAY = 30, BETA_BONUS = { 1: 300, 7: 300, 14: 700 }, BETA_GOAL = 14;
 const betaState = () => { try { const b = JSON.parse(localStorage.getItem('sd_beta') || 'null'); return b && Array.isArray(b.days) ? b : null; } catch (e) { return null; } };
-// 베타 7일째 보상: 베타 한정 영웅 '개척자'. 이미 7일을 넘긴 테스터는 다음 실행 때 받는다 (정식판으로 바뀐 뒤에도 기록이 있으면 지급)
-const BETA_HERO_DAY = 7;
+// 베타 14일째 보상(11/23 사용자 변경, 원래 7일): 베타 한정 영웅 '개척자'. 이미 14일을 넘긴 테스터는 다음 실행 때 받는다 (정식판으로 바뀐 뒤에도 기록이 있으면 지급)
+const BETA_HERO_DAY = 14;
 const betaHeroDue = () => { const b = betaState(); return APP && !!b && b.days.length >= BETA_HERO_DAY && !M.unlocked.pioneer; };
-function grantBetaHero() { M.unlocked.pioneer = 1; saveMeta(); track('hero_unlock', { hero: 'pioneer', src: 'beta7' }); if (typeof needAnims === 'function') needAnims(['pioneer']); }
+function grantBetaHero() { M.unlocked.pioneer = 1; saveMeta(); track('hero_unlock', { hero: 'pioneer', src: 'beta14' }); if (typeof needAnims === 'function') needAnims(['pioneer']); }
 const betaHeroHtml = () => `<div style="display:flex;align-items:center;gap:10px;margin:8px 0 10px;padding:8px 10px;border-radius:12px;background:rgba(255,154,213,.14);border:1.5px solid #ff9ad5;text-align:left"><img src="assets/pioneer.png" alt="" style="height:64px;width:auto;flex:none"><div><div style="font-size:11px;color:#9be36d">β ${L('베타 한정 영웅', 'ベータ限定ヒーロー', 'Beta-exclusive hero')}</div><div style="font-size:16px;color:#ffd166">${L('개척자 획득!', '開拓者ゲット！', 'Pioneer unlocked!')}</div><div style="font-size:11px;opacity:.8;line-height:1.4">${L('주변 영웅 공격력을 올려요. 영웅 강화에서 덱에 넣어 보세요', '周りのヒーローの攻撃力アップ。強化画面でデッキに入れてね', 'Boosts nearby heroes. Add her to your deck in Upgrade')}</div></div></div>`;
 function showBetaHero() { if (popupBusy()) return setTimeout(showBetaHero, 1500);
   const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
-  w.innerHTML = `<div style="width:min(300px,86vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="display:inline-block;font-size:12px;color:#1a1233;background:#9be36d;border-radius:10px;padding:2px 10px;margin-bottom:8px">β ${L('베타 테스터', 'ベータテスター', 'Beta Tester')}</div><div style="font-size:19px;color:#ffd166;margin-bottom:2px">${L('7일 출석 보상', '7日出席報酬', 'Day-7 reward')}</div>${betaHeroHtml()}<button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
+  w.innerHTML = `<div style="width:min(300px,86vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="display:inline-block;font-size:12px;color:#1a1233;background:#9be36d;border-radius:10px;padding:2px 10px;margin-bottom:8px">β ${L('베타 테스터', 'ベータテスター', 'Beta Tester')}</div><div style="font-size:19px;color:#ffd166;margin-bottom:2px">${L('14일 출석 보상', '14日出席報酬', 'Day-14 reward')}</div>${betaHeroHtml()}<button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
   document.body.appendChild(w); w.querySelector('button').onclick = () => { w.remove(); sfx('jackpot'); buzz([20, 30]); }; }
 function checkBeta() {
   if (!BETA) { if (betaHeroDue()) { grantBetaHero(); showBetaHero(); } return; }
@@ -800,7 +800,7 @@ function checkBeta() {
   localStorage.setItem('sd_beta', JSON.stringify(b)); M.gems += g; saveMeta(); gemPop = { amt: g, t: 1.8 }; track('beta_reward', { n, gems: g });
   const heroNow = betaHeroDue(); if (heroNow) grantBetaHero();
   const head = n === 1 ? L('베타 테스터가 되어 주셔서 고마워요!', 'ベータテスターになってくれてありがとう！', 'Thanks for being a beta tester!') : n >= BETA_GOAL && bonus ? L(`베타 테스트 ${BETA_GOAL}일 완주!`, `ベータテスト${BETA_GOAL}日達成！`, `${BETA_GOAL}-day beta complete!`) : L(`베타 테스트 ${n}일째`, `ベータテスト${n}日目`, `Beta test day ${n}`);
-  const sub = n < BETA_HERO_DAY ? L(`매일 앱을 켜면 보석 ${BETA_DAY}개, 7일째엔 베타 한정 영웅 '개척자'와 보너스, 14일째엔 큰 보너스가 있어요 (${n}/${BETA_GOAL}일)`, `毎日アプリを開くとジェム${BETA_DAY}個、7日目はベータ限定ヒーロー「開拓者」とボーナス、14日目は大ボーナス (${n}/${BETA_GOAL}日)`, `Open the app daily for ${BETA_DAY} gems. Day 7: beta-only hero Pioneer + bonus, day 14: big bonus (${n}/${BETA_GOAL})`) : n < BETA_GOAL ? L(`매일 앱을 켜면 보석 ${BETA_DAY}개, 14일째엔 큰 보너스가 있어요 (${n}/${BETA_GOAL}일)`, `毎日アプリを開くとジェム${BETA_DAY}個、14日目は大ボーナス (${n}/${BETA_GOAL}日)`, `Open the app daily for ${BETA_DAY} gems, big bonus on day 14 (${n}/${BETA_GOAL})`) : L('끝까지 함께해 줘서 고마워요. 의견은 언제든 환영이에요', '最後まで一緒にありがとう。ご意見いつでも歓迎です', 'Thank you for testing with us. Feedback is always welcome');
+  const sub = n < BETA_GOAL ? L(`매일 앱을 켜면 보석 ${BETA_DAY}개, 7일째엔 보너스, 14일째엔 베타 한정 영웅 '개척자'와 큰 보너스가 있어요 (${n}/${BETA_GOAL}일)`, `毎日アプリを開くとジェム${BETA_DAY}個、7日目はボーナス、14日目はベータ限定ヒーロー「開拓者」と大ボーナス (${n}/${BETA_GOAL}日)`, `Open the app daily for ${BETA_DAY} gems. Day 7: bonus, day 14: beta-only hero Pioneer + big bonus (${n}/${BETA_GOAL})`) : L('끝까지 함께해 줘서 고마워요. 의견은 언제든 환영이에요', '最後まで一緒にありがとう。ご意見いつでも歓迎です', 'Thank you for testing with us. Feedback is always welcome');
   const show = () => { if (popupBusy()) return setTimeout(show, 1500);
     const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
     w.innerHTML = `<div style="width:min(300px,86vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="display:inline-block;font-size:12px;color:#1a1233;background:#9be36d;border-radius:10px;padding:2px 10px;margin-bottom:8px">β ${L('베타 테스터', 'ベータテスター', 'Beta Tester')}</div><div style="font-size:19px;color:#ffd166;margin-bottom:6px">${head}</div><div style="font-size:30px;margin:6px 0">💎 +${g}</div>${heroNow ? betaHeroHtml() : ''}<div style="font-size:12px;opacity:.8;margin-bottom:12px;line-height:1.5">${sub}</div><button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
@@ -2912,7 +2912,7 @@ function drawPick() {
 }
 // 상점: [영웅] 탭은 해금·덱·단련, [능력] 탭은 공통 강화
 const SHOP_TAB = { hero: { x: 30, y: 98, w: 145, h: 36 }, ability: { x: 185, y: 98, w: 145, h: 36 } };
-// 베타 한정 영웅: 가진 사람은 보이고, 아직 없으면 앱 베타 테스터에게만 '베타 7일 출석 보상' 잠금 카드로 보인다 (웹·정식판은 숨김)
+// 베타 한정 영웅: 가진 사람은 보이고, 아직 없으면 앱 베타 테스터에게만 '베타 14일 출석 보상' 잠금 카드로 보인다 (웹·정식판은 숨김)
 const betaHeroVisible = k => !BETA_ONLY[k] || M.unlocked[k] || BETA;
 function shopRows() { return shopTab === 'hero' ? ALL_TYPES.filter(betaHeroVisible) : ABILITY_KEYS; }
 let shopScroll = 0, shopDrag = null;
@@ -2952,8 +2952,8 @@ function drawShop() {
     const b = shopBuyRect(i);
     if (locked && BETA_ONLY[k]) {
       rr(196, y + 10, 152, 38, 10); ctx.fillStyle = 'rgba(155,227,109,.16)'; ctx.fill(); ctx.strokeStyle = 'rgba(155,227,109,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
-      const bt = betaState(), bn = bt ? Math.min(bt.days.length, 7) : 0;
-      text(L('베타 7일 출석 보상', 'ベータ7日出席報酬', 'Beta day-7 reward'), 272, y + 23, 12, '#c8f5a8', 'center', 2.5); text(`${bn}/7${L('일', '日', ' days')}`, 272, y + 38, 11, 'rgba(255,255,255,.7)', 'center', 2);
+      const bt = betaState(), bn = bt ? Math.min(bt.days.length, BETA_HERO_DAY) : 0;
+      text(L('베타 14일 출석 보상', 'ベータ14日出席報酬', 'Beta day-14 reward'), 272, y + 23, 12, '#c8f5a8', 'center', 2.5); text(`${bn}/${BETA_HERO_DAY}${L('일', '日', ' days')}`, 272, y + 38, 11, 'rgba(255,255,255,.7)', 'center', 2);
     } else if (locked) {
       const ok = M.gems >= UNLOCK_COST[k];
       button({ x: 196, y: y + 10, w: 152, h: 38 }, '#ff4f72', ok, (cx, cy) => { text(L('해금', '解放', 'Unlock'), cx - 26, cy, 15, '#fff', 'center', 3); icon('gem', cx + 12, cy, 15); text(String(UNLOCK_COST[k]), cx + 38, cy, 14, '#fff', 'center', 3); }, 'unl_' + k);
