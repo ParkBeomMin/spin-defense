@@ -1,5 +1,52 @@
 [
   {
+    "id": "2026-11-24-v2.9.2",
+    "date": "2026.11.24",
+    "title": {
+      "ko": "v2.9.2: 각성·스킬·새 영웅 2명·단련 Lv60",
+      "ja": "v2.9.2：覚醒・スキル・新ヒーロー2人・修練Lv60",
+      "en": "v2.9.2: Awakening, skills, 2 new heroes, Training Lv60"
+    },
+    "body": {
+      "ko": [
+        "영웅 단련 상한이 30에서 60으로! Lv31부터는 한계 돌파 구간이라 레벨당 공격력 +15%",
+        "한계 돌파 보너스: Lv40 치명타 +5%, Lv50 사거리 +10%, Lv60 초월 스킬 피해 +50%",
+        "새 영웅 현상금 사냥꾼(보석 950): 적 최대 체력에 비례한 피해. 체력 많은 보스에 강해요",
+        "새 영웅 방패 파괴자(보석 1100): 방패·갑옷을 무시하고 적을 약화시켜 모든 영웅 피해 증가",
+        "랭킹에서 같은 이름은 가장 높은 기록 하나만 보여요",
+        "새 스킬 3종: 메테오(길 한 줄에 운석 비), 얼음 폭풍(모든 적 정지), 번개 낙하(가장 강한 적에게 큰 한 방). 전투 화면 왼쪽 아래 버튼, 영웅 강화 > 스킬에서 해금·강화",
+        "웨이브 200부터 후반 카드 6장: 정화, 관통, 집중, 결속, 결전의 시간, 전설 카드 '영웅의 맹세'",
+        "화면 흔들림 개선: 전장만 부드럽게, 큰 순간에만 흔들려요. 설정에서 보통/약하게/끄기",
+        "각성 추가: 단련 Lv.30 이상 영웅을 각성석으로 ★1~★3 각성, 영웅마다 고유 능력 (기사 충격파, 여우궁수 삼연사, 닌자 처형 등)",
+        "각성석: 웨이브 150 이상 보스 처치 +1, 3부 보스 첫 처치 +5, 원정 최고 기록(160 이상) 보스 +2"
+      ],
+      "ja": [
+        "ヒーロー修練の上限が30から60に！Lv31からは限界突破区間でLvごとに攻撃力+15%",
+        "限界突破ボーナス：Lv40 会心+5%、Lv50 射程+10%、Lv60 超越スキル+50%",
+        "新ヒーロー「賞金稼ぎ」（ジェム950）：最大HP割合ダメージ。高HPボスに強い",
+        "新ヒーロー「シールドブレイカー」（ジェム1100）：盾や装甲を無視し、敵を弱体化",
+        "ランキングで同じ名前は最高記録1つだけ表示",
+        "新スキル3種：メテオ（道の1列に隕石の雨）、氷の嵐（全ての敵を停止）、落雷（一番強い敵に強烈な一撃）。バトル画面左下のボタン、ヒーロー強化＞スキルで解放・強化",
+        "ウェーブ200から終盤カード6枚：浄化、貫通、集中、結束、決戦の時、レジェンド「英雄の誓い」",
+        "画面の揺れを改善：フィールドだけ、大きな場面だけ揺れます。設定で普通/弱め/OFF",
+        "覚醒を追加：修練Lv.30以上のヒーローを覚醒石で★1〜★3に覚醒、ヒーローごとの固有能力（ナイトの衝撃波、キツネ弓使いの三連射、忍者の処刑など）",
+        "覚醒石：W150以降のボス撃破+1、第3部ボス初撃破+5、遠征の最高記録（160以上）ボス+2"
+      ],
+      "en": [
+        "Hero training cap raised from 30 to 60! From Lv31, Limit Break gives +15% ATK per level",
+        "Limit break bonuses: Lv40 crit +5%, Lv50 range +10%, Lv60 transcend skill +50%",
+        "New hero Bounty Hunter (950 gems): % max HP damage, great vs tanky bosses",
+        "New hero Shieldbreaker (1100 gems): ignores shields and armor, weakens enemies",
+        "Ranking now shows only the best score per name",
+        "3 new skills: Meteor (meteor rain on one lane), Ice Storm (freeze all foes), Thunderstrike (huge hit on the strongest foe). Bottom-left buttons in battle; unlock and upgrade in Upgrade > Skills",
+        "6 late-game cards from wave 200: Purify, Pierce, Focus, Bond, Final Stand, and the legendary Hero's Oath",
+        "Smoother screen shake: only the battlefield moves, only on big moments. Settings: Normal / Low / Off",
+        "New Awakening: heroes at Training Lv.30+ can awaken ★1-★3 with Awakening Stones, each gaining a unique ability (Knight Shockwave, Fox Archer Triple Shot, Ninja Execute and more)",
+        "Stones: +1 per boss from wave 150, +5 for each part-3 boss's first defeat, +2 for expedition record bosses (160+)"
+      ]
+    }
+  },
+  {
     "id": "2026-11-24-v2.9",
     "date": "2026.11.24",
     "title": {
