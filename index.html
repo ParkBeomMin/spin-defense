@@ -665,7 +665,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.8.3';
+const GAME_VER = 'v2.8.4';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -889,8 +889,7 @@ function openCodeDialog() {
   const wrap = document.createElement('div'); wrap.id = 'codedlg';
   wrap.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
   wrap.innerHTML = `<div style="width:min(300px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:18px 16px 14px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
-    <div style="font-size:22px;color:#ffd166;margin-bottom:6px">${L('이벤트 코드', 'イベントコード', 'Event Code')}</div>
-    <div style="font-size:12px;opacity:.75;margin-bottom:12px">${L('개발일지·SNS에서 받은 코드를 입력하세요', '開発日記やSNSで配布したコードを入力', 'Enter a code from our posts')}</div>
+    <div style="font-size:22px;color:#ffd166;margin-bottom:14px">${L('이벤트 코드', 'イベントコード', 'Event Code')}</div>
     <input id="codein" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" style="width:100%;box-sizing:border-box;font:20px inherit;font-family:inherit;text-align:center;letter-spacing:2px;text-transform:uppercase;padding:10px;border-radius:12px;border:2px solid #8fe3ff;background:#1a1233;color:#fff;outline:none">
     <div id="codemsg" style="min-height:20px;font-size:13px;margin:10px 0 4px;color:#cfe8ff"></div>
     <div style="display:flex;gap:8px;margin-top:6px">
