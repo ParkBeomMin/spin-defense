@@ -603,7 +603,7 @@ function weekKey(off = 0) {
 function weekRange() { const d = new Date(Date.now() + 9 * 3600e3), day = (d.getUTCDay() + 6) % 7, mon = new Date(d - day * 86400e3), sun = new Date(+mon + 6 * 86400e3); const f = x => `${x.getUTCMonth() + 1}/${x.getUTCDate()}`; return `${f(mon)}~${f(sun)}`; }
 const deviceId = () => { let id = localStorage.getItem('sd_did'); if (!id) { id = Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-4); localStorage.setItem('sd_did', id); } return id; };
 const nick = () => { const n = cleanNick(localStorage.getItem('sd_nick')); return n && !badNick(n) ? n : ''; };
-// 앱: 랭킹 이름을 묻지 않고 처음 켤 때 랜덤 이름을 만들어 바로 등록한다(사용자 요청 2026-11-23). 랭킹 화면 '이름 바꾸기'로 언제든 변경
+// 앱: 랭킹 이름을 묻지 않고 처음 켤 때 랜덤 이름을 만들어 바로 등록한다(사용자 요청 2026-11-23). 설정 '랭킹 이름 바꾸기'로 언제든 변경
 function randomNick() {
   const P = { ko: [['용감한', '졸린', '빠른', '행운의', '씩씩한', '수상한', '배고픈', '반짝', '전설의', '꼬마', '무적', '느긋한'], ['기사', '궁수', '마법사', '슬라임', '용사', '여우', '고양이', '오우거', '닌자', '드워프', '정령', '용']],
     ja: [['ゆうかん', 'ねむい', 'はやい', 'ラッキー', 'げんき', 'なぞの', 'はらぺこ', 'キラキラ', 'でんせつ', 'ちびっこ'], ['ナイト', 'アーチャー', 'まほう', 'スライム', 'ゆうしゃ', 'キツネ', 'ネコ', 'ニンジャ', 'ドラゴン']],
@@ -665,7 +665,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.8.4';
+const GAME_VER = 'v2.8.5';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -686,6 +686,7 @@ function openSettings() {
       ${row(L('효과음', '効果音', 'Sound effects'), seg('sfx', [[1, L('켜기', 'ON', 'On')], [0, L('끄기', 'OFF', 'Off')]], store.mute ? 0 : (store.sfxOn ? 1 : 0)))}
       ${row(L('진동', 'バイブ', 'Vibration'), seg('vib', [[1, L('켜기', 'ON', 'On')], [0, L('끄기', 'OFF', 'Off')]], store.vib ? 1 : 0))}
       ${row(L('언어', '言語', 'Language'), seg('lang', [['auto', L('자동', '自動', 'Auto')], ['ko', '한국어'], ['ja', '日本語'], ['en', 'English']], langCur))}
+      ${PORTAL ? '' : row(L('랭킹 이름', 'ランキング名', 'Ranking name'), `<div style="display:flex;gap:6px;align-items:center"><div style="flex:1;text-align:left;font-size:15px;padding:8px 10px;border-radius:10px;background:#1a1233;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${nick() ? nick().replace(/[<>&]/g, '') : L('아직 없어요', 'まだありません', 'Not set')}</div><button id="setnick" style="font:14px inherit;font-family:inherit;padding:8px 12px;border-radius:10px;border:2px solid #ffcf5a;background:#6b5bb8;color:#fff">${L('바꾸기', '変更', 'Change')}</button></div>`)}
       <button id="setok" style="width:100%;margin-top:14px;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('닫기', '閉じる', 'Close')}</button>
       <a href="${feedbackUrl()}" target="_blank" rel="noopener" id="fbbtn" style="display:block;margin-top:10px;font:15px inherit;font-family:inherit;padding:10px;border-radius:12px;background:#3a2f66;border:2px solid #8fe3ff;color:#fff;text-decoration:none">✉ ${L('의견·버그 보내기', 'ご意見・不具合を送る', 'Send feedback / bugs')}</a>
       <a href="https://parkbeommin.github.io/spin-defense/privacy.html" target="_blank" rel="noopener" style="display:block;margin-top:10px;font-size:12px;color:#cfe8ff;text-decoration:underline">${L('개인정보처리방침', 'プライバシーポリシー', 'Privacy Policy')}</a></div>`;
@@ -699,6 +700,7 @@ function openSettings() {
       sfx('click'); track('settings', { id, v }); render();
     });
     wrap.querySelector('#setok').onclick = () => wrap.remove();
+    const sn = wrap.querySelector('#setnick'); if (sn) sn.onclick = () => { wrap.remove(); activate('rname'); };
   };
   render(); document.body.appendChild(wrap);
   wrap.addEventListener('pointerdown', e => { if (e.target === wrap) wrap.remove(); });
@@ -709,7 +711,7 @@ function openNickDialog(after) {
   wrap.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
   wrap.innerHTML = `<div style="width:min(300px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:18px 16px 14px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)">
     <div style="font-size:21px;color:#ffd166;margin-bottom:6px">${L('주간 랭킹에 올릴 이름', '週間ランキングの名前', 'Name for the weekly ranking')}</div>
-    <div style="font-size:12px;opacity:.75;margin-bottom:12px">${L('최대 10자 · 나중에 랭킹 화면에서 바꿀 수 있어요', '最大10文字・あとで変更できます', 'Up to 10 characters, you can change it later')}</div>
+    <div style="font-size:12px;opacity:.75;margin-bottom:12px">${L('최대 10자 · 나중에 설정에서 바꿀 수 있어요', '最大10文字・あとで設定から変更できます', 'Up to 10 characters, change it later in Settings')}</div>
     <input id="nickin" maxlength="10" autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;font:20px inherit;font-family:inherit;text-align:center;padding:10px;border-radius:12px;border:2px solid #8fe3ff;background:#1a1233;color:#fff;outline:none">
     <div id="nickmsg" style="min-height:18px;font-size:12px;margin:8px 0 4px;color:#ffb0b0"></div>
     <div style="display:flex;gap:8px"><button id="nickno" style="flex:1;font:15px inherit;font-family:inherit;padding:10px;border-radius:12px;border:0;background:#5a5a6a;color:#fff">${L('나중에', 'あとで', 'Later')}</button>
@@ -826,9 +828,8 @@ function drawRank() {
     text(rankVal(r, tab), 330, y + 18, 15, '#8fe3ff', 'right', 3);
   });
   const myI = list ? list.findIndex(r => r.id === me) : -1, wbr = tab === 'exp' ? (expBest() ? { wave: expBest() } : null) : weekBestRaw(tab), wbt = wbr ? (tab === 'boss' ? rankVal({ boss: wbr.extra && wbr.extra.boss || 0, sec: wbr.extra && wbr.extra.sec || 0 }, 'boss') : 'WAVE ' + wbr.wave) : '';
-  text(nick() ? L(`내 이름: ${nick()} · ${tab === 'exp' ? '최고' : '이번 주 최고'} ${wbt || '없음'}${myI >= 10 ? ` (${myI + 1}위)` : ''}`, `名前：${nick()}・${tab === 'exp' ? '最高' : '今週の最高'} ${wbt || 'なし'}`, `Name: ${nick()} · ${tab === 'exp' ? 'Best' : 'Best this week'} ${wbt || '-'}`) : L('게임이 끝나면 이름을 등록할 수 있어요', 'ゲーム終了後に名前を登録できます', 'You can register a name after a game'), W / 2, 556, fitSize(L(`내 이름: ${nick()} · ${tab === 'exp' ? '최고' : '이번 주 최고'} ${wbt || '없음'}`, `名前：${nick()}・${tab === 'exp' ? '最高' : '今週の最高'} ${wbt || 'なし'}`, `Name: ${nick()} · ${tab === 'exp' ? 'Best' : 'Best this week'} ${wbt || '-'}`), 12, 330), '#cfe8ff', 'center', 3);
-  button(BTN.rname, '#5a49a8', true, (cx, cy) => text(L('이름 바꾸기', '名前を変更', 'Change name'), cx, cy, 13, '#fff', 'center', 3), 'rname');
-  button({ x: 20, y: 590, w: 140, h: 36 }, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る', 'Back'), cx, cy, 15, '#fff', 'center', 3), 'rback');
+  text(nick() ? L(`내 이름: ${nick()} · ${tab === 'exp' ? '최고' : '이번 주 최고'} ${wbt || '없음'}${myI >= 10 ? ` (${myI + 1}위)` : ''}`, `名前：${nick()}・${tab === 'exp' ? '最高' : '今週の最高'} ${wbt || 'なし'}`, `Name: ${nick()} · ${tab === 'exp' ? 'Best' : 'Best this week'} ${wbt || '-'}`) : L('설정에서 랭킹 이름을 등록할 수 있어요', '設定でランキング名を登録できます', 'Set a ranking name in Settings'), W / 2, 556, fitSize(L(`내 이름: ${nick()} · ${tab === 'exp' ? '최고' : '이번 주 최고'} ${wbt || '없음'}`, `名前：${nick()}・${tab === 'exp' ? '最高' : '今週の最高'} ${wbt || 'なし'}`, `Name: ${nick()} · ${tab === 'exp' ? 'Best' : 'Best this week'} ${wbt || '-'}`), 12, 330), '#cfe8ff', 'center', 3);
+  button({ x: 110, y: 590, w: 140, h: 36 }, '#ff4f72', true, (cx, cy) => text(L('돌아가기', '戻る', 'Back'), cx, cy, 15, '#fff', 'center', 3), 'rback');
 }
 // ===== 모드 선택 창 =====
 function openModes() {
@@ -2936,7 +2937,7 @@ function hitKey(x, y) {
   if (screen === 'title' && installEvt && inRect(x, y, BTN.install)) return 'install';
   if (screen === 'title') return inRect(x, y, BTN.chal) ? 'chal' : inRect(x, y, BTN.notice) && NOTICES.length ? 'notice' : inRect(x, y, BTN.start) ? 'start' : inRect(x, y, BTN.shop) ? 'shop' : inRect(x, y, BTN.reward) ? 'reward' : (!PORTAL && inRect(x, y, BTN.rank)) ? 'rank' : inRect(x, y, BTN.tmute) ? 'tmute' : inRect(x, y, BTN.modes) ? 'modes' : null;
   if (screen === 'rank') { for (let i = 0; i < 3; i++) if (inRect(x, y, rtabRect(i))) return 'rt_' + RTABS[i]; if ((RANK.tab === 'main' || RANK.tab === 'deck') && inRect(x, y, RDECK_BTN)) return RANK.tab === 'deck' ? 'rt_main' : 'rt_deck'; }
-  if (screen === 'rank') return inRect(x, y, BTN.rname) ? 'rname' : inRect(x, y, { x: 20, y: 590, w: 140, h: 36 }) ? 'rback' : null;
+  if (screen === 'rank') return inRect(x, y, { x: 110, y: 590, w: 140, h: 36 }) ? 'rback' : null;
   if (screen === 'ach') { if (inRect(x, y, BTN.back)) return 'back'; if (y < ACH_TOP || y > ACH_BOT) return null; for (let i = 0; i < ACH.length; i++) { const yy = 108 + i * 66 - achScroll; if (inRect(x, y, { x: 250, y: yy + 11, w: 92, h: 36 })) return 'ach_' + ACH[i].id; } return null; }
   if (screen === 'missions') { if (inRect(x, y, BTN.achb)) return 'achb'; if (!PORTAL && inRect(x, y, BTN.codeb)) return 'codeb'; if (inRect(x, y, BTN.back)) return 'back'; if (inRect(x, y, BTN.attc)) return 'attc'; for (let i = 0; i < 3; i++) if (inRect(x, y, missionClaimRect(i))) return 'mc_' + i; return null; }
   if (screen === 'shop') {
