@@ -286,6 +286,7 @@ const BTN = {
   quit:  { x: 95,  y: 376, w: 170, h: 50 },
   start: { x: 95,  y: 452, w: 170, h: 62 },
   revive:{ x: 70,  y: 388, w: 220, h: 50 },
+  adx:   { x: 244, y: 262, w: 72,  h: 24 },  // 게임 오버: 광고 보고 보석 2배 / 원정 재도전 골드 1.5배 (실제 광고가 준비됐을 때만)
   shop:  { x: 95,  y: 528, w: 170, h: 48 },
   reward:{ x: 12,  y: 14,  w: 58,  h: 58 },
   notice:{ x: 12,  y: 80,  w: 58,  h: 58 },
@@ -654,7 +655,7 @@ const badNick = s => {
 const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '***'; };
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.8.1';
+const GAME_VER = 'v2.8.2';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -1070,6 +1071,7 @@ function loadExp() { try { const r = JSON.parse(localStorage.getItem(EXP_KEY)); 
 function resumeExp(r) {
   resumeRun(r); S.mode = 'exp'; S.revived = false; S.gemsGiven = 0; S.expGem = 0; S.expBest0 = expBest(); S.cleared2 = !!r.cleared2; S.endless = 0;
   track('exp_resume', { wave: r.wave });
+  if (localStorage.getItem('sd_expboost')) { localStorage.removeItem('sd_expboost'); const g0 = S.gold; S.gold = Math.round(S.gold * 1.5) + 100; S.goldShown = S.gold; setTimeout(() => { if (screen === 'play') banner(L('광고 보너스!', '広告ボーナス！', 'Ad bonus!'), L(`시작 골드 ${g0} → ${S.gold}`, `開始ゴールド ${g0} → ${S.gold}`, `Starting gold ${g0} → ${S.gold}`), '#ffd166', 2.2); }, 900); }
 }
 function startExp() { const r = loadExp(); if (r) resumeExp(r); else { newGame(null, 'exp'); screen = 'play'; } }
 async function submitExp(w) {
@@ -1836,9 +1838,19 @@ function gameOver() {
   // 보석: 웨이브 x2 + 처치/25 + 보스 처치 x5 (부활 후 다시 지면 늘어난 만큼만 추가)
   if (S.mode === 'exp') { if (S.wave > expBest()) localStorage.setItem('sd_expbest', S.wave); S.newBest = S.wave > S.expBest0; if (nick()) submitExp(expBest()); else if (expBest() > +(localStorage.getItem('sd_expsub') || 0) && !localStorage.getItem('sd_nick_skip')) setTimeout(() => { if (screen === 'over') openNickDialog(() => submitExp(expBest())); }, 900); }
   const total = S.mode === 'exp' ? (S.expGem || 0) + (S.endless || 0) : S.mode === 'boss' ? S.bossKills * RUSH.gem + (S.rushClear ? RUSH.clearGem : 0) : Math.round((S.wave * 2 + S.kills / 25 + S.bossKills * 5 + (S.endless || 0)) * (S.mode === 'hard' ? HARD.gem : 1));
-  S.gemsEarned = total; M.gems += total - S.gemsGiven; S.gemsGiven = total; saveMeta();
+  const total2 = total + (S.adBonus || 0);
+  S.gemsEarned = total2; M.gems += total2 - S.gemsGiven; S.gemsGiven = total2; saveMeta();
   NOMETA = false;
   if (S.mode !== 'exp') rankAfterGame();
+}
+// 게임 오버 추가 보상형 광고: 플레이어가 원할 때만 보는 자리. 실제 광고(앱 AdMob / 웹 H5)가 준비됐을 때만 버튼을 보여준다
+const adxKind = () => !S ? null : S.mode === 'exp' ? (S.adx || localStorage.getItem('sd_expboost') ? null : 'expboost') : (S.adx || !(S.gemsEarned > 0) ? null : 'gem2x');
+const adxShown = () => screen === 'over' && !PORTAL && adMode() && !!adxKind();
+function adxReward() {
+  const k = adxKind(); if (!k) return; S.adx = true;
+  if (k === 'gem2x') { const add = Math.min(S.gemsEarned, 500); S.adBonus = (S.adBonus || 0) + add; M.gems += add; S.gemsGiven += add; S.gemsEarned += add; saveMeta(); gemPop = { amt: add, t: 1.6 }; sfx('jackpot'); flash(L(`보석 2배! +${add}`, `ジェム2倍！+${add}`, `Double gems! +${add}`), '#8fe3ff', 2); }
+  else { localStorage.setItem('sd_expboost', '1'); sfx('jackpot'); flash(L('다음 재도전은 시작 골드 1.5배!', '次の再挑戦は開始ゴールド1.5倍！', 'Next retry starts with 1.5x gold!'), '#ffd166', 2.4); }
+  track('ad_reward', { kind: k, wave: S.wave, gm: S.mode });
 }
 function revive() {
   track('revive', { wave: S.wave, mode: adMode() ? 'ad' : 'time' });
@@ -2635,8 +2647,10 @@ function drawOver() {
   if (S.rushClear) text(L('보스 러시 클리어!', 'ボスラッシュ クリア！', 'Boss Rush Cleared!'), W / 2, 212, 26, '#9be36d', 'center', 6); else
   text(S.quit ? L('게임 종료', 'ゲーム終了', 'Game Over') : S.bossFail ? L('보스를 못 잡았어요', 'ボスを倒せなかった…', 'The boss got away') : L('방어 실패', '防衛失敗', 'Defense Failed'), W / 2, 212, S.bossFail && !S.quit ? 24 : 28, S.quit ? '#cfe8ff' : '#ff6b6b', 'center', 6);
   text(S.mode === 'boss' ? L(`보스 ${S.bossKills}/10 · ${mmss(S.rushSec ?? S.time)}`, `ボス ${S.bossKills}/10・${mmss(S.rushSec ?? S.time)}`, `Boss ${S.bossKills}/10 · ${mmss(S.rushSec ?? S.time)}`) : (S.mode && S.mode !== 'normal' ? MODE_NAME[S.mode] + ' ' : '') + `WAVE ${S.wave}`, W / 2, 247, S.mode && S.mode !== 'normal' ? 24 : 28, '#fff', 'center', 5);
-  text(L(`처치 ${S.kills.toLocaleString()}마리`, `撃破 ${S.kills.toLocaleString()}体`, `Defeated ${S.kills.toLocaleString()}`), W / 2 - 8, 274, 13, 'rgba(255,255,255,.75)', 'right', 3);
-  icon('gem', W / 2 + 10, 274, 15); text(L(`보석 +${S.gemsEarned || 0}`, `ジェム +${S.gemsEarned || 0}`, `Gems +${S.gemsEarned || 0}`), W / 2 + 20, 274, 13, '#8fe3ff', 'left', 3);
+  const ox = adxShown() ? -44 : 0;
+  text(L(`처치 ${S.kills.toLocaleString()}마리`, `撃破 ${S.kills.toLocaleString()}体`, `Defeated ${S.kills.toLocaleString()}`), W / 2 - 8 + ox, 274, 13, 'rgba(255,255,255,.75)', 'right', 3);
+  icon('gem', W / 2 + 10 + ox, 274, 15); text(L(`보석 +${S.gemsEarned || 0}`, `ジェム +${S.gemsEarned || 0}`, `Gems +${S.gemsEarned || 0}`), W / 2 + 20 + ox, 274, 13, '#8fe3ff', 'left', 3);
+  if (adxShown()) { const b = BTN.adx, ex = adxKind() === 'expboost', p = 1 + 0.04 * Math.sin(T * 5); ctx.save(); ctx.translate(b.x + b.w / 2, b.y + b.h / 2); ctx.scale(p, p); rr(-b.w / 2, -b.h / 2, b.w, b.h, 13); ctx.fillStyle = ex ? '#e0a020' : '#2f8ae0'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke(); rr(-b.w / 2 - 4, -b.h / 2 - 7, 22, 12, 4); ctx.fillStyle = '#ffcf5a'; ctx.fill(); text('AD', -b.w / 2 + 7, -b.h / 2 - 1, 8, '#5a3a00', 'center', 0); const tx = ex ? L('골드 1.5배', 'ゴールド1.5倍', '1.5x gold') : L('보석 2배', 'ジェム2倍', '2x gems'); text(tx, 0, 1, fitSize(tx, 12, b.w - 8), '#fff', 'center', 3); ctx.restore(); }
   // 다음 목표
   rr(52, 292, 256, 86, 12); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,207,90,.35)'; ctx.lineWidth = 1.5; ctx.stroke();
   text(L('다음 목표', '次の目標', 'Next goals'), 64, 305, 11, 'rgba(255,255,255,.55)', 'left', 2);
@@ -2927,7 +2941,7 @@ function hitKey(x, y) {
       if (TYPES[k] && inRect(x, y, shopDeckRect(i))) return 'deck_' + k; }
     return null;
   }
-  if (screen === 'over') { if (!S.revived && !S.rushClear && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; if (!PORTAL && inRect(x, y, BTN.share)) return 'share'; return null; }
+  if (screen === 'over') { if (adxShown() && inRect(x, y, BTN.adx)) return 'adx'; if (!S.revived && !S.rushClear && inRect(x, y, BTN.revive)) return 'revive'; if (inRect(x, y, BTN.retry)) return 'retry'; if (inRect(x, y, BTN.home)) return 'home'; if (!PORTAL && inRect(x, y, BTN.share)) return 'share'; return null; }
   if (S.pick) { for (let i = 0; i < 3; i++) if (inRect(x, y, pickRect(i))) return 'card_' + i; return null; }
   { const sr = sellRect(); if (sr && inRect(x, y, sr)) return 'sellsel'; }
   if (paused) return inRect(x, y, BTN.resume) ? 'resume' : inRect(x, y, BTN.quit) ? 'quit' : null;
@@ -2961,6 +2975,7 @@ function activate(key) {
     case 'home': screen = 'shop'; sfx('click'); break;
     case 'share': sfx('click'); shareRecord(); break;
     case 'retry': if (S.mode === 'exp') { track('retry', { last_wave: S.wave, gm: 'exp' }); sfx('click'); betweenGames(() => startExp()); break; } { track('retry', { last_wave: S.wave, chal: S.chal ? 1 : 0, gm: S.mode }); sfx('click'); const ch = S.chal ? todayChallenge() : null, gm = S.mode || 'normal'; betweenGames(() => { newGame(ch, gm); screen = 'play'; }); break; }
+    case 'adx': if (adxShown()) showRewardAd(adxReward, adxKind()); break;
     case 'revive': if (adMode()) showRewardAd(revive, 'revive'); else ad = { t: REVIVE_WAIT, max: REVIVE_WAIT, onReward: revive, kind: 'wait' }; break;
     case 'resume': paused = false; quitAsk = 0; sfx('click'); break;
     case 'pause': paused = true; quitAsk = 0; sfx('click'); break;
