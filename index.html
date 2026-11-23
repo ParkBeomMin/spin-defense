@@ -603,6 +603,15 @@ function weekKey(off = 0) {
 function weekRange() { const d = new Date(Date.now() + 9 * 3600e3), day = (d.getUTCDay() + 6) % 7, mon = new Date(d - day * 86400e3), sun = new Date(+mon + 6 * 86400e3); const f = x => `${x.getUTCMonth() + 1}/${x.getUTCDate()}`; return `${f(mon)}~${f(sun)}`; }
 const deviceId = () => { let id = localStorage.getItem('sd_did'); if (!id) { id = Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-4); localStorage.setItem('sd_did', id); } return id; };
 const nick = () => { const n = cleanNick(localStorage.getItem('sd_nick')); return n && !badNick(n) ? n : ''; };
+// 앱: 랭킹 이름을 묻지 않고 처음 켤 때 랜덤 이름을 만들어 바로 등록한다(사용자 요청 2026-11-23). 랭킹 화면 '이름 바꾸기'로 언제든 변경
+function randomNick() {
+  const P = { ko: [['용감한', '졸린', '빠른', '행운의', '씩씩한', '수상한', '배고픈', '반짝', '전설의', '꼬마', '무적', '느긋한'], ['기사', '궁수', '마법사', '슬라임', '용사', '여우', '고양이', '오우거', '닌자', '드워프', '정령', '용']],
+    ja: [['ゆうかん', 'ねむい', 'はやい', 'ラッキー', 'げんき', 'なぞの', 'はらぺこ', 'キラキラ', 'でんせつ', 'ちびっこ'], ['ナイト', 'アーチャー', 'まほう', 'スライム', 'ゆうしゃ', 'キツネ', 'ネコ', 'ニンジャ', 'ドラゴン']],
+    en: [['Brave', 'Sleepy', 'Swift', 'Lucky', 'Bold', 'Sneaky', 'Hungry', 'Shiny', 'Epic', 'Tiny', 'Calm'], ['Knight', 'Archer', 'Mage', 'Slime', 'Hero', 'Fox', 'Cat', 'Ogre', 'Ninja', 'Imp', 'Drake']] };
+  const [A, B] = P[LANG] || P.en, pick = a => a[Math.floor(Math.random() * a.length)];
+  for (let i = 0; i < 40; i++) { let n = pick(A) + pick(B); const num = String(Math.floor(Math.random() * 90) + 10); if ((n + num).length > 10) continue; n = cleanNick(n + num); if (n && !badNick(n)) return n; }
+  return 'Hero' + (Math.floor(Math.random() * 9000) + 1000);
+}
 const weekBestRaw = (tab = 'main') => { try { const b = JSON.parse(localStorage.getItem(BOARDS[tab].wb)); return b && b.week === weekKey() ? b : null; } catch (e) { return null; } };
 const weekBest = (tab = 'main') => { const b = weekBestRaw(tab); return b ? b.wave : 0; };
 const RANK = { tab: 'main', D: { main: {}, deck: {}, boss: {}, exp: {} },
@@ -653,9 +662,10 @@ const badNick = s => {
     || latin.split(/[^a-z]+/).some(w => SHORT_LATIN_NICK.test(w));
 };
 const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '***'; };
+if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.8.2';
+const GAME_VER = 'v2.8.3';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
