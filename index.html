@@ -325,6 +325,8 @@ window.addEventListener('appinstalled', () => { installEvt = null; track('pwa_in
 if (/[?&]src=pwa/.test(location.search)) setTimeout(() => track('pwa_launch'), 1500);
 // ===== 공지사항 (assets/notices.json, 새 공지는 빨간 점 + 첫 화면에서 한 번 자동으로 열림) =====
 let NOTICES = [], noticeOpen = false, noticeAuto = false;
+// 자동으로 뜨는 창(공지, 베타 보상, 초대·랭킹 보상)은 한 번에 하나만. 다른 창이 떠 있거나 판을 하는 중이면 기다렸다가 띄운다
+const popupBusy = () => !!document.getElementById('codedlg') || noticeOpen || (typeof chalOpen !== 'undefined' && chalOpen) || screen === 'loading' || (screen === 'play' && !paused);
 fetch(LIVE + 'assets/notices.json?t=' + Date.now()).catch(() => fetch('assets/notices.json')).then(r => r.json()).then(n => { NOTICES = Array.isArray(n) ? n : []; }).catch(() => {});
 const noticeUnseen = () => NOTICES.length && localStorage.getItem('sd_notice_seen') !== NOTICES[0].id;
 function closeNotice() { noticeOpen = false; if (NOTICES.length) localStorage.setItem('sd_notice_seen', NOTICES[0].id); }
@@ -651,6 +653,14 @@ const badNick = s => {
 };
 const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '***'; };
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+// 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
+const GAME_VER = 'v2.8.1';
+const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
+function feedbackUrl() {
+  const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
+  const info = `${GAME_VER} · ${APP ? 'Android app' : 'web'} · ${os} · ${LANG} · best W${store.best}${typeof expBest === 'function' ? ' · exp W' + expBest() : ''}`;
+  return `${FEEDBACK_FORM}?usp=pp_url&entry.1189017881=${encodeURIComponent('스핀 디펜스 (Spin Defense)')}&entry.1950440059=${encodeURIComponent(info)}`;
+}
 function openSettings() {
   if (document.getElementById('codedlg')) return;
   const wrap = document.createElement('div'); wrap.id = 'codedlg';
@@ -666,6 +676,7 @@ function openSettings() {
       ${row(L('진동', 'バイブ', 'Vibration'), seg('vib', [[1, L('켜기', 'ON', 'On')], [0, L('끄기', 'OFF', 'Off')]], store.vib ? 1 : 0))}
       ${row(L('언어', '言語', 'Language'), seg('lang', [['auto', L('자동', '自動', 'Auto')], ['ko', '한국어'], ['ja', '日本語'], ['en', 'English']], langCur))}
       <button id="setok" style="width:100%;margin-top:14px;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('닫기', '閉じる', 'Close')}</button>
+      <a href="${feedbackUrl()}" target="_blank" rel="noopener" id="fbbtn" style="display:block;margin-top:10px;font:15px inherit;font-family:inherit;padding:10px;border-radius:12px;background:#3a2f66;border:2px solid #8fe3ff;color:#fff;text-decoration:none">✉ ${L('의견·버그 보내기', 'ご意見・不具合を送る', 'Send feedback / bugs')}</a>
       <a href="https://parkbeommin.github.io/spin-defense/privacy.html" target="_blank" rel="noopener" style="display:block;margin-top:10px;font-size:12px;color:#cfe8ff;text-decoration:underline">${L('개인정보처리방침', 'プライバシーポリシー', 'Privacy Policy')}</a></div>`;
     wrap.querySelectorAll('[data-seg] button').forEach(b => b.onclick = () => {
       const id = b.parentElement.dataset.seg, v = b.dataset.v;
@@ -712,7 +723,7 @@ async function checkWeekReward() {
     const ids = j.filter(x => x.document).map(x => x.document.name.split('/').pop()), i = ids.indexOf(deviceId());
     if (i < 0) return;
     const g = RANK_REWARD[i]; M.gems += g; saveMeta(); gemPop = { amt: g, t: 1.8 }; track('rank_reward', { rank: i + 1, gems: g });
-    const show = () => { if (document.getElementById('codedlg')) return setTimeout(show, 1500); const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+    const show = () => { if (popupBusy()) return setTimeout(show, 1500); const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
       w.innerHTML = `<div style="width:min(290px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="font-size:15px;color:#cfe8ff">${L('지난주 주간 랭킹', '先週の週間ランキング', 'Last week\'s ranking')}</div><div style="font-size:34px;color:#ffd166;margin:6px 0">${L(`${i + 1}위!`, `${i + 1}位！`, `#${i + 1}!`)}</div><div style="font-size:16px;margin-bottom:14px">${L(`보상 보석 +${g}`, `報酬 ジェム +${g}`, `Reward: ${g} gems`)}</div><button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
       document.body.appendChild(w); w.querySelector('button').onclick = () => { w.remove(); sfx('jackpot'); }; };
     show();
@@ -739,7 +750,7 @@ async function checkInvites() {
     const j = await r.json(), n = Math.min(INVITE_MAX, (j.documents || []).length), got = +(localStorage.getItem('sd_invc') || 0);
     if (n <= got) return;
     const k = n - got, g = k * INVITE_GEM; localStorage.setItem('sd_invc', n); M.gems += g; saveMeta(); gemPop = { amt: g, t: 1.8 }; track('invite_reward', { n: k, gems: g });
-    const show = () => { if (document.getElementById('codedlg')) return setTimeout(show, 1500); const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+    const show = () => { if (popupBusy()) return setTimeout(show, 1500); const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
       w.innerHTML = `<div style="width:min(290px,84vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="font-size:15px;color:#cfe8ff">${L('친구 초대', '友だち招待', 'Friend invites')}</div><div style="font-size:24px;color:#ffd166;margin:8px 0">${L(`친구 ${k}명이 내 링크로 왔어요!`, `友だち${k}人が来てくれた！`, `${k} friend${k > 1 ? 's' : ''} joined!`)}</div><div style="font-size:16px;margin-bottom:14px">${L(`보석 +${g}`, `ジェム +${g}`, `Gems +${g}`)}</div><button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
       document.body.appendChild(w); w.querySelector('button').onclick = () => { w.remove(); sfx('jackpot'); }; };
     show();
@@ -758,7 +769,7 @@ function checkBeta() {
   localStorage.setItem('sd_beta', JSON.stringify(b)); M.gems += g; saveMeta(); gemPop = { amt: g, t: 1.8 }; track('beta_reward', { n, gems: g });
   const head = n === 1 ? L('베타 테스터가 되어 주셔서 고마워요!', 'ベータテスターになってくれてありがとう！', 'Thanks for being a beta tester!') : n >= BETA_GOAL && bonus ? L(`베타 테스트 ${BETA_GOAL}일 완주!`, `ベータテスト${BETA_GOAL}日達成！`, `${BETA_GOAL}-day beta complete!`) : L(`베타 테스트 ${n}일째`, `ベータテスト${n}日目`, `Beta test day ${n}`);
   const sub = n < BETA_GOAL ? L(`매일 앱을 켜면 보석 ${BETA_DAY}개, 7일째·14일째엔 보너스도 있어요 (${n}/${BETA_GOAL}일)`, `毎日アプリを開くとジェム${BETA_DAY}個、7日目・14日目はボーナスも (${n}/${BETA_GOAL}日)`, `Open the app daily for ${BETA_DAY} gems, with bonuses on day 7 and 14 (${n}/${BETA_GOAL})`) : L('끝까지 함께해 줘서 고마워요. 의견은 언제든 환영이에요', '最後まで一緒にありがとう。ご意見いつでも歓迎です', 'Thank you for testing with us. Feedback is always welcome');
-  const show = () => { if (document.getElementById('codedlg') || (screen === 'play' && !paused) || screen === 'loading') return setTimeout(show, 2000);
+  const show = () => { if (popupBusy()) return setTimeout(show, 1500);
     const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
     w.innerHTML = `<div style="width:min(300px,86vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="display:inline-block;font-size:12px;color:#1a1233;background:#9be36d;border-radius:10px;padding:2px 10px;margin-bottom:8px">β ${L('베타 테스터', 'ベータテスター', 'Beta Tester')}</div><div style="font-size:19px;color:#ffd166;margin-bottom:6px">${head}</div><div style="font-size:30px;margin:6px 0">💎 +${g}</div><div style="font-size:12px;opacity:.8;margin-bottom:12px;line-height:1.5">${sub}</div><button style="width:100%;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('받기', '受け取る', 'Claim')}</button></div>`;
     document.body.appendChild(w); w.querySelector('button').onclick = () => { w.remove(); sfx('jackpot'); buzz([20, 30]); }; };
@@ -2548,12 +2559,12 @@ function drawTitle() {
   button(BTN.modes, '#3d6fd1', true, (cx, cy) => { sprite('boss', cx, cy + 9, 30); text(L('모드', 'モード', 'Modes'), cx, cy + 17, L(11, 9, 10), '#fff', 'center', 2.5); }, 'modes');
   button(BTN.chal, '#d9542b', true, (cx, cy) => { drawFlame(cx, cy - 6, 0.95); text(L('도전', 'チャレンジ', 'Challenge'), cx, cy + 17, L(11, 8, 9), '#fff', 'center', 2.5); }, 'chal');
   if (!chalDone()) redDot(BTN.chal.x + BTN.chal.w - 4, BTN.chal.y + 4);
-  if (!noticeAuto && noticeUnseen() && store.best > 0 && T > 1.2) { noticeAuto = true; noticeOpen = true; }
+  if (!noticeAuto && noticeUnseen() && store.best > 0 && T > 1.2 && !document.getElementById('codedlg')) { noticeAuto = true; noticeOpen = true; }
   if (noticeOpen) drawNotice();
   else if (chalOpen) drawChallenge();
   // 아래 정보
   if (store.best) { icon('chest', W / 2 - 62, 600, 22); text(L(`최고 기록  WAVE ${store.best}`, `最高記録  WAVE ${store.best}`, `Best  WAVE ${store.best}`), W / 2 + 10, 600, 14, '#ffd166', 'center', 3.5); }
-  { const bt = betaState(); if (bt) text(L(`v2.8 · β 베타 테스터 ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}일`, `v2.8 · β ベータテスター ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}日`, `v2.8 · β Beta Tester ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}`), W / 2, 628, 10, bt.days.length >= BETA_GOAL ? '#ffd166' : '#9be36d'); else text(L('v2.8 베타', 'v2.8 ベータ', 'v2.8 beta'), W / 2, 628, 10, 'rgba(255,255,255,.4)'); }
+  { const bt = betaState(); if (bt) text(L(`${GAME_VER} · β 베타 테스터 ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}일`, `${GAME_VER} · β ベータテスター ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}日`, `${GAME_VER} · β Beta Tester ${Math.min(bt.days.length, BETA_GOAL)}/${BETA_GOAL}`), W / 2, 628, 10, bt.days.length >= BETA_GOAL ? '#ffd166' : '#9be36d'); else text(L(`${GAME_VER} 베타`, `${GAME_VER} ベータ`, `${GAME_VER} beta`), W / 2, 628, 10, 'rgba(255,255,255,.4)'); }
   drawGemPop();
 }
 function drawGemPop() {
