@@ -625,8 +625,11 @@ function buySkill(k) {
 const skRect = i => ({ x: 4, y: 438 + i * 39, w: 52, h: 36 });
 const skHint = () => !S.first && S.wave >= 2 && skLv('meteor') > 0 && !((S.sk && S.sk.meteor) > 0) && !S.aim && !localStorage.getItem('sd_skhint');
 // 스킬 아이콘(캔버스로 직접 그림)
-function skillIcon(k, x, y, s, a = 1) {
-  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); const r = s / 2;
+// v2.9.7: 스킬 아이콘 그림(assets/skill_*.png). 아직 안 불러졌으면 아래 캔버스 아이콘으로 그림
+function skillIcon(k, x, y, s, a = 1, gray = false) {
+  const im = IMG['skill_' + k]; if (!im) ensureImg('skill_' + k);
+  if (im && im.complete && im.naturalWidth) { ctx.save(); ctx.globalAlpha *= a; if (gray) ctx.filter = 'grayscale(1) brightness(.75)'; ctx.drawImage(im, x - s / 2, y - s / 2, s, s); ctx.restore(); return; }
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); const r = s / 2 * 0.8;
   if (k === 'meteor') {
     const g = ctx.createLinearGradient(-r, -r, r * 0.3, r * 0.3); g.addColorStop(0, 'rgba(255,120,40,0)'); g.addColorStop(1, 'rgba(255,200,90,.95)');
     ctx.strokeStyle = g; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.55; ctx.beginPath(); ctx.moveTo(-r * 0.95, -r * 0.95); ctx.lineTo(r * 0.15, r * 0.15); ctx.stroke();
@@ -658,10 +661,10 @@ function drawSkills() {
     else { g.addColorStop(0, 'rgba(36,26,70,.92)'); g.addColorStop(1, 'rgba(20,14,42,.92)'); }
     ctx.fillStyle = g; ctx.fill(); ctx.shadowBlur = 0;
     ctx.lineWidth = 2; ctx.strokeStyle = aim ? '#ffd166' : ready ? col : 'rgba(255,255,255,.18)'; ctx.stroke();
-    if (!lv) { skillIcon(k, cx, cy, 24, 0.25); text('🔒', b.x + b.w - 10, b.y + b.h - 10, 11, '#fff', 'center', 0); }
+    if (!lv) { skillIcon(k, cx, cy, 30, 0.5, true); text('🔒', b.x + b.w - 10, b.y + b.h - 9, 11, '#fff', 'center', 0); }
     else {
       const bob = ready ? Math.sin(T * 4 + i) * 1.3 : 0;
-      skillIcon(k, cx, cy - (cd > 0 ? 0 : 4) + bob, 26, ready ? 1 : 0.4);
+      skillIcon(k, cx, cy - (cd > 0 ? 0 : 3) + bob, cd > 0 ? 30 : 32, ready ? 1 : 0.45, cd > 0);
       if (cd > 0) {
         const p = clamp(cd / skCdOf(k), 0, 1);
         ctx.save(); rr(b.x, b.y, b.w, b.h, 10); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,.52)'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, 44, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p); ctx.closePath(); ctx.fill(); ctx.restore();
@@ -1114,7 +1117,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.9.6';
+const GAME_VER = 'v2.9.7';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -3421,7 +3424,7 @@ function drawSkillRow(k, i) {
   const d = SKILLS[k], lv = skLv(k), y = shopRowY(i); if (y > SHOP_BOT || y + 56 < shopTopY()) return;
   const maxed = lv >= SKILL_MAX, c = lv ? skUpCost(lv) : d.cost, pop = shopPop && shopPop.k === 'sk_' + k ? shopPop.t : 0;
   rr(12, y, 336, 54, 12); ctx.fillStyle = pop > 0 ? 'rgba(143,227,255,.2)' : lv ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.04)'; ctx.fill();
-  rr(18, y + 5, 46, 46, 10); ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fill(); skillIcon(k, 41, y + 28, 32, lv ? 1 : 0.4);
+  rr(18, y + 5, 46, 46, 10); ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fill(); skillIcon(k, 41, y + 28, 42, lv ? 1 : 0.6, !lv);
   text(d.name, 72, y + 16, 15, lv ? '#fff' : 'rgba(255,255,255,.6)', 'left', 3);
   if (lv) text(`Lv.${lv}`, 72 + ctx.measureText(d.name).width + 8, y + 17, 11, maxed ? '#ffd166' : 'rgba(255,255,255,.55)', 'left', 2);
   const lv1 = Math.max(1, lv), sub = d.desc(lv1) + L(` · 대기 ${skCdLv(k, lv1)}초`, ` · CT ${skCdLv(k, lv1)}秒`, ` · CD ${skCdLv(k, lv1)}s`) + (lv && !maxed ? L(` → Lv.${lv + 1}: `, ` → Lv.${lv + 1}：`, ` → Lv.${lv + 1}: `) + d.desc(lv + 1) + L(` · 대기 ${skCdLv(k, lv + 1)}초`, ` · CT ${skCdLv(k, lv + 1)}秒`, ` · CD ${skCdLv(k, lv + 1)}s`) : '');
