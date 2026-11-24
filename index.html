@@ -685,7 +685,7 @@ function useSkill(k) {
   if (!lv) { flash(L('영웅 강화 > 스킬에서 해금할 수 있어요', 'ヒーロー強化＞スキルで解放できます', 'Unlock it in Upgrade > Skills'), '#ffb35c', 1.8); sfx('error'); return; }
   if (!S.sk) S.sk = {};
   if ((S.sk[k] || 0) > 0) { flash(L(`${SKILLS[k].name}: ${Math.ceil(S.sk[k])}초 뒤에 다시 쓸 수 있어요`, `${SKILLS[k].name}：あと${Math.ceil(S.sk[k])}秒`, `${SKILLS[k].name}: ready in ${Math.ceil(S.sk[k])}s`), '#8fd8ff', 1.2); sfx('error'); return; }
-  if (k === 'meteor') { if (S.aim) { S.aim = null; sfx('click'); return; } S.aim = { k, t: 8, hover: -1 }; flash(L('운석을 떨어뜨릴 길 한 줄을 눌러요', '隕石を落とす道の列をタップ', 'Tap a lane to drop meteors'), '#ffb070', 2.5); sfx('click'); return; }
+  if (k === 'meteor') { if (S.aim) { S.aim = null; sfx('click'); return; } S.aim = { k, t: 8, hover: -1 }; ensureImg('meteor_rock'); flash(L('운석을 떨어뜨릴 길 한 줄을 눌러요', '隕石を落とす道の列をタップ', 'Tap a lane to drop meteors'), '#ffb070', 2.5); sfx('click'); return; }
   if (!alive().length) { flash(L('지금은 적이 없어요', '今は敵がいません', 'No enemies right now'), '#8fd8ff', 1.2); sfx('error'); return; }
   if (k === 'ice') castIce(lv); else castThunder(lv);
 }
@@ -707,12 +707,15 @@ function skFirst(k) {
   else S.skTitle = { txt: SKILLS[k].name + '!', col: SKILLS[k].col, t: 0.9, max: 0.9 };
 }
 function skJag(x1, y1, x2, y2, n, amp) { const pts = [[x1, y1]]; for (let i = 1; i < n; i++) { const p = i / n; pts.push([x1 + (x2 - x1) * p + (Math.random() - 0.5) * amp * 2, y1 + (y2 - y1) * p + (Math.random() - 0.5) * amp * 0.6]); } pts.push([x2, y2]); return pts; }
-const metPos = m => { const p = clamp(m.t / m.dur, 0, 1), e = p * (0.55 + 0.45 * p); return [m.x - 95 * (1 - e), m.y - 220 * (1 - e), p]; };
+const metPos = m => { const p = clamp(m.t / m.dur, 0, 1), e = p * (0.4 + 0.6 * p); return [m.sx + (m.x - m.sx) * e, m.sy + (m.y - m.sy) * e, p]; };
 function castMeteor(lane) {
   const lv = skLv('meteor'), [d0, len] = LANES()[lane], n = Math.round(len / 46), dmg = skBase() * 1.0 * skMul(lv);
   if (!S.mets) S.mets = [];
-  for (let k = 0; k < n; k++) { const [x, y] = pathPos(d0 + (k + 0.5) * len / n); S.mets.push({ x: x + (Math.random() - 0.5) * 8, y: y + (Math.random() - 0.5) * 8, t: -0.35 - k * 0.11 - Math.random() * 0.04, dur: 0.5, dmg, sz: 15 + Math.random() * 5, rot: Math.random() * 6, last: k === n - 1 }); }
-  S.aim = null; S.msgT = 0; S.laneFx = { lane, t: 1.6, max: 1.6 }; S.metSky = { t: 0, max: 0.35 + n * 0.11 + 1.0 }; S.metKill = { k0: S.kills, t: -1 };
+  ensureImg('meteor_rock'); const NRM = [[0, -1], [1, 0], [0, 1], [-1, 0]][lane];
+  // v2.9.5: 줄 표시가 먼저(0.22초 동안 줄을 따라 쓸고 지나감), 운석은 0.5초 뒤 그 줄 바로 위에서 짧고 가파르게 떨어짐 (보드 가운데를 가로지르지 않게)
+  for (let k = 0; k < n; k++) { const [x, y] = pathPos(d0 + (k + 0.5) * len / n), ix = x + (Math.random() - 0.5) * 8, iy = y + (Math.random() - 0.5) * 8, lead = 0.5 + k * 0.11 + Math.random() * 0.03, hgt = lane === 0 ? 135 : 112 + Math.random() * 16, side = NRM[0] * (34 + Math.random() * 12) + (NRM[0] ? 0 : (Math.random() - 0.5) * 24);
+    S.mets.push({ x: ix, y: iy, sx: ix + side, sy: iy - hgt, t: -lead, lead, dur: 0.35, dmg, sz: 14 + Math.random() * 8, rot: Math.random() * 6, spin: (Math.random() < 0.5 ? -1 : 1) * (2.5 + Math.random() * 3), k, last: k === n - 1 }); }
+  S.aim = null; S.msgT = 0; S.laneFx = { lane, t: 2.0, max: 2.0 }; S.metSky = { t: 0, max: 0.5 + n * 0.11 + 0.9 }; S.metKill = { k0: S.kills, t: -1 };
   sfx('zap'); buzz(20); skFirst('meteor'); skUsed('meteor', lv);
 }
 function meteorHit(m) {
@@ -758,7 +761,7 @@ function skillTick(dt) {
   if (S.aim) { S.aim.t -= dt; if (S.aim.t <= 0) S.aim = null; }
   if (!S.embers) S.embers = [];
   if (S.mets && S.mets.length) {
-    for (const m of S.mets) { m.t += dt; if (m.t > 0 && m.t < m.dur && S.embers.length < 160) { const [sx, sy] = metPos(m); for (let j = 0; j < 2; j++) S.embers.push({ x: sx + (Math.random() - 0.5) * 8, y: sy + (Math.random() - 0.5) * 8, vx: -20 + (Math.random() - 0.5) * 40, vy: -40 + Math.random() * 40, t: 0.5, max: 0.5, r: 1 + Math.random() * 2.2 }); }
+    for (const m of S.mets) { m.t += dt; if (m.t > 0 && m.t < m.dur && S.embers.length < 160) { const [sx, sy] = metPos(m); for (let j = 0; j < 2; j++) S.embers.push({ x: sx + (Math.random() - 0.5) * 8, y: sy + (Math.random() - 0.5) * 8, vx: (m.sx - m.x) * 0.3 + (Math.random() - 0.5) * 40, vy: (m.sy - m.y) * 0.3 + Math.random() * 30, t: 0.5, max: 0.5, r: 1 + Math.random() * 2.2 }); }
       if (!m.hit && m.t >= m.dur) { m.hit = true; meteorHit(m); } }
     S.mets = S.mets.filter(m => m.t < m.dur + 0.3);
   }
@@ -809,18 +812,24 @@ function drawSkillFx(top) {
   // 메테오 조준: 위험 표시 줄
   if (S.aim && S.aim.k === 'meteor') for (let i = 0; i < 4; i++) { const on = S.aim.hover === i; skLane(i, on ? 30 : 22, on ? '#ffd166' : '#ff8a3c', on ? 0.7 : 0.35 + 0.15 * Math.sin(T * 6 + i)); }
   if (S.laneFx) {
-    const lf = S.laneFx, a = Math.min(1, lf.t / 0.4), pulse = 0.5 + 0.5 * Math.sin(T * 18);
-    const [x1, y1, x2, y2] = skLane(lf.lane, 34, '#ff3a1e', (0.25 + 0.25 * pulse) * a); skLane(lf.lane, 6, '#ffe2a0', 0.8 * a);
-    ctx.save(); ctx.globalAlpha = 0.8 * a; ctx.fillStyle = '#ffd166'; const L1 = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L1, uy = (y2 - y1) / L1;
-    for (let d = ((T * 60) % 26); d < L1; d += 26) { const px = x1 + ux * d, py = y1 + uy * d; ctx.save(); ctx.translate(px, py); ctx.rotate(Math.atan2(uy, ux)); ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-3, -6); ctx.lineTo(-3, 6); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    const lf = S.laneFx, age = lf.max - lf.t, a = Math.min(1, lf.t / 0.4), sw = clamp(age / 0.22, 0, 1), boost = 1 + 0.6 * clamp(1 - age / 0.7, 0, 1), pulse = 0.5 + 0.5 * Math.sin(T * 18);
+    const [d0, len] = LANES()[lf.lane], [x1, y1] = pathPos(d0 + 4), [x2, y2] = pathPos(d0 + len - 4), xe = x1 + (x2 - x1) * sw, ye = y1 + (y2 - y1) * sw;
+    ctx.save(); ctx.lineCap = 'round'; ctx.globalCompositeOperation = 'lighter';
+    for (const [w, col, al] of [[50, '#ff3a1e', (0.16 + 0.16 * pulse) * boost], [28, '#ff7a2a', 0.38 * boost], [8, '#ffe2a0', 0.9]]) { ctx.globalAlpha = Math.min(1, al * a); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(xe, ye); ctx.stroke(); }
+    if (sw < 1) { const g = ctx.createRadialGradient(xe, ye, 2, xe, ye, 40); g.addColorStop(0, 'rgba(255,250,210,1)'); g.addColorStop(0.4, 'rgba(255,170,60,.7)'); g.addColorStop(1, 'rgba(255,80,0,0)'); ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(xe, ye, 40, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.9 * a; ctx.fillStyle = '#ffd166'; const L1 = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L1, uy = (y2 - y1) / L1;
+    for (let d = ((T * 70) % 28); d < L1 * sw; d += 28) { const px = x1 + ux * d, py = y1 + uy * d; ctx.save(); ctx.translate(px, py); ctx.rotate(Math.atan2(uy, ux)); ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-4, -8); ctx.lineTo(-4, 8); ctx.closePath(); ctx.fill(); ctx.restore(); }
     ctx.restore();
   }
   // 떨어지는 운석
   if (S.mets) for (const m of S.mets) {
     if (m.t >= m.dur) continue;
-    const pp = clamp((m.t + 0.35) / (m.dur + 0.35), 0, 1);
-    ctx.save(); ctx.globalAlpha = 0.25 + 0.5 * pp; ctx.strokeStyle = '#ff3a1e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(m.x, m.y, 22 - 10 * pp, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = 'rgba(0,0,0,' + (0.15 + 0.35 * pp) + ')'; ctx.beginPath(); ctx.ellipse(m.x, m.y + 4, 6 + 12 * pp, 3 + 5 * pp, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    const ap = m.t + m.lead - (0.04 + 0.05 * (m.k || 0)); if (ap < 0) continue;
+    const pop = Math.min(1, ap / 0.12), pp = clamp((m.t + m.lead) / (m.lead + m.dur), 0, 1), p = clamp(m.t / m.dur, 0, 1), rr0 = (22 - 9 * pp) * (0.5 + 0.5 * pop) + (1 - pop) * 10;
+    ctx.save(); ctx.globalAlpha = (0.45 + 0.45 * pp) * pop; ctx.strokeStyle = '#ff3a1e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(m.x, m.y, rr0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 0.35 * pop; ctx.fillStyle = '#ff5a2a'; ctx.beginPath(); ctx.arc(m.x, m.y, 3, 0, Math.PI * 2); ctx.fill();
+    if (m.t > 0) { ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(0,0,0,' + (0.15 + 0.35 * p) + ')'; ctx.beginPath(); ctx.ellipse(m.x, m.y + 4, 6 + 12 * p, 3 + 5 * p, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
   }
   if (S.storm) { const st = S.storm, dim = st.t < 0.45 ? clamp(st.t / 0.45, 0, 1) * 0.45 : Math.max(0, 0.45 * (1 - (st.t - 0.45) / 0.65)); ctx.save(); ctx.fillStyle = 'rgba(8,10,30,' + dim + ')'; ctx.fillRect(BX0, BY0, BW, BH); ctx.restore(); }
   drawSkillLow();
@@ -828,17 +837,30 @@ function drawSkillFx(top) {
 function drawSkillTop() {
   const mx = (PL + PR) / 2, my = (PT + PB) / 2;
   if (S.mets) for (const m of S.mets) {
-    if (m.t < 0 || m.t >= m.dur) continue;
-    const [sx, sy, p] = metPos(m), ang = Math.atan2(220, 95), cs = Math.cos(ang), sn = Math.sin(ang), tl = 40 + 70 * p, sz = m.sz * (0.8 + 0.4 * p);
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (let j = 7; j >= 1; j--) { const q = j / 7, tx = sx - cs * q * tl, ty = sy - sn * q * tl, r = sz * (1.25 - q * 0.85); ctx.fillStyle = q > 0.5 ? 'rgba(255,80,20,' + (0.5 * (1 - q) + 0.1) + ')' : 'rgba(255,190,80,' + (0.7 * (1 - q)) + ')'; ctx.beginPath(); ctx.arc(tx + Math.sin(T * 40 + j) * 1.5, ty, r, 0, Math.PI * 2); ctx.fill(); }
-    const g = ctx.createRadialGradient(sx, sy, 2, sx, sy, sz * 2.8); g.addColorStop(0, 'rgba(255,230,150,.9)'); g.addColorStop(0.4, 'rgba(255,140,40,.5)'); g.addColorStop(1, 'rgba(255,80,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, sz * 2.8, 0, Math.PI * 2); ctx.fill();
+    if (m.t < 0 || m.t >= m.dur + 0.09) continue;
+    const im = IMG.meteor_rock, ok = im && im.complete && im.width;
+    if (m.t >= m.dur) { if (!ok) continue; const q = (m.t - m.dur) / 0.09, s0 = m.sz * 1.05 * 2.5; ctx.save(); ctx.globalAlpha = 1 - q; ctx.translate(m.x, m.y - 2); ctx.scale(1.25 + 0.35 * q, 0.7 - 0.3 * q); ctx.drawImage(im, -s0 / 2, -s0 / 2, s0, s0); ctx.restore(); continue; }
+    const [sx, sy, p] = metPos(m), vx = m.x - m.sx, vy = m.y - m.sy, vl = Math.hypot(vx, vy) || 1, ux = vx / vl, uy = vy / vl, nx = -uy, ny = ux, sc = 0.55 + 0.5 * p, sz = m.sz * sc, fa = Math.min(1, p / 0.12), fl = 1 + 0.12 * Math.sin(T * 50 + m.rot * 3);
+    const tl = (44 + 64 * p) * sc, bx = sx - ux * tl, by = sy - uy * tl;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fa;
+    // 불꽃 꼬리: 바깥 주황 원뿔 + 안쪽 노란 원뿔 (흔들림)
+    for (const [wk, lk, c0, c1, c2] of [[1.15, 1, 'rgba(255,200,90,.85)', 'rgba(255,90,20,.5)', 'rgba(200,30,0,0)'], [0.6, 0.7, 'rgba(255,250,215,.95)', 'rgba(255,190,70,.6)', 'rgba(255,120,30,0)']]) {
+      const ex = sx - ux * tl * lk + nx * Math.sin(T * 30 + m.rot) * 4, ey = sy - uy * tl * lk + ny * Math.sin(T * 30 + m.rot) * 4, w = sz * wk * fl;
+      const g = ctx.createLinearGradient(sx, sy, ex, ey); g.addColorStop(0, c0); g.addColorStop(0.45, c1); g.addColorStop(1, c2); ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(sx + nx * w, sy + ny * w); ctx.quadraticCurveTo(sx - ux * tl * 0.45 * lk + nx * w * 0.8, sy - uy * tl * 0.45 * lk + ny * w * 0.8, ex, ey); ctx.quadraticCurveTo(sx - ux * tl * 0.45 * lk - nx * w * 0.8, sy - uy * tl * 0.45 * lk - ny * w * 0.8, sx - nx * w, sy - ny * w); ctx.arc(sx, sy, w, Math.atan2(-ny, -nx), Math.atan2(ny, nx), false); ctx.closePath(); ctx.fill();
+    }
+    for (let j = 1; j <= 4; j++) { const q = j / 5, tx = sx - ux * q * tl + nx * Math.sin(T * 35 + j * 1.7) * sz * 0.5, ty = sy - uy * q * tl + ny * Math.sin(T * 35 + j * 1.7) * sz * 0.5; ctx.fillStyle = 'rgba(255,' + (150 - j * 20) + ',40,' + (0.35 * (1 - q)) + ')'; ctx.beginPath(); ctx.arc(tx, ty, sz * (0.7 - q * 0.4), 0, Math.PI * 2); ctx.fill(); }
+    const g = ctx.createRadialGradient(sx, sy, 2, sx, sy, sz * 2.6); g.addColorStop(0, 'rgba(255,230,150,.9)'); g.addColorStop(0.4, 'rgba(255,140,40,.45)'); g.addColorStop(1, 'rgba(255,80,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, sz * 2.6, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    ctx.save(); ctx.translate(sx, sy); ctx.rotate(m.rot + T * 5);
-    ctx.fillStyle = '#4a2c1e'; ctx.beginPath(); for (let j = 0; j < 7; j++) { const an = j / 7 * Math.PI * 2, rr2 = sz * (0.82 + 0.18 * Math.sin(j * 2.3 + m.rot)); j ? ctx.lineTo(Math.cos(an) * rr2, Math.sin(an) * rr2) : ctx.moveTo(Math.cos(an) * rr2, Math.sin(an) * rr2); } ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#ffb050'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-sz * 0.5, -sz * 0.1); ctx.lineTo(0, sz * 0.15); ctx.lineTo(sz * 0.45, -sz * 0.3); ctx.moveTo(0, sz * 0.15); ctx.lineTo(sz * 0.1, sz * 0.6); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,170,90,.85)'; ctx.beginPath(); ctx.arc(-sz * 0.3, -sz * 0.35, sz * 0.28, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.globalAlpha = fa; ctx.translate(sx, sy); ctx.rotate(m.rot + T * (m.spin || 4));
+    if (ok) { const s0 = sz * 2.5; ctx.drawImage(im, -s0 / 2, -s0 / 2, s0, s0); }
+    else {
+      ctx.fillStyle = '#4a2c1e'; ctx.beginPath(); for (let j = 0; j < 7; j++) { const an = j / 7 * Math.PI * 2, rr2 = sz * (0.82 + 0.18 * Math.sin(j * 2.3 + m.rot)); j ? ctx.lineTo(Math.cos(an) * rr2, Math.sin(an) * rr2) : ctx.moveTo(Math.cos(an) * rr2, Math.sin(an) * rr2); } ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#ffb050'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-sz * 0.5, -sz * 0.1); ctx.lineTo(0, sz * 0.15); ctx.lineTo(sz * 0.45, -sz * 0.3); ctx.moveTo(0, sz * 0.15); ctx.lineTo(sz * 0.1, sz * 0.6); ctx.stroke();
+    }
     ctx.restore();
+    // 앞쪽 열기 테두리
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 * fa; const hg = ctx.createRadialGradient(sx + ux * sz * 0.5, sy + uy * sz * 0.5, 1, sx + ux * sz * 0.5, sy + uy * sz * 0.5, sz * 0.9); hg.addColorStop(0, 'rgba(255,240,180,1)'); hg.addColorStop(1, 'rgba(255,140,40,0)'); ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(sx + ux * sz * 0.5, sy + uy * sz * 0.5, sz * 0.9, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   if (S.embers && S.embers.length) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of S.embers) { const a = p.t / p.max; ctx.fillStyle = a > 0.5 ? 'rgba(255,220,120,' + a + ')' : 'rgba(255,110,40,' + a + ')'; ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r); } ctx.restore(); }
   // 번개 낙하: 먹구름
@@ -1092,7 +1114,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.9.4';
+const GAME_VER = 'v2.9.5';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
