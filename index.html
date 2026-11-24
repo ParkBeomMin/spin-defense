@@ -429,16 +429,32 @@ const META_KEYS = Object.keys(META_DEF);
 let M = (() => { try { return JSON.parse(localStorage.getItem('sd_meta')) || { gems: 0, lv: {} }; } catch (e) { return { gems: 0, lv: {} }; } })();
 if (!M.lv) M.lv = {};
 if (!M.unlocked) M.unlocked = { sword: 1, bow: 1, magic: 1, ice: 1 };
-if (!M.deck || M.deck.length !== 4) M.deck = ['sword', 'bow', 'magic', 'ice'];
+M.deck = (Array.isArray(M.deck) ? M.deck : []).filter((k, i, a) => TYPES[k] && M.unlocked[k] && a.indexOf(k) === i).slice(0, 4);
+for (const k of ['sword', 'bow', 'magic', 'ice', ...Object.keys(TYPES)]) { if (M.deck.length >= 4) break; if (M.unlocked[k] && !M.deck.includes(k)) M.deck.push(k); }
 const ABILITY_KEYS = ['gold', 'luck', 'bounty', 'charge'];
 let shopTab = 'hero';
 function unlockHero(t) { const c = UNLOCK_COST[t]; if (M.unlocked[t]) return; if (M.gems < c) { sfx('error'); return; } M.gems -= c; M.unlocked[t] = 1; saveMeta(); track('hero_unlock', { hero: t }); sfx('jackpot'); buzz([20, 30]); shopPop = { k: t, t: 0.6 }; shopMsg = { txt: L(`${TYPES[t].name} 해금! 덱에 넣어 보세요`, `${TYPES[t].name} 解放！デッキに入れてみよう`, `${TYPES[t].name} unlocked! Add them to your deck`), t: 2.5 }; }
+// v2.9.4 덱 편집: 상단 '내 덱' 칸에서 ×로 빼고, 목록에서 '덱에 넣기'. 덱이 꽉 찼으면 바꿀 자리를 고르는 교체 모드
+let deckSwap = null, deckPop = null;
+function deckChanged(act, hero) { saveMeta(); track('deck_change', { deck: M.deck.join(','), act, hero }); }
+function deckRemoveAt(i) {
+  const t = M.deck[i]; if (!t) { shopMsg = { txt: L('아래 목록에서 영웅을 골라 넣어요', '下のリストからヒーローを選んでね', 'Pick a hero from the list below'), t: 1.8 }; sfx('click'); return; }
+  if (M.deck.length <= 1) { shopMsg = { txt: L('덱에 최소 1명은 있어야 해요', 'デッキには最低1人必要です', 'Keep at least 1 hero in your deck'), t: 1.8 }; sfx('error'); return; }
+  M.deck.splice(i, 1); sfx('poof'); deckChanged('remove', t);
+}
+function deckSwapAt(i) {
+  const t = deckSwap; deckSwap = null; if (!t || M.deck.includes(t)) return;
+  const old = M.deck[i]; if (old) M.deck[i] = t; else M.deck.push(t);
+  deckPop = { i: old ? i : M.deck.length - 1, t: 0.4 }; sfx('jackpot'); buzz(15); deckChanged('swap', t);
+  shopMsg = { txt: old ? L(`${TYPES[old].name} → ${TYPES[t].name}`, `${TYPES[old].name} → ${TYPES[t].name}`, `${TYPES[old].name} → ${TYPES[t].name}`) : TYPES[t].name, t: 1.6 };
+}
 function toggleDeck(t) {
   if (!M.unlocked[t]) return;
   const i = M.deck.indexOf(t);
-  if (i >= 0) { if (M.deck.length <= 1) return; M.deck.splice(i, 1); }
-  else { if (M.deck.length >= 4) { shopMsg = { txt: L('덱은 4명이에요. 먼저 한 명을 빼주세요', 'デッキは4人まで。先に1人外してね', 'Your deck holds 4. Remove one first'), t: 2 }; sfx('error'); return; } M.deck.push(t); }
-  saveMeta(); sfx('click');
+  if (deckSwap === t) { deckSwap = null; sfx('click'); return; }
+  if (i >= 0) { if (deckSwap) { deckSwapAt(i); return; } deckRemoveAt(i); return; }
+  if (M.deck.length >= 4) { deckSwap = t; sfx('click'); return; }
+  M.deck.push(t); deckPop = { i: M.deck.length - 1, t: 0.4 }; sfx('click'); buzz(10); deckChanged('add', t);
 }
 let shopMsg = null;
 const saveMeta = () => localStorage.setItem('sd_meta', JSON.stringify(M));
@@ -1076,7 +1092,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.9.3';
+const GAME_VER = 'v2.9.4';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -3352,7 +3368,7 @@ const SHOP_TAB = { hero: { x: 14, y: 98, w: 104, h: 36 }, ability: { x: 122, y: 
 const betaHeroVisible = k => !BETA_ONLY[k] || M.unlocked[k] || BETA;
 function shopRows() { return shopTab === 'hero' ? ALL_TYPES.filter(betaHeroVisible) : shopTab === 'skill' ? SKILL_KEYS.map(k => 'sk_' + k) : shopTab === 'awaken' ? ALL_TYPES.filter(k => M.unlocked[k]).sort((a, b) => (metaLv(b) >= AW_REQ) - (metaLv(a) >= AW_REQ)).map(k => 'aw_' + k) : ABILITY_KEYS; }
 function drawAwRow(k, i) {
-  const y = shopRowY(i); if (y > SHOP_BOT || y + 56 < SHOP_TOP) return;
+  const y = shopRowY(i); if (y > SHOP_BOT || y + 56 < shopTopY()) return;
   const s = M.aw[k] || 0, lv = metaLv(k), ok30 = lv >= AW_REQ, maxed = s >= 3, c = maxed ? null : AW_COST[s + 1], pop = shopPop && shopPop.k === 'aw_' + k ? shopPop.t : 0;
   rr(12, y, 336, 54, 12); ctx.fillStyle = pop > 0 ? 'rgba(199,146,255,.25)' : s ? 'rgba(199,146,255,.1)' : 'rgba(255,255,255,.05)'; ctx.fill();
   if (s) { ctx.strokeStyle = AW_COL[s]; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1; }
@@ -3372,13 +3388,15 @@ function drawAwRow(k, i) {
 }
 
 let shopScroll = 0, shopDrag = null;
-const SHOP_TOP = 140, SHOP_BOT = 582;
-const shopMaxScroll = () => Math.max(0, 144 + shopRows().length * 60 - 4 - SHOP_BOT);
-function shopRowY(i) { return 144 + i * 60 - shopScroll; }
+const SHOP_BOT = 582, DECK_BAR_H = 80;
+const shopTopY = () => 140 + (shopTab === 'hero' ? DECK_BAR_H : 0);
+const DECK_SLOT = i => ({ x: 24 + i * 80, y: 158, w: 72, h: 56 });
+const shopMaxScroll = () => Math.max(0, shopTopY() + 4 + shopRows().length * 60 - 4 - SHOP_BOT);
+function shopRowY(i) { return shopTopY() + 4 + i * 60 - shopScroll; }
 function shopBuyRect(i) { return { x: 262, y: shopRowY(i) + 10, w: 86, h: 38 }; }
-function shopDeckRect(i) { return { x: 196, y: shopRowY(i) + 10, w: 60, h: 38 }; }
+function shopDeckRect(i) { return { x: 190, y: shopRowY(i) + 10, w: 68, h: 38 }; }
 function drawSkillRow(k, i) {
-  const d = SKILLS[k], lv = skLv(k), y = shopRowY(i); if (y > SHOP_BOT || y + 56 < SHOP_TOP) return;
+  const d = SKILLS[k], lv = skLv(k), y = shopRowY(i); if (y > SHOP_BOT || y + 56 < shopTopY()) return;
   const maxed = lv >= SKILL_MAX, c = lv ? skUpCost(lv) : d.cost, pop = shopPop && shopPop.k === 'sk_' + k ? shopPop.t : 0;
   rr(12, y, 336, 54, 12); ctx.fillStyle = pop > 0 ? 'rgba(143,227,255,.2)' : lv ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.04)'; ctx.fill();
   rr(18, y + 5, 46, 46, 10); ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fill(); skillIcon(k, 41, y + 28, 32, lv ? 1 : 0.4);
@@ -3389,6 +3407,31 @@ function drawSkillRow(k, i) {
   const b = shopBuyRect(i), ok = !maxed && M.gems >= c;
   button(b, maxed ? '#5a5a6a' : lv ? '#2f8ae0' : '#ff4f72', ok, (cx, cy) => { if (maxed) text('MAX', cx, cy, 15, '#ffd166', 'center', 3); else { if (!lv) text(L('해금', '解放', 'Get'), cx - 22, cy, 13, '#fff', 'center', 3); icon('gem', lv ? cx - 20 : cx + 2, cy, 14); text(String(c), lv ? cx + 9 : cx + 24, cy, 13, '#fff', 'center', 3); } }, 'buy_sk_' + k);
 }
+function drawDeckBar() {
+  const n = M.deck.length, sw = !!deckSwap, pulse = 0.5 + 0.5 * Math.sin(T * 7);
+  rr(12, 140, 336, 78, 12); ctx.fillStyle = sw ? 'rgba(143,227,255,.12)' : 'rgba(255,207,90,.08)'; ctx.fill(); ctx.strokeStyle = sw ? 'rgba(143,227,255,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(255,207,90,.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+  text(L(`내 덱 ${n}/4`, `マイデッキ ${n}/4`, `My deck ${n}/4`), 22, 153, 13, n < 4 ? '#ff9a9a' : '#ffd166', 'left', 3);
+  const hint = sw ? L(`${TYPES[deckSwap].name} 넣을 자리를 골라요`, `${TYPES[deckSwap].name}と入れ替えるヒーローをタップ`, `Tap a hero to swap with ${TYPES[deckSwap].name}`) : n < 4 ? L('아래에서 영웅을 골라 넣어요', '下のリストから選んでね', 'Pick heroes from the list below') : L('× 눌러서 빼기', '×で外す', 'Tap × to remove');
+  text(hint, 338, 153, fitSize(hint, 11, 200), sw ? '#8fe3ff' : 'rgba(255,255,255,.6)', 'right', 2.5);
+  for (let i = 0; i < 4; i++) {
+    const r = DECK_SLOT(i), k = M.deck[i], pop = deckPop && deckPop.i === i ? deckPop.t / 0.4 : 0;
+    ctx.save(); if (pop > 0) { const sc = 1 + 0.18 * Math.sin(pop * Math.PI); ctx.translate(r.x + r.w / 2, r.y + r.h / 2); ctx.scale(sc, sc); ctx.translate(-(r.x + r.w / 2), -(r.y + r.h / 2)); }
+    if (k) {
+      rr(r.x, r.y, r.w, r.h, 10); ctx.fillStyle = sw ? 'rgba(143,227,255,' + (0.12 + 0.14 * pulse) + ')' : 'rgba(255,255,255,.1)'; ctx.fill(); ctx.strokeStyle = sw ? '#8fe3ff' : (TYPES[k].color || '#ffcf5a'); ctx.lineWidth = sw ? 2 : 1.5; ctx.stroke();
+      ctx.save(); rr(r.x, r.y, r.w, r.h, 10); ctx.clip(); if (!drawAnim(k, 'idle', (T * 12 + i * 5) % 20, r.x + r.w / 2, r.y + 50, 52)) sprite(k, r.x + r.w / 2, r.y + 48, 46);
+      const g = ctx.createLinearGradient(0, r.y + r.h - 18, 0, r.y + r.h); g.addColorStop(0, 'rgba(14,8,32,0)'); g.addColorStop(1, 'rgba(14,8,32,.9)'); ctx.fillStyle = g; ctx.fillRect(r.x, r.y + r.h - 18, r.w, 18); ctx.restore();
+      text(TYPES[k].name, r.x + r.w / 2, r.y + r.h - 7, fitSize(TYPES[k].name, 10, r.w - 6), '#fff', 'center', 2.5);
+      if (!sw) { ctx.beginPath(); ctx.arc(r.x + r.w - 7, r.y + 7, 8, 0, Math.PI * 2); ctx.fillStyle = '#ff4f72'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); text('×', r.x + r.w - 7, r.y + 7, 12, '#fff', 'center', 0); }
+      else text('⇄', r.x + r.w - 9, r.y + 9, 13, '#8fe3ff', 'center', 2.5);
+    } else {
+      ctx.save(); rr(r.x, r.y, r.w, r.h, 10); ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.fill(); ctx.setLineDash([5, 4]); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+      text('+', r.x + r.w / 2, r.y + 22, 22, 'rgba(255,255,255,.55)', 'center', 0);
+      const eh = L('비어 있어요', '空き', 'Empty'); text(eh, r.x + r.w / 2, r.y + r.h - 10, fitSize(eh, 10, r.w - 6), 'rgba(255,255,255,.5)', 'center', 0);
+    }
+    ctx.restore();
+  }
+  if (deckPop) { deckPop.t -= 1 / 60; if (deckPop.t <= 0) deckPop = null; }
+}
 function drawShop() {
   ctx.fillStyle = 'rgba(14,8,32,.88)'; ctx.fillRect(-OX - 5, -EX - 5, VW + 10, VH + EX + 10);
   text(L('영웅 강화', 'ヒーロー強化', 'Upgrade Heroes'), W / 2, 36, 28, '#ffd166', 'center', 6);
@@ -3396,20 +3439,22 @@ function drawShop() {
   for (const [k, b] of Object.entries(SHOP_TAB)) {
     const on = shopTab === k; rr(b.x, b.y, b.w, b.h, 12); ctx.fillStyle = on ? '#6b5bb8' : 'rgba(255,255,255,.08)'; ctx.fill();
     if (on) { ctx.strokeStyle = '#ffcf5a'; ctx.lineWidth = 2; ctx.stroke(); }
-    const lb = k === 'hero' ? L(`영웅 · 덱 ${M.deck.length}/4`, `デッキ ${M.deck.length}/4`, `Deck ${M.deck.length}/4`) : k === 'ability' ? L('능력', '能力', 'Perks') : k === 'awaken' ? L('각성', '覚醒', 'Awaken') : L('스킬', 'スキル', 'Skills');
+    const lb = k === 'hero' ? L('영웅', 'ヒーロー', 'Heroes') : k === 'ability' ? L('능력', '能力', 'Perks') : k === 'awaken' ? L('각성', '覚醒', 'Awaken') : L('스킬', 'スキル', 'Skills');
     text(lb, b.x + b.w / 2, b.y + b.h / 2, fitSize(lb, 15, b.w - 10), on ? '#fff' : 'rgba(255,255,255,.6)', 'center', 3);
   }
+  if (shopTab === 'hero') drawDeckBar();
   shopScroll = clamp(shopScroll, 0, shopMaxScroll());
-  ctx.save(); ctx.beginPath(); ctx.rect(-OX, SHOP_TOP, VW, SHOP_BOT - SHOP_TOP); ctx.clip();
+  ctx.save(); ctx.beginPath(); ctx.rect(-OX, shopTopY(), VW, SHOP_BOT - shopTopY()); ctx.clip();
   shopRows().forEach((k, i) => {
     if (k.startsWith('sk_')) { drawSkillRow(k.slice(3), i); return; }
     if (k.startsWith('aw_')) { drawAwRow(k.slice(3), i); return; }
     const d = META_DEF[k], l = metaLv(k), y = shopRowY(i), maxed = l >= d.max, c = metaCost(k);
-    if (y > SHOP_BOT || y + 56 < SHOP_TOP) return;
+    if (y > SHOP_BOT || y + 56 < shopTopY()) return;
     const isHero = !!TYPES[k], locked = isHero && !M.unlocked[k], inDeck = isHero && M.deck.includes(k);
     const pop = shopPop && shopPop.k === k ? shopPop.t : 0;
-    rr(12, y, 336, 54, 12); ctx.fillStyle = pop > 0 ? 'rgba(143,227,255,.2)' : inDeck ? 'rgba(255,207,90,.1)' : 'rgba(255,255,255,.07)'; ctx.fill();
-    if (inDeck) { ctx.strokeStyle = 'rgba(255,207,90,.55)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    const picking = deckSwap === k;
+    rr(12, y, 336, 54, 12); ctx.fillStyle = picking ? 'rgba(143,227,255,' + (0.16 + 0.12 * Math.sin(T * 7)) + ')' : pop > 0 ? 'rgba(143,227,255,.2)' : inDeck ? 'rgba(255,207,90,.1)' : 'rgba(255,255,255,.07)'; ctx.fill();
+    if (picking) { ctx.strokeStyle = '#8fe3ff'; ctx.lineWidth = 2; ctx.stroke(); } else if (inDeck) { ctx.strokeStyle = 'rgba(255,207,90,.55)'; ctx.lineWidth = 1.5; ctx.stroke(); }
     ctx.save(); rr(18, y + 5, 46, 46, 10); ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fill(); ctx.clip();
     if (locked) ctx.filter = 'grayscale(1) brightness(.55)';
     if (isHero) { if (!drawAnim(k, 'idle', (T * 12 + i * 3) % 20, 41, y + 55, 48)) sprite(k, 41, y + 53, 44); } else icon(d.icon, 41, y + 28, 30);
@@ -3420,7 +3465,7 @@ function drawShop() {
     if (BETA_ONLY[k]) { ctx.save(); rr(18, y + 3, 26, 13, 6); ctx.fillStyle = '#9be36d'; ctx.fill(); ctx.restore(); text(L('β 한정', 'β限定', 'β only'), 31, y + 10, 8, '#1a1233', 'center', 0); }
     const nms = isHero && l >= 20 ? metaNextMs(l) : null;
     const sub = isHero ? (locked ? TYPES[k].role : (l > 0 ? L(`공격력 +${metaPct(l)}%`, `攻撃力 +${metaPct(l)}%`, `ATK +${metaPct(l)}%`) + (maxed ? '' : ` → +${metaPct(l + 1)}%`) + (l === META_AWAKE ? L(' · 한계 돌파 시작! 레벨당 +15%', ' · 限界突破開始！Lvごと+15%', ' · Limit break! +15% per Lv') : '') + (nms ? ` · Lv${nms[0]}: ${nms[1]}` : '') : TYPES[k].role)) : (l > 0 ? d.desc(l) + (maxed ? '' : ` → ${d.desc(l + 1).replace(/^.*?([+-])/, '$1')}`) : d.desc(1));
-    { const bw = isHero ? 124 : 188; ctx.save(); ctx.beginPath(); ctx.rect(70, y, bw, 56); ctx.clip(); marqueeText(sub, 72, y + 38, 11, '#cfe8ff', bw - 4, i); ctx.restore(); }
+    { const bw = isHero ? 116 : 188; ctx.save(); ctx.beginPath(); ctx.rect(70, y, bw, 56); ctx.clip(); marqueeText(sub, 72, y + 38, 11, '#cfe8ff', bw - 4, i); ctx.restore(); }
     const b = shopBuyRect(i);
     if (locked && BETA_ONLY[k]) {
       rr(196, y + 10, 152, 38, 10); ctx.fillStyle = 'rgba(155,227,109,.16)'; ctx.fill(); ctx.strokeStyle = 'rgba(155,227,109,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -3430,7 +3475,7 @@ function drawShop() {
       const ok = M.gems >= UNLOCK_COST[k];
       button({ x: 196, y: y + 10, w: 152, h: 38 }, '#ff4f72', ok, (cx, cy) => { text(L('해금', '解放', 'Unlock'), cx - 26, cy, 15, '#fff', 'center', 3); icon('gem', cx + 12, cy, 15); text(String(UNLOCK_COST[k]), cx + 38, cy, 14, '#fff', 'center', 3); }, 'unl_' + k);
     } else {
-      if (isHero) { const db = shopDeckRect(i); button(db, inDeck ? '#e0a020' : '#4a4466', true, (cx, cy) => text(inDeck ? L('덱 ✓', 'デッキ ✓', 'Deck ✓') : L('덱 +', 'デッキ +', 'Deck +'), cx, cy, 13, '#fff', 'center', 3), 'deck_' + k); }
+      if (isHero) { const db = shopDeckRect(i), dl = picking ? L('고르는 중', '選択中', 'Picking') : inDeck ? (deckSwap ? L('이 자리로', 'ここと交換', 'Swap here') : L('덱 ✓', 'デッキ ✓', 'In deck ✓')) : L('덱에 넣기', 'デッキへ', 'Add'); button(db, picking ? '#2f9fc0' : inDeck ? '#e0a020' : '#6b5bb8', true, (cx, cy) => text(dl, cx, cy, fitSize(dl, 13, db.w - 10), '#fff', 'center', 3), 'deck_' + k); }
       const ok = !maxed && M.gems >= c;
       button(b, maxed ? '#5a5a6a' : '#2f8ae0', ok, (cx, cy) => { if (maxed) text('MAX', cx, cy, 15, '#ffd166', 'center', 3); else { icon('gem', cx - 20, cy, 15); text(String(c), cx + 9, cy, 14, '#fff', 'center', 3); } }, 'buy_' + k);
     }
@@ -3439,8 +3484,8 @@ function drawShop() {
   const msx = shopMaxScroll();
   if (msx > 0) {
     if (shopScroll < msx - 2) { const g = ctx.createLinearGradient(0, SHOP_BOT - 34, 0, SHOP_BOT); g.addColorStop(0, 'rgba(14,8,32,0)'); g.addColorStop(1, 'rgba(14,8,32,.95)'); ctx.fillStyle = g; ctx.fillRect(-OX, SHOP_BOT - 34, VW, 34); text(L('▼ 아래로 밀어서 더 보기', '▼ スクロールでもっと見る', '▼ Scroll for more'), W / 2, SHOP_BOT - 8, 11, 'rgba(255,255,255,.75)', 'center', 2.5); }
-    if (shopScroll > 2) { const g = ctx.createLinearGradient(0, SHOP_TOP, 0, SHOP_TOP + 24); g.addColorStop(0, 'rgba(14,8,32,.95)'); g.addColorStop(1, 'rgba(14,8,32,0)'); ctx.fillStyle = g; ctx.fillRect(-OX, SHOP_TOP, VW, 24); }
-    const th = (SHOP_BOT - SHOP_TOP) * (SHOP_BOT - SHOP_TOP) / (SHOP_BOT - SHOP_TOP + msx), ty = SHOP_TOP + (SHOP_BOT - SHOP_TOP - th) * (shopScroll / msx);
+    if (shopScroll > 2) { const g = ctx.createLinearGradient(0, shopTopY(), 0, shopTopY() + 24); g.addColorStop(0, 'rgba(14,8,32,.95)'); g.addColorStop(1, 'rgba(14,8,32,0)'); ctx.fillStyle = g; ctx.fillRect(-OX, shopTopY(), VW, 24); }
+    const th = (SHOP_BOT - shopTopY()) * (SHOP_BOT - shopTopY()) / (SHOP_BOT - shopTopY() + msx), ty = shopTopY() + (SHOP_BOT - shopTopY() - th) * (shopScroll / msx);
     rr(352, ty, 4, th, 2); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fill();
   }
   if (shopMsg) { shopMsg.t -= 1 / 60; ctx.globalAlpha = Math.min(1, shopMsg.t * 2); text(shopMsg.txt, W / 2, 573, 13, '#ffd166', 'center', 3); ctx.globalAlpha = 1; if (shopMsg.t <= 0) shopMsg = null; }
@@ -3541,8 +3586,9 @@ function hitKey(x, y) {
   if (screen === 'shop') {
     if (inRect(x, y, BTN.back)) return 'back';
     for (const k of Object.keys(SHOP_TAB)) if (inRect(x, y, SHOP_TAB[k])) return 'tab_' + k;
+    if (shopTab === 'hero') for (let i = 0; i < 4; i++) if (inRect(x, y, DECK_SLOT(i))) return 'dslot_' + i;
     const rows = shopRows();
-    if (y < SHOP_TOP || y > SHOP_BOT) return null;
+    if (y < shopTopY() || y > SHOP_BOT) return null;
     for (let i = 0; i < rows.length; i++) { const k = rows[i];
       if (TYPES[k] && !M.unlocked[k]) { if (!BETA_ONLY[k] && inRect(x, y, { x: 196, y: shopRowY(i) + 10, w: 152, h: 38 })) return 'unl_' + k; continue; }
       if (inRect(x, y, shopBuyRect(i))) return 'buy_' + k;
@@ -3560,6 +3606,7 @@ function hitKey(x, y) {
   return null;
 }
 function activate(key) {
+  if (deckSwap && !(key && (key.startsWith('dslot_') || key.startsWith('deck_')))) deckSwap = null;
   switch (key) {
     case 'start': track('game_start', { deck: M.deck.join(','), best_wave: store.best, gems: M.gems, lang: LANG }); if (M.deck.length < 4) { screen = 'shop'; shopTab = 'hero'; shopMsg = { txt: L('덱에 영웅 4명을 골라주세요', 'デッキにヒーローを4人選んでね', 'Pick 4 heroes for your deck'), t: 2.5 }; sfx('error'); break; } { const r = loadRun(); if (r) { openResumeDialog(r); break; } } newGame(); screen = 'play'; sfx('click'); break;
     case 'shop': screen = 'shop'; sfx('click'); needAnims(Object.keys(TYPES)); break;
@@ -3604,6 +3651,7 @@ function activate(key) {
       else if (key && key.startsWith('buy_aw_')) awakenHero(key.slice(7));
       else if (key && key.startsWith('buy_')) buyMeta(key.slice(4));
       else if (key && key.startsWith('unl_')) unlockHero(key.slice(4));
+      else if (key && key.startsWith('dslot_')) { const di = +key.slice(6); if (deckSwap) deckSwapAt(di); else deckRemoveAt(di); }
       else if (key && key.startsWith('deck_')) toggleDeck(key.slice(5));
       else if (key && key.startsWith('tab_')) { shopTab = key.slice(4); shopScroll = 0; sfx('click'); }
       else if (key && key.startsWith('card_')) choosePick(+key.slice(5));
@@ -3622,7 +3670,7 @@ cv.addEventListener('pointerdown', e => {
     const i = cellAt(x, y);
     if (i >= 0 && S.units[i]) { const [rx0, ry0] = rawPos(e); drag = { idx: i, x, y, sx: x, sy: y, rx: rx0, ry: ry0, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; }
   }
-  if (screen === 'shop' && y >= SHOP_TOP && y <= SHOP_BOT && shopMaxScroll() > 0) shopDrag = { y0: y, s0: shopScroll, moved: false };
+  if (screen === 'shop' && y >= shopTopY() && y <= SHOP_BOT && shopMaxScroll() > 0) shopDrag = { y0: y, s0: shopScroll, moved: false };
   if (screen === 'ach' && y >= ACH_TOP && y <= ACH_BOT && achMax() > 0) shopDrag = { y0: y, s0: achScroll, moved: false, ach: true };
   const k = hitKey(x, y);
   if (k) { press = { key: k }; try { cv.setPointerCapture(e.pointerId); } catch (_) {} }
@@ -3641,6 +3689,7 @@ cv.addEventListener('pointerup', e => {
   const [x, y] = pos(e);
   if (shopDrag) { const mv = shopDrag.moved; shopDrag = null; if (mv) { press = null; return; } }
   if (press) { const k = press.key; press = null; if (hitKey(x, y) === k) activate(k); return; }
+  if (screen === 'shop' && deckSwap) { deckSwap = null; sfx('click'); }
   if (!drag) return;
   const d = drag; drag = null;
   if (!S.units[d.idx]) return;
