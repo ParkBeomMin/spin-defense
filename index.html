@@ -1026,7 +1026,7 @@ function drawAch() {
     const v = Math.min(a.goal, a.val() || 0), done = v >= a.goal, got = !!M.ach[a.id];
     rr(12, y, 336, 58, 12); ctx.fillStyle = got ? 'rgba(255,255,255,.04)' : done ? 'rgba(155,227,109,.14)' : 'rgba(255,255,255,.08)'; ctx.fill();
     ctx.save(); rr(20, y + 7, 44, 44, 10); ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fill(); ctx.clip(); if (TYPES[a.icon]) sprite(a.icon, 42, y + 52, 42); else icon(a.icon, 42, y + 29, 28); ctx.restore();
-    text(a.name, 74, y + 18, 14, got ? 'rgba(255,255,255,.5)' : '#fff', 'left', 3);
+    ctx.save(); ctx.beginPath(); ctx.rect(72, y + 2, 172, 26); ctx.clip(); marqueeText(a.name, 74, y + 18, 14, got ? 'rgba(255,255,255,.5)' : '#fff', 168, i + 3); ctx.restore();
     rr(74, y + 32, 160, 8, 4); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill(); rr(74, y + 32, 160 * v / a.goal, 8, 4); ctx.fillStyle = done ? '#7be36d' : '#8fe3ff'; ctx.fill();
     text(`${v.toLocaleString()} / ${a.goal.toLocaleString()}`, 74, y + 49, 10, 'rgba(255,255,255,.65)', 'left', 2);
     button({ x: 250, y: y + 11, w: 92, h: 36 }, got ? '#5a5a6a' : done ? '#2f8ae0' : '#4a4466', done && !got, (cx, cy) => { if (got) text(L('완료', '完了', 'Done'), cx, cy, 14, '#fff', 'center', 3); else { icon('gem', cx - 20, cy, 15); text(String(a.r), cx + 9, cy, 14, '#fff', 'center', 3); } }, 'ach_' + a.id);
@@ -1114,7 +1114,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.9.5';
+const GAME_VER = 'v2.9.6';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
