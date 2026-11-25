@@ -1215,7 +1215,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v3.0.0';
+const GAME_VER = 'v3.0.1';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -1851,7 +1851,7 @@ function w3TaxHook() {
 }
 function twinDown(e) {
   const p = e.twinOf; if (!p || p.dead) return false;
-  if (p.down) { p.down = false; p.dead = false; killEnemy(p); return false; } // 둘 다 쓰러지면 진짜 처치
+  if (p.down) { p.down = false; p.dead = true; p.twinGhost = true; puffs(p.x, p.y - 20, 14, '210,200,255', 12); /* v3.0.1: 쌍둥이는 둘 합쳐 보스 1회로 집계 (남은 하나만 killEnemy) */ return false; } // 둘 다 쓰러지면 진짜 처치
   e.down = true; e.downT = 5; e.hp = 1; puffs(e.x, e.y - 20, 12, '210,200,255', 12); sfx('shatter');
   flash(L('쌍둥이 달 기사가 쓰러졌어요! 5초 안에 나머지도 쓰러뜨려야 해요', '双子の片方が倒れた！5秒以内にもう片方も！', 'One twin is down! Defeat the other within 5s'), '#d8ccff', 2.2);
   return true;
@@ -1876,7 +1876,7 @@ const w3Speed = e => e.down ? 0 : 1;
 // 안개 망령: 살아 있는 동안 영웅 사거리 -30%
 { const st0 = stats; stats = function (u) { const s = st0(u); if (S && S.enemies && !(S.B && S.B.focus) && w3Any('fogwraith')) s.range *= 0.7; return s; }; }
 function w3Kill(e) {
-  if (e.twinOf && !e.twinOf.dead) { const p = e.twinOf; p.twinOf = null; if (p.down) { p.down = false; p.dead = false; killEnemy(p); } }
+  if (e.twinOf && !e.twinOf.dead) { const p = e.twinOf; p.twinOf = null; if (p.down) { p.down = false; p.dead = true; p.twinGhost = true; puffs(p.x, p.y - 20, 14, '210,200,255', 12); /* v3.0.1: 쌍둥이는 둘 합쳐 보스 1회로 집계 (남은 하나만 killEnemy) */ } }
   if (e.bk === 'eclipse' && S.wave >= 300 && !S.cleared3 && S.mode !== 'boss') {
     S.cleared3 = true; localStorage.setItem('sd_clear3', '1');
     setTimeout(() => { if (screen !== 'play') return; banner(L('최종 엔딩! 일식의 신 처치', '最終エンディング！日蝕の神撃破', 'FINAL ENDING! Eclipse God defeated'), L('영원의 틈까지 지켜냈어요. 진짜 전설이에요!', '永遠の裂け目まで守り抜いた。真の伝説！', 'You held the Rift of Eternity. A true legend!'), '#ffe9a0', 6); flashScreen(0.7, '#fff6d6'); sfx('jackpot'); buzz([80, 60, 160, 60, 240]); S.units.forEach(q => { if (q) q.cheer = 3; }); for (let k = 0; k < 14; k++) setTimeout(() => { if (screen === 'play') { const [cx0, cy0] = cellCenter(Math.floor(Math.random() * 20)); burst(cx0, cy0, ['#ffd166', '#ff7ab6', '#8fe3ff', '#9be36d', '#c792ff'][k % 5], 30); } }, k * 200); }, 700);
@@ -3023,6 +3023,14 @@ function drawUnitAt(u, x, y, opts = {}) {
   ctx.restore();
 }
 const bossOnTop = e => e.boss && e.y + FY < PT + 12;
+// v3.0.1: 위쪽 길의 보스는 HUD 위에 그려지므로, 머리 위 상태 글자·바를 발 아래로 뒤집어 그려 HUD와 겹치지 않게 한다
+function bossTopFlip(e, h, fn) {
+  const t0 = text, r0 = rr, head = e.y - h, near = x => Math.abs(x - e.x) < 60;
+  const fy = y => y < head + 2 ? e.y + 16 + (head - y) : y;
+  text = function (s, x, y, ...a) { return t0(s, x, near(x) ? fy(y) : y, ...a); };
+  rr = function (x, y, w, hh, r) { return r0(x, near(x + w / 2) ? fy(y) : y, w, hh, r); };
+  try { fn(); } finally { text = t0; rr = r0; }
+}
 function drawEnemy(e) {
   const BD = e.boss ? BOSSES[e.bk || 'ogre'] : null;
   const k = e.boss ? BD.spr : e.kind;
@@ -3049,6 +3057,7 @@ function drawEnemy(e) {
   ctx.globalAlpha = 1;
   if (e.bk === 'golem' && !(e.armorOff > 0)) { ctx.save(); ctx.globalAlpha = 0.35 + 0.1 * Math.sin(T * 4); ctx.strokeStyle = '#8fe3ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(e.x, e.y - h * 0.45, h * 0.55, h * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   if (e.bk === 'magmatitan' && e.rage > 0.05) { ctx.save(); ctx.globalAlpha = Math.min(0.7, e.rage) * (0.6 + 0.4 * Math.sin(T * 10)); ctx.strokeStyle = '#ff6a2a'; ctx.lineWidth = 3 + e.rage * 4; ctx.beginPath(); ctx.ellipse(e.x, e.y - h * 0.45, h * 0.6, h * 0.62, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+  const overhead = () => {
   if (e.bk === 'sphinx' && e.fav) { rr(e.x - 13, e.y - h - 30, 26, 24, 7); ctx.fillStyle = 'rgba(40,30,80,.85)'; ctx.fill(); ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 2; ctx.stroke(); sprite(e.fav, e.x, e.y - h - 8, 20); }
   if (W3[e.bk]) w3Draw(e, h);
   if (e.bk === 'hydra') text(L(`머리 ${(e.heads ?? 2) + 1}`, `頭 ${(e.heads ?? 2) + 1}`, `Heads ${(e.heads ?? 2) + 1}`), e.x, e.y - h - 10, 11, '#9be36d', 'center', 3);
@@ -3058,6 +3067,8 @@ function drawEnemy(e) {
   if (e.charging > 0) { ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = '#ff8a6a'; ctx.lineWidth = 3; for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(e.x - e.dir * (8 + k * 7), e.y - h * 0.3 - k * 4); ctx.lineTo(e.x - e.dir * (20 + k * 9), e.y - h * 0.3 - k * 4); ctx.stroke(); } ctx.restore(); }
   if (e.stunT > 0) { for (let k = 0; k < 3; k++) { const ang = T * 6 + k * 2.09; icon('star', e.x + Math.cos(ang) * (e.boss ? 14 : 9), e.y - h + 2 + Math.sin(ang) * 3, e.boss ? 9 : 7); } }
   if (e.vulnT > 0) { const xx = e.x + (e.boss ? 20 : 12), yy = e.y - h - (e.boss ? 4 : 2), bb = Math.sin(T * 6) * 1.5; ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#b06bff'; ctx.strokeStyle = '#2a0f4a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(xx - 2.5, yy - 10 + bb); ctx.lineTo(xx + 2.5, yy - 10 + bb); ctx.lineTo(xx + 2.5, yy - 5 + bb); ctx.lineTo(xx + 6, yy - 5 + bb); ctx.lineTo(xx, yy + 2 + bb); ctx.lineTo(xx - 6, yy - 5 + bb); ctx.lineTo(xx - 2.5, yy - 5 + bb); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); } // 방패 파괴자 '약화' 표시
+  };
+  if (e.boss && e.y - h - 24 + FY < 66) bossTopFlip(e, h, overhead); else overhead(); // 머리 위 글자가 HUD(높이 62) 쪽으로 올라가면 발 아래로
   if (e.poisonT > 0) { e.poisonT -= 1 / 60; ctx.save(); ctx.globalAlpha = 0.7; ctx.fillStyle = '#a8f07c'; for (let k = 0; k < 2; k++) { const ph = (T * 1.4 + k * 0.5 + e.bob * 0.05) % 1; ctx.beginPath(); ctx.arc(e.x - 4 + k * 8, e.y - h * 0.6 - ph * 10, 1.5 + ph * 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
   if ((e.hp < e.max || e.boss) && !bossOnTop(e)) {
     const bw = e.boss ? 44 : 22, by = e.y - h + 2;
