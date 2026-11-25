@@ -560,7 +560,7 @@ const CARDS = [
   { icon: 'coin',  name: L('황금 사냥', '黄金狩り', 'Gold Rush'),    desc: L('처치 골드 +35%', '撃破ゴールド +35%', 'Gold per kill +35%'),              apply: B => { B.gold *= 1.35; } },
   { icon: 'star',  name: L('행운의 별빛', '幸運の星明かり', 'Lucky Starlight'),  desc: L('별(와일드) 확률 1.5배', '星(ワイルド)確率 1.5倍', 'Star (wild) chance x1.5'),       apply: B => { B.star *= 1.5; } },
   { icon: 'chest', name: L('보물상자', '宝箱', 'Treasure Chest'),     desc: L('지금 바로 골드 +150', '今すぐゴールド +150', '+150 gold right now'),         apply: () => { S.gold += 150; } },
-  { icon: 'chest', name: L('공짜 소환', 'タダ召喚', 'Free Summons'),    desc: L('무료 소환 +2회', '無料召喚 +2回', '+2 free summons'),              apply: () => { S.freeCharges += 2; S.adSpins += 2; } },
+  { icon: 'chest', name: L('공짜 소환', 'タダ召喚', 'Free Summons'),    desc: L('무료 소환 +2회', '無料召喚 +2回', '+2 free summons'),              apply: () => { S.bonusSpins = (S.bonusSpins || 0) + 2; } }, // v2.9.9: 광고 없이 바로 쓰는 보너스 소환 (예전엔 앱에서 광고 소환 횟수로 들어가 광고를 봐야 했음)
   { icon: 'gem',   name: L('전군 강화', '全軍強化', 'Army Boost'),    desc: L('모든 영웅 공격력 +20%', '全ヒーロー攻撃力 +20%', 'All heroes ATK +20%'),       apply: B => { ALL_TYPES.forEach(t => B.dmg[t] *= 1.2); } },
   { t: 'bard', icon: 'bard',  name: L('앙코르', 'アンコール', 'Encore'),       desc: L('음유시인 공속 오라 +60%', '吟遊詩人の攻速オーラ +60%', 'Bard speed aura +60%'),     apply: B => { B.aura *= 1.6; } },
   { t: 'ninja', icon: 'ninja', name: L('그림자 일격', '影の一撃', 'Shadow Strike'), desc: L('닌자 치명타 피해 +100%', '忍者の会心ダメージ +100%', 'Ninja crit damage +100%'),      apply: B => { B.ninjaCrit += 1; } },
@@ -1117,7 +1117,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.9.8';
+const GAME_VER = 'v2.9.9';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -1544,13 +1544,13 @@ let S, screen = 'loading', drag = null, selected = -1, ad = null, press = null, 
 const RUN_KEY = 'sd_run';
 function saveRun() {
   if (!S || S.chal || S.mode === 'boss' || S.mode === 'exp' || S.wave < 3 || screen !== 'play') return;
-  try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), best0: S.best0, mode: S.mode || 'normal', wk: S.wk, wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, speed: S.speed, endless: S.endless || 0, cleared: !!S.cleared })); } catch (e) {}
+  try { localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, at: Date.now(), best0: S.best0, mode: S.mode || 'normal', wk: S.wk, wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: S.wave % 5 === 0 && !S.pick, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, revived: S.revived, gemsGiven: S.gemsGiven, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: S.adSpins, bonusSpins: S.bonusSpins || 0, speed: S.speed, endless: S.endless || 0, cleared: !!S.cleared })); } catch (e) {}
 }
 // ===== 원정 모드: 웨이브가 시작될 때마다 판 전체를 sd_exp 에 저장. 지면 그 웨이브(= 최고 웨이브) 시작 상태로 다시 도전 =====
 const EXP_KEY = 'sd_exp';
 function saveExp() {
   if (!S || S.mode !== 'exp') return;
-  try { localStorage.setItem(EXP_KEY, JSON.stringify({ v: 1, at: Date.now(), mode: 'exp', wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: false, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: MAX_AD_SPINS, speed: S.speed, cleared: !!S.cleared, cleared2: !!S.cleared2, cleared3: !!S.cleared3 })); } catch (e) {}
+  try { localStorage.setItem(EXP_KEY, JSON.stringify({ v: 1, at: Date.now(), mode: 'exp', wave: S.wave, gold: S.gold, deck: TYPE_KEYS, units: S.units.map(u => u ? [u.type, u.grade] : 0), lv: S.lv, picked: S.picked.map(c => CARDS.indexOf(c)), pickDone: false, kills: S.kills, time: S.time, spins: S.spins, bossKills: S.bossKills, freeCharges: S.freeCharges, freeT: S.freeT, adSpins: MAX_AD_SPINS, bonusSpins: S.bonusSpins || 0, speed: S.speed, cleared: !!S.cleared, cleared2: !!S.cleared2, cleared3: !!S.cleared3 })); } catch (e) {}
 }
 function loadExp() { try { const r = JSON.parse(localStorage.getItem(EXP_KEY)); return r && r.v === 1 && r.wave ? r : null; } catch (e) { return null; } }
 function resumeExp(r) {
@@ -1571,7 +1571,7 @@ let runCache = null, runCacheT = 0;
 const loadRunCached = () => { if (T - runCacheT > 1 || T < runCacheT) { runCache = loadRun(); runCacheT = T; } return runCache; };
 function resumeRun(r) {
   const deck = M.deck.slice(); M.deck = r.deck.slice(); newGame(null, r.mode || 'normal'); M.deck = deck;
-  Object.assign(S, { best0: r.best0 ?? store.best, gold: r.gold, goldShown: r.gold, kills: r.kills || 0, time: r.time || 0, spins: r.spins || 0, bossKills: r.bossKills || 0, revived: !!r.revived, gemsGiven: r.gemsGiven || 0, freeCharges: r.freeCharges ?? 1, freeT: r.freeT ?? freeRecharge(), adSpins: r.adSpins ?? MAX_AD_SPINS, speed: r.speed || 1, first: false, endless: r.endless || 0, cleared: !!r.cleared });
+  Object.assign(S, { best0: r.best0 ?? store.best, gold: r.gold, goldShown: r.gold, kills: r.kills || 0, time: r.time || 0, spins: r.spins || 0, bossKills: r.bossKills || 0, revived: !!r.revived, gemsGiven: r.gemsGiven || 0, freeCharges: r.freeCharges ?? 1, bonusSpins: r.bonusSpins || 0, freeT: r.freeT ?? freeRecharge(), adSpins: r.adSpins ?? MAX_AD_SPINS, speed: r.speed || 1, first: false, endless: r.endless || 0, cleared: !!r.cleared });
   for (const k in r.lv) S.lv[k] = r.lv[k];
   r.units.forEach((u, i) => { S.units[i] = u ? { type: u[0], grade: u[1], cd: Math.random() * 0.4, anim: 0, born: 0.3 } : null; });
   for (const ci of r.picked || []) { const c = CARDS[ci]; if (c) { c.apply(S.B); S.picked.push(c); } }
@@ -1601,7 +1601,7 @@ function newGame(chal = null, mode = 'normal') {
   S = {
     gold: 100 + 25 * metaLv('gold'), goldShown: 100 + 25 * metaLv('gold'), B: newBuffs(), picked: [], pick: null, bossKills: 0, gemsGiven: 0, wave: 0, waveT: 3, spawnLeft: 0, spawnGap: 1, spawnT: 0,
     enemies: [], units: Array(COLS * ROWS).fill(null), fx: [], proj: [], dmg: [], parts: [], coins: [], dying: [], decals: [], pools: [], hitstop: 0, hsCd: 0, flash: null, kick: null,
-    spins: 0, adSpins: MAX_AD_SPINS, freeCharges: 1, freeT: freeRecharge(), lv: Object.fromEntries(ALL_TYPES.map(t => [t, 0])), lvPop: {},
+    spins: 0, adSpins: MAX_AD_SPINS, bonusSpins: 0, freeCharges: 1, freeT: freeRecharge(), lv: Object.fromEntries(ALL_TYPES.map(t => [t, 0])), lvPop: {},
     revived: false, speed: 1, kills: 0, time: 0, shake: 0,
     msg: '', msgT: 0, msgCol: '#fff', banner: null,
     reels: [0, 1, 2].map(i => ({ strip: [TYPE_KEYS[i]], pos: 0, from: 0, to: 0, t: 0, dur: 0, done: true })),
@@ -2845,7 +2845,14 @@ function drawSlot() {
     }, 'speed');
   }
   if (autoAvail() && !paused && screen === 'play') drawAutoToggle();
-  if (adMode()) {
+  if ((S.bonusSpins || 0) > 0) {
+    button(BTN.ad, '#2fae6a', can, (cx, cy) => {
+      icon('chest', cx - 22, cy + 1, 30);
+      text(L('무료', '無料', 'Free'), cx + 14, cy - 8, 15, '#fff', 'center', 3);
+      text(`×${S.bonusSpins}`, cx + 14, cy + 11, 13, '#eaffd8', 'center', 2.5);
+      rr(cx + 14, cy - 30, 34, 13, 4); ctx.fillStyle = '#9be36d'; ctx.fill(); text(L('보너스', 'ボーナス', 'BONUS'), cx + 31, cy - 23, 8, '#1f4a10');
+    }, 'ad');
+  } else if (adMode()) {
     const adOk = S.adSpins > 0 && can;
     button(BTN.ad, '#2f8ae0', adOk, (cx, cy) => {
       icon('chest', cx - 22, cy + 1, 30);
@@ -3300,7 +3307,7 @@ function drawInfoStrip() {
   if (S.mode === 'boss') {
     text(L(`보스 러시 ${Math.min(10, (S.rushN || 0) + 1)} / 10`, `ボスラッシュ ${Math.min(10, (S.rushN || 0) + 1)} / 10`, `Boss Rush ${Math.min(10, (S.rushN || 0) + 1)} / 10`), I.x + 16, cy + 1, 14, '#ffd166', 'left', 3);
   } else {
-    const live = S.enemies.some(e => e.boss), nb = live ? S.wave : Math.max(10, Math.ceil((S.wave + 1) / 10) * 10), bd = BOSSES[bossKindFor(nb)], left = nb - S.wave;
+    const lb = S.enemies.find(e => e.boss), live = !!lb, nb = live ? S.wave : Math.max(10, Math.ceil((S.wave + 1) / 10) * 10), bd = (live && BOSSES[lb.bk]) || BOSSES[bossKindFor(nb)] || BOSSES[bossKindFor(Math.max(10, Math.floor(nb / 10) * 10))], left = nb - S.wave;
     if (LATE_IMGS.includes(bd.spr)) ensureImg(bd.spr);
     ctx.save(); rr(I.x + 5, I.y + 4, 36, I.h - 8, 10); ctx.fillStyle = 'rgba(255,93,93,.18)'; ctx.fill(); ctx.clip(); sprite(bd.spr, I.x + 23, I.y + I.h + 2, 40); ctx.restore();
     text(live ? L('보스전!', 'ボス戦！', 'Boss fight!') : L(`다음 보스 · W${nb}`, `次のボス · W${nb}`, `Next boss · W${nb}`), I.x + 48, I.y + 13, 11, live ? '#ff8a8a' : '#ffd166', 'left', 2.5);
@@ -3667,6 +3674,7 @@ function activate(key) {
     case 'sound': store.mute = !store.mute; sfx('click'); break;
     case 'ad':
       if (!canSpin()) { flash(L('칸이 꽉 찼거나 소환 중이에요', 'マスがいっぱいか、召喚中です', 'Board is full or summoning'), '#ffb35c'); sfx('error'); }
+      else if ((S.bonusSpins || 0) > 0) { S.bonusSpins--; doSpin(true); }
       else if (adMode()) { if (S.adSpins <= 0) { flash(L('이번 판 무료 소환을 다 썼어요', 'このゲームの無料召喚は使い切りました', 'No free summons left this game'), '#ffb35c'); sfx('error'); } else showRewardAd(() => { S.adSpins--; doSpin(true); }, 'free_spin'); }
       else if (S.freeCharges <= 0) { flash(L(`무료 소환은 ${mmss(S.freeT)} 후에 충전돼요`, `無料召喚は ${mmss(S.freeT)} 後にチャージされます`, `Free summon recharges in ${mmss(S.freeT)}`), '#8fd8ff', 1.6); sfx('error'); }
       else { if (S.freeCharges >= FREE_MAX) S.freeT = freeRecharge(); S.freeCharges--; doSpin(true); }
