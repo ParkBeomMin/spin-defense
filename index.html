@@ -1117,7 +1117,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v2.9.9';
+const GAME_VER = 'v2.9.10';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -2452,12 +2452,23 @@ function adxReward() {
   track('ad_reward', { kind: k, wave: S.wave, gm: S.mode });
 }
 function revive() {
-  track('revive', { wave: S.wave, mode: adMode() ? 'ad' : 'time' });
+  const viaAd = adMode(); // v2.9.10: 광고 보고 부활하면 필드의 일반 몬스터를 전부 처치 (골드·처치 수 인정, 보스는 기존 규칙)
+  track('revive', { wave: S.wave, mode: viaAd ? 'ad' : 'time' });
   S.revived = true; screen = 'play'; S.bossT = 0; S.bossFail = false; NOMETA = S.mode === 'weekly';
   if (S.mode === 'boss' && S.enemies.some(e => e.boss)) S.bossT = S.bossMax = 20;
+  let wiped = 0;
+  if (viaAd) {
+    for (const e of S.enemies.filter(e => !e.boss && !e.dead && e.hp > 0)) { e.hp = 0; killEnemy(e); wiped++; }
+    S.enemies = S.enemies.filter(e => !e.dead);
+    const cx = (PL + PR) / 2, cy = (PT + PB) / 2;
+    S.fx.push({ k: 'shock', x: cx, y: cy, col: '#fff3b0', r0: 20, r1: 320, w: 12, t: 0.7, max: 0.7 }); S.fx.push({ k: 'shock', x: cx, y: cy, col: '#9be36d', r0: 10, r1: 240, w: 8, t: 0.55, max: 0.55 });
+    flashScreen(0.35, '#fffbe0'); addShake(0.45); buzz([30, 40, 60]);
+  }
   S.enemies.sort((a, b) => a.hp - b.hp);
   while (aliveWeight() > LIMIT / 3) { const e = S.enemies.pop(); burst(e.x, e.y, '#fff', 6); }
-  banner(L('부활!', '復活！', 'Revived!'), L('몬스터 일부를 쓸어냈어요', 'モンスターを一部なぎ払った！', 'Swept away some monsters'), '#9be36d', 2); sfx('jackpot');
+  if (viaAd) banner(L('부활!', '復活！', 'Revived!'), wiped ? L(`몬스터 ${wiped}마리를 한 번에 쓸어냈어요!`, `モンスター${wiped}体を一掃！`, `Wiped out ${wiped} monsters!`) : L('다시 싸워요!', 'もう一度戦おう！', 'Back in the fight!'), '#9be36d', 2);
+  else banner(L('부활!', '復活！', 'Revived!'), L('몬스터 일부를 쓸어냈어요', 'モンスターを一部なぎ払った！', 'Swept away some monsters'), '#9be36d', 2);
+  sfx('jackpot');
 }
 // 실제 앱에서는 AdMob 보상형 광고로 교체
 // 보상형 광고: 실제 광고(H5 Games Ads)가 준비되면 그걸 쓰고, 아니면 테스트용 가짜 광고
