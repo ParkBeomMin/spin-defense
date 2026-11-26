@@ -1215,7 +1215,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v3.0.1';
+const GAME_VER = 'v3.0.2';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -1351,6 +1351,25 @@ function checkBeta() {
   show();
 }
 setTimeout(checkBeta, 2500);
+// v3.0.2 앱 업데이트 알림 (Google Play 인앱 업데이트, @capawesome/capacitor-app-update). Play에서 설치한 앱에서만 동작, 웹·직접 설치 APK는 조용히 무시
+let updDone = false, updTry = 0;
+async function checkAppUpdate() {
+  if (updDone || !APP || !(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform())) return;
+  const P = window.Capacitor.Plugins && window.Capacitor.Plugins.AppUpdate; if (!P) { updDone = true; return; }
+  let info; try { info = await P.getAppUpdateInfo(); } catch (e) { updDone = true; return; }
+  if (!info || info.updateAvailability !== 2) { updDone = true; return; }
+  if (screen === 'play' || popupBusy()) { if (++updTry <= 60) setTimeout(checkAppUpdate, 8000); return; }
+  updDone = true; track('app_update_prompt', { cur: GAME_VER, avail: String(info.availableVersionCode || info.availableVersionName || '') });
+  const w = document.createElement('div'); w.id = 'codedlg'; w.style.cssText = 'position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);font-family:' + FONT.replace(/"/g, "'");
+  w.innerHTML = `<div style="width:min(300px,86vw);background:linear-gradient(#4a3888,#2c2058);border:3px solid #ffcf5a;border-radius:18px;padding:20px 16px 14px;text-align:center;color:#fff"><div style="font-size:34px;margin-bottom:4px">⬆️</div><div style="font-size:19px;color:#ffd166;margin-bottom:6px">${L('새 버전이 있어요', '新しいバージョンがあります', 'A new version is available')}</div><div style="font-size:13px;opacity:.85;line-height:1.5;margin-bottom:14px">${L('업데이트해도 진행 상황은 그대로 이어져요', 'アップデートしても進行状況はそのまま引き継がれます', 'Your progress stays the same after updating')}</div><div style="display:flex;gap:8px"><button id="updno" style="flex:1;font:15px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#5a5a6a;color:#fff">${L('나중에', 'あとで', 'Later')}</button><button id="updok" style="flex:1.4;font:16px inherit;font-family:inherit;padding:11px;border-radius:12px;border:0;background:#ff4f72;color:#fff">${L('업데이트', 'アップデート', 'Update')}</button></div></div>`;
+  document.body.appendChild(w);
+  w.querySelector('#updno').onclick = () => { w.remove(); sfx('click'); track('app_update', { act: 'later' }); };
+  w.querySelector('#updok').onclick = async () => { w.remove(); sfx('click'); track('app_update', { act: 'update' });
+    try { if (info.immediateUpdateAllowed) { const r = await P.performImmediateUpdate(); if (r && r.code === 0) return; } } catch (e) {}
+    try { await P.openAppStore(); } catch (e) {} };
+}
+setTimeout(checkAppUpdate, 3000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !updDone) setTimeout(checkAppUpdate, 2500); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkBeta, 1500); });
 function rankAfterGame() {
   if (PORTAL || S.chal || S.mode === 'hard') return;
