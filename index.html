@@ -529,7 +529,7 @@ function awHit(u, e, dmg, crit) {
     else if (t === 'sniper') { for (const o of awNear(e, 90, s)) awDmg(o, dmg * [0.5, 0.6, 0.7][i], '#d9f99d'); }
     else if (t === 'bomber' && R < [0.2, 0.3, 0.4][i]) { const c = [e, ...awNear(e, 90, 6)]; for (let k = 0; k < 3; k++) { const o = c[Math.floor(Math.random() * c.length)]; if (!o) continue; for (const q of [o, ...awNear(o, 30, 4)]) awDmg(q, dmg * 0.4); S.fx.push({ k: 'shock', x: o.x, y: o.y - 8, col: '#ff9a3c', r0: 4, r1: 30, w: 3, t: 0.25, max: 0.25 }); } }
     else if (t === 'chrono' && !e.dead && R < [0.1, 0.15, 0.2][i]) { const f = e.boss ? 0.2 : 0.6; if (!(e.stunT > f)) e.stunT = f; S.fx.push({ k: 'shock', x: e.x, y: e.y - 16, col: '#8fb8ff', r0: 4, r1: 24, w: 2, t: 0.3, max: 0.3 }); }
-    else if (t === 'hunter' && !e.dead) { awDmg(e, e.max * (e.boss ? 0.001 : 0.005) * s); }
+    else if (t === 'hunter' && !e.dead) { awDmg(e, Math.min(e.max * (e.boss ? 0.001 : 0.005) * s, dmg * (e.boss ? 1.5 : 4))); }
     else if (t === 'breaker' && e.vulnT > 0) e.awVulnAdd = 0.05 * s;
   } finally { S.awBusy = false; }
 }
@@ -580,14 +580,14 @@ const CARDS = [
   { icon: 'star', minWave: 200, once: 1, name: L('집중', '集中', 'Focus'), desc: L('안개의 사거리 감소 무시', '霧の射程ダウンを無視', 'Ignore range loss from fog'), apply: B => { B.focus = 1; } },
   { icon: 'star', minWave: 200, name: L('결속', '結束', 'Bond'), desc: L('기절·약화된 적에게 피해 +30%', 'スタン・弱体化した敵に +30%', 'DMG +30% to stunned/weakened foes'), apply: B => { B.bond = (B.bond || 0) + 0.3; } },
   { icon: 'heart', minWave: 200, name: L('결전의 시간', '決戦の時', 'Final Stand'), desc: L('보스 제한 시간 +8초', 'ボスの制限時間 +8秒', 'Boss time limit +8s'), apply: B => { B.bossTime = (B.bossTime || 0) + 8; } },
-  { icon: 'star', minWave: 200, once: 1, rare: 0.3, legend: 1, name: L('영웅의 맹세', '英雄の誓い', "Hero's Oath"), desc: L('전설! 모든 영웅 공격력 +50%', 'レジェンド！全ヒーロー攻撃力 +50%', 'Legendary! All heroes ATK +50%'), apply: B => { for (const t in B.dmg) B.dmg[t] *= 1.5; } },
+  { icon: 'star', minWave: 200, once: 1, rare: 0.3, legend: 1, name: L('영웅의 맹세', '英雄の誓い', "Hero's Oath"), desc: L('전설! 모든 영웅 공격력 +50%', 'レジェンド！全ヒーロー攻撃力 +50%', 'Legendary! All heroes ATK +50%'), apply: B => { B.legend = (B.legend || 1) * 1.5; } }, // v3.0.3: 전설 카드는 카드 완만화(cardMul) 밖에서 곱함
   // v3.0.0 웨이브 300부터 나오는 최후반 카드
   { icon: 'coin', minWave: 300, once: 1, name: L('신속 소환', '迅速召喚', 'Swift Summon'), desc: L('소환 비용 -30%', '召喚コスト -30%', 'Summon cost -30%'), apply: B => { B.spinCost *= 0.7; } },
   { icon: 'star', minWave: 300, once: 1, name: L('연쇄 각성', '連鎖覚醒', 'Chain Awakening'), desc: L('각성 능력 발동 확률 +50%', '覚醒能力の発動率 +50%', 'Awakening ability proc +50%'), apply: B => { B.awProc = (B.awProc || 1) * 1.5; } },
   { icon: 'bolt', minWave: 300, once: 1, name: L('스킬 숙련', 'スキル熟練', 'Skill Mastery'), desc: L('스킬 대기 시간 -25%', 'スキルのCT -25%', 'Skill cooldowns -25%'), apply: B => { B.skCd = (B.skCd || 1) * 0.75; } },
   { icon: 'heart', minWave: 300, name: L('거인 사냥', '巨人狩り', 'Giant Slayer'), desc: L('보스에게 주는 피해 +80%', 'ボスへのダメージ +80%', 'Damage to bosses +80%'), apply: B => { B.boss *= 1.8; } },
   { icon: 'heart', minWave: 300, name: L('철벽', '鉄壁', 'Iron Wall'), desc: L('보스 제한 시간 +10초', 'ボスの制限時間 +10秒', 'Boss time limit +10s'), apply: B => { B.bossTime = (B.bossTime || 0) + 10; } },
-  { icon: 'star', minWave: 300, once: 1, rare: 0.25, legend: 1, name: L('신들의 축복', '神々の祝福', 'Blessing of the Gods'), desc: L('전설! 모든 영웅 공격력 ×1.8', 'レジェンド！全ヒーロー攻撃力 ×1.8', 'Legendary! All heroes ATK x1.8'), apply: B => { for (const t in B.dmg) B.dmg[t] *= 1.8; } },
+  { icon: 'star', minWave: 300, once: 1, rare: 0.25, legend: 1, name: L('신들의 축복', '神々の祝福', 'Blessing of the Gods'), desc: L('전설! 모든 영웅 공격력 ×1.8', 'レジェンド！全ヒーロー攻撃力 ×1.8', 'Legendary! All heroes ATK x1.8'), apply: B => { B.legend = (B.legend || 1) * 1.8; } },
 ];
 const newBuffs = () => ({ dmg: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), spd: Object.fromEntries(ALL_TYPES.map(t => [t, 1])), aura: 1, ninjaCrit: 0, chain: 0, splash: 1, slowT: 0, range: 1, crit: 0, boss: 1, spinCost: 1, gold: 1, star: 1, stun: 0, stunT: 0, poison: 1, poisonT: 0, snipeCrit: 0, income: 1, rally: 1 });
 function openPick() {
@@ -725,7 +725,13 @@ function laneAt(x, y) {
   return ds.indexOf(Math.min(...ds));
 }
 const skBase = () => enemyHP(); // 지금 웨이브 일반 몬스터 체력
-function skHit(e, dmg, fx, fy) { const prev = S.srcType; S.srcType = 'skill'; damage(e, dmg, true, fx, fy, false); S.srcType = prev; }
+// v3.0.3 밸런스: 같은 카드를 계속 고르면 배율이 곱으로 끝없이 커져서(웨이브당 체력 성장보다 빠름) 300~600이 너무 쉬웠음 → 일정 이상은 완만하게
+const cardMul = (m, knee) => m <= knee ? m : knee * Math.pow(m / knee, 0.3);
+let tdpsT = -1, tdpsV = 0;
+function teamDps() { if (tdpsT === S.time) return tdpsV; let v = 0; for (const u of S.units) { if (!u) continue; try { const st = stats(u); v += st.dmg / Math.max(0.05, st.rate); } catch (e) {} } tdpsT = S.time; tdpsV = Math.max(1, v); return tdpsV; }
+// 스킬이 보스에게 주는 피해는 '내 팀 화력 n초 분'까지 (적 체력 비례 부분이 성장을 건너뛰지 못하게)
+const skBossCap = (e, dmg, sec) => e.boss ? Math.min(dmg, teamDps() * sec * (S.B.boss > 1 ? cardMul(S.B.boss, 2.5) : 1)) : dmg;
+function skHit(e, dmg, fx, fy, capSec = 3) { dmg = skBossCap(e, dmg, capSec); const prev = S.srcType; S.srcType = 'skill'; damage(e, dmg, true, fx, fy, false); S.srcType = prev; }
 // v2.9.3 스킬 연출 강화 (피해 수치는 v2.9.2와 같음, 메테오·번개는 연출 시간만큼 늦게 맞음)
 const skFmt = n => n >= 1e12 ? (n / 1e12).toFixed(1) + 'T' : n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'K' : String(Math.round(n));
 function skFirst(k) {
@@ -736,7 +742,7 @@ function skFirst(k) {
 function skJag(x1, y1, x2, y2, n, amp) { const pts = [[x1, y1]]; for (let i = 1; i < n; i++) { const p = i / n; pts.push([x1 + (x2 - x1) * p + (Math.random() - 0.5) * amp * 2, y1 + (y2 - y1) * p + (Math.random() - 0.5) * amp * 0.6]); } pts.push([x2, y2]); return pts; }
 const metPos = m => { const p = clamp(m.t / m.dur, 0, 1), e = p * (0.4 + 0.6 * p); return [m.sx + (m.x - m.sx) * e, m.sy + (m.y - m.sy) * e, p]; };
 function castMeteor(lane) {
-  const lv = skLv('meteor'), [d0, len] = LANES()[lane], n = Math.round(len / 46), dmg = skBase() * 1.0 * skMul(lv);
+  const lv = skLv('meteor'), [d0, len] = LANES()[lane], n = Math.round(len / 46), dmg = skBase() * 0.6 * skMul(lv);
   if (!S.mets) S.mets = [];
   ensureImg('meteor_rock'); const NRM = [[0, -1], [1, 0], [0, 1], [-1, 0]][lane];
   // v2.9.5: 줄 표시가 먼저(0.22초 동안 줄을 따라 쓸고 지나감), 운석은 0.5초 뒤 그 줄 바로 위에서 짧고 가파르게 떨어짐 (보드 가운데를 가로지르지 않게)
@@ -746,7 +752,7 @@ function castMeteor(lane) {
   sfx('zap'); buzz(20); skFirst('meteor'); skUsed('meteor', lv);
 }
 function meteorHit(m) {
-  for (const e of alive()) if (Math.hypot(e.x - m.x, e.y - m.y) < 44) skHit(e, m.dmg * (e.boss ? 0.5 : 1), m.x, m.y - 40);
+  for (const e of alive()) if (Math.hypot(e.x - m.x, e.y - m.y) < 44) skHit(e, m.dmg * (e.boss ? 0.5 : 1), m.x, m.y - 40, 1.5);
   S.fx.push({ k: 'shock', x: m.x, y: m.y, col: '#ffb070', r0: 6, r1: 60, w: 8, t: 0.45, max: 0.45 });
   S.fx.push({ k: 'shock', x: m.x, y: m.y, col: '#fff3c4', r0: 4, r1: 34, w: 4, t: 0.25, max: 0.25 });
   puffs(m.x, m.y - 6, 5, '90,70,60', 14); puffs(m.x, m.y, 4, '255,150,70', 10);
@@ -775,7 +781,7 @@ function thunderStrike(st) {
   for (let j = 0; j < 4; j++) { const a = pts[3 + Math.floor(Math.random() * 8)], dx = (Math.random() < 0.5 ? -1 : 1) * (30 + Math.random() * 50); br.push(skJag(a[0], a[1], a[0] + dx, a[1] + 40 + Math.random() * 50, 5, 10)); }
   const arcs = al.filter(e => e !== tg && Math.hypot(e.x - tg.x, e.y - tg.y) < 120).slice(0, 4);
   if (!S.bolts) S.bolts = []; S.bolts.push({ pts, br, arcs, x: tg.x, y: ty, t: 0.55, max: 0.55 });
-  skHit(tg, dmg, tg.x, tg.y - 60); S.lastThunder = dmg;
+  skHit(tg, dmg, tg.x, tg.y - 60, 10 * skMul(lv)); S.lastThunder = skBossCap(tg, dmg, 10 * skMul(lv));
   S.fx.push({ k: 'shock', x: tg.x, y: ty, col: '#ffe066', r0: 8, r1: 90, w: 8, t: 0.5, max: 0.5 }); S.fx.push({ k: 'shock', x: tg.x, y: ty, col: '#ffffff', r0: 4, r1: 46, w: 4, t: 0.3, max: 0.3 });
   sparks(tg.x, ty, '#fff3a0', 18, 260); sparks(tg.x, ty, '#8fd8ff', 8, 180); puffs(tg.x, tg.y, 4, '60,60,80', 12);
   decal(tg.x, tg.y + 4, 22, '20,15,10', 3); if (!S.scorch) S.scorch = []; S.scorch.push({ x: tg.x, y: tg.y + 4, t: 2.4, max: 2.4 });
@@ -807,7 +813,7 @@ function castJudge(lv) {
 function judgeStrike(j) {
   const al = alive(); if (!al.length) return; const P = skJudP(j.lv) / 100, PB = skJudB(j.lv) / 100, base = skBase() * skMul(j.lv); let tot = 0;
   j.beams = al.slice(0, 40).map(e => ({ x: e.x, y: e.y, w: e.boss ? 46 : 26 }));
-  for (const e of al) { const dmg = e.boss ? e.hp * PB + base * 2 : e.hp * P + base * 0.4; tot += dmg; skHit(e, dmg, e.x, e.y - 40); sparks(e.x, e.y - 14, '#fff3b0', e.boss ? 18 : 6, 200); S.fx.push({ k: 'shock', x: e.x, y: e.y - 8, col: '#ffe9a0', r0: 4, r1: e.boss ? 70 : 32, w: 5, t: 0.4, max: 0.4 }); }
+  for (const e of al) { const dmg = e.boss ? e.hp * PB + base * 2 : e.hp * P + base * 0.4; tot += skBossCap(e, dmg, 10 * skMul(j.lv)); skHit(e, dmg, e.x, e.y - 40, 10 * skMul(j.lv)); sparks(e.x, e.y - 14, '#fff3b0', e.boss ? 18 : 6, 200); S.fx.push({ k: 'shock', x: e.x, y: e.y - 8, col: '#ffe9a0', r0: 4, r1: e.boss ? 70 : 32, w: 5, t: 0.4, max: 0.4 }); }
   S.bigNum = { x: (PL + PR) / 2, y: (PT + PB) / 2 - 60, txt: L('천벌! ', '天罰！', 'JUDGMENT! ') + skFmt(tot), t: 1.4, max: 1.4 };
   flashScreen(0.55, '#fff6d0'); sfx('bigboom'); sfx('jackpot'); addShake(0.55); hitstop(0.1); buzz([40, 30, 60]);
 }
@@ -816,7 +822,7 @@ function skTick2(dt) {
     const hitNow = tn.tick <= 0; if (hitNow) tn.tick = 0.22;
     for (const e of S.enemies) { if (e.dead || e.hp <= 0 || e.vanish > 0) continue; if (Math.hypot(e.x - tx, e.y - ty) > 44) continue;
       e.d = Math.max(0, e.d - (e.boss ? 70 : 260) * dt); if (!e.boss) e.slowT = Math.max(e.slowT || 0, 0.6);
-      if (hitNow) { skHit(e, skBase() * 0.45 * skMul(tn.lv), e.x, e.y - 30); tn.hitN++; } }
+      if (hitNow) { skHit(e, skBase() * 0.45 * skMul(tn.lv), e.x, e.y - 30, 0.4); tn.hitN++; } }
     if (S.embers.length < 160 && Math.random() < 0.8) S.embers.push({ x: tx + (Math.random() - 0.5) * 50, y: ty - Math.random() * 70, vx: (Math.random() - 0.5) * 120, vy: -40 - Math.random() * 80, t: 0.5, max: 0.5, r: 1 + Math.random() * 2, col: 'leaf' });
     if (tn.d <= tn.end || tn.t > 3.2) { puffs(tx, ty, 10, '200,240,225', 14); S.torn = null; } }
   if (S.goldRain > 0) { S.goldRain -= dt; if (S.gdrops) for (const p of S.gdrops) { p.y += p.v * dt; p.x += 30 * dt; if (p.y > PB + 90) { p.y = PT - 120 - Math.random() * 60; p.x = PL - 30 + Math.random() * (PW + 60); } } if (S.goldRain <= 0) { S.goldRain = 0; S.gdrops = null; } }
@@ -1215,7 +1221,7 @@ const showNick = s => { const n = cleanNick(s); return n && !badNick(n) ? n : '*
 if (APP && !nick()) { try { localStorage.setItem('sd_nick', randomNick()); localStorage.setItem('sd_nick_auto', '1'); localStorage.removeItem('sd_nick_skip'); } catch (e) {} }
 function drawGear(cx, cy) { ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#fff'; for (let k = 0; k < 8; k++) { ctx.save(); ctx.rotate(k * Math.PI / 4); ctx.fillRect(-3, -15, 6, 7); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#4a3f7a'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 // 테스터·플레이어 의견: 구글 폼(까베밍 게임 테스터 의견, 세 게임 공용). 게임 이름과 버전·기기 정보를 미리 채워서 연다
-const GAME_VER = 'v3.0.2';
+const GAME_VER = 'v3.0.3';
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSc-PdektEWxmc5bZoA4NFHv9_blNanu3HRvebDuY1kLvTWEHA/viewform';
 function feedbackUrl() {
   const ua = navigator.userAgent, os = /Android [0-9.]+/.exec(ua)?.[0] || (/iPhone|iPad/.test(ua) ? 'iOS' : /Windows|Mac OS X/.exec(ua)?.[0] || 'web');
@@ -1750,9 +1756,11 @@ function banner(text, sub, col = '#fff', t = 1.6) { S.banner = { text, sub, col,
 const spinCost = () => Math.round((20 + S.spins * 2) * S.B.spinCost * ((S.cm && S.cm.spin) || 1));
 const upCost = t => 40 + S.lv[t] * 35;
 // 난이도 곡선: 초반 5웨이브는 순하게, 이후 가파르게 (TUNE은 시뮬레이션으로 맞춘 값)
-const TUNE = { A: 32, G: 1.17, G2: 1.09, G3: 1.04, G4: 1.05, G5: 1.042, G6: 1.045, G7: 1.03, bossCap: 100, L: 0.5, from: 7, boss: 16, bossGrow: 0.2, bossTime: 40, upPct: 0.2 };
+const TUNE = { A: 32, G: 1.17, G2: 1.09, G3: 1.04, G4: 1.05, G5: 1.037, G6: 1.040, G7: 1.03, bossCap: 100, L: 0.5, from: 7, boss: 16, bossGrow: 0.2, bossTime: 40, upPct: 0.2 };
 // 체력 성장: 30웨이브까지 1.17배씩, 31~60은 G2, 61부터는 G3 (웨이브 100까지 갈 수 있게 후반 성장을 완만하게)
-const hpCurve = w => Math.pow(TUNE.G, Math.min(w, 30) - 1) * (w > 30 ? Math.pow(TUNE.G2, Math.min(w, 60) - 30) : 1) * (w > 60 ? Math.pow(TUNE.G3, Math.min(w, 100) - 60) : 1) * (w > 100 ? Math.pow(TUNE.G4, Math.min(w, 200) - 100) : 1) * (w > 200 ? Math.pow(TUNE.G5, Math.min(w, 300) - 200) : 1) * (w > 300 ? Math.pow(TUNE.G6, Math.min(w, 400) - 300) : 1) * (w > 400 ? Math.pow(TUNE.G7, w - 400) : 1); // 101부터는 G4, 201부터는 G5(3부) (2부를 끝까지 가려면 성장이 필요)
+// v3.0.3: 웨이브 구간별 체력 성장표 (구간 끝 웨이브, 웨이브당 배율). 6~10부(501~1000)는 새 콘텐츠와 함께 줄을 추가/수정
+const GROW = [[30, 'G'], [60, 'G2'], [100, 'G3'], [200, 'G4'], [300, 'G5'], [400, 'G6'], [500, 'G7'], [1000, 'G7'], [Infinity, 'G7']];
+const hpCurve = w => { let m = 1, prev = 1; for (const [end, k] of GROW) { const hi = Math.min(w, end); if (hi > prev) m *= Math.pow(TUNE[k], hi - prev); prev = end; if (w <= end) break; } return m; };
 const hpW = () => S.hpWave || S.wave;
 const enemyHP = () => Math.round(TUNE.A * hpCurve(hpW()) * (1 + TUNE.L * Math.max(0, hpW() - TUNE.from)) * ((S.cm && S.cm.hp) || 1) * (S.first && S.wave <= 8 ? 0.75 : 1));
 function aliveWeight() { let w = 0; for (const e of S.enemies) w += e.boss ? 10 : 1; return w; }
@@ -2303,7 +2311,7 @@ function stats(u) {
   { const [ad, as] = awAura(ui); aura += ad; spdAura += as; } // 각성 오라
   if (S.rallyT > 0) aura *= 1.5;
   const ml = metaLv(u.type);
-  return { range: t.range * (1 + 0.08 * (u.grade - 1)) * B.range * (ml >= 50 ? 1.1 : 1), dmg: t.dmg * g.m * (1 + TUNE.upPct * S.lv[u.type]) * metaMulOf(ml) * B.dmg[u.type] * aura * (S.cm.dmg || 1), rate: t.rate * (1 - 0.07 * (u.grade - 1)) / B.spd[u.type] / spdAura / (S.goldRain > 0 ? 1.3 : 1) };
+  return { range: t.range * (1 + 0.08 * (u.grade - 1)) * B.range * (ml >= 50 ? 1.1 : 1), dmg: t.dmg * g.m * (1 + TUNE.upPct * S.lv[u.type]) * metaMulOf(ml) * cardMul(B.dmg[u.type], 3) * (B.legend || 1) * aura * (S.cm.dmg || 1), rate: t.rate * (1 - 0.07 * (u.grade - 1)) / cardMul(B.spd[u.type], 2) / spdAura / (S.goldRain > 0 ? 1.3 : 1) };
 }
 // ===== 타격감 도우미 =====
 const CRIT = { sword: 0.2, bow: 0.12, magic: 0.1, ice: 0.08, bard: 0.05, ninja: 0.35, storm: 0.1, dwarf: 0.12, alch: 0.06, sniper: 0.25, cat: 0.08, bomber: 0.1, chrono: 0.08, pioneer: 0.1, hunter: 0.15, breaker: 0.12 };
@@ -2367,7 +2375,7 @@ function damage(e, dmg, showNum, fx, fy, crit = false) {
   if (e.dead) return;
   if (e.vanish > 0) { if (showNum && S.dmg.length < 30) S.dmg.push({ x: e.x, y: e.y - 30, v: 'MISS', t: 0.5, max: 0.5, vx: 0 }); return; }
   if (crit) critFx(e, fx ?? e.x, fy ?? e.y);
-  if (e.boss) dmg *= S.B.boss;
+  if (e.boss) dmg *= cardMul(S.B.boss, 2.5);
   if (e.vulnT > 0) dmg *= (e.vuln || 1.15) + (e.awVulnAdd || 0); // 방패 파괴자 '약화' (+각성 분쇄)
   if (S.B.bond && (e.vulnT > 0 || e.stunT > 0)) dmg *= 1 + S.B.bond; // 후반 카드 '결속'
   if (S.sanct && Math.hypot(e.x - S.sanct.x, (e.y - S.sanct.y) * 1.8) < S.sanct.r) dmg *= 1 + S.sanct.p; // v3.0.0 스킬 '성역'
@@ -2642,8 +2650,8 @@ function fireAttack0(u, ux, uy) {
     S.fx.push({ k: 'cast', x: ux, y: uy + 15, t: 0.3, max: 0.3, col: t.color });
   } else if (u.type === 'hunter') {
     let tg = e; for (const o of S.enemies) { if (o.dead || o.vanish > 0 || Math.hypot(o.x - ux, o.y - uy) > st.range + o.r) continue; if (o.boss && !tg.boss) tg = o; else if (o.boss === tg.boss && o.max > tg.max) tg = o; }
-    const pct = (tg.boss ? t.bossPct : t.hpPct) * (1 + 0.2 * (u.grade - 1)) * (S.B.hunt || 1) * (1 + 0.01 * metaLv('hunter'));
-    S.proj.push({ crit, k: 'bolt2', x: ux + f * 20, y: uy - 22, tx: tg.x, ty: tg.y - 8, target: tg, t: 0, dur: 0.11, dmg: st.dmg * (crit ? 2 : 1) + tg.max * pct, show: true, col: t.color });
+    const pct = (tg.boss ? t.bossPct : t.hpPct) * (1 + 0.2 * (u.grade - 1)) * cardMul(S.B.hunt || 1, 2) * (1 + 0.01 * metaLv('hunter'));
+    S.proj.push({ crit, k: 'bolt2', x: ux + f * 20, y: uy - 22, tx: tg.x, ty: tg.y - 8, target: tg, t: 0, dur: 0.11, dmg: st.dmg * (crit ? 2 : 1) + Math.min(tg.max * pct, st.dmg * (tg.boss ? 6 : 12)), show: true, col: t.color });
     S.fx.push({ k: 'tip', x: ux + f * 20, y: uy - 22, t: 0.12, max: 0.12, col: '#c8ffe8' }); sfx('crit');
     u.face = tg.x < ux ? -1 : 1;
   } else if (u.type === 'breaker') {
@@ -2766,7 +2774,7 @@ const ULTI = {
   sniper: { name: L('관통 저격', '貫通狙撃', 'Piercing Shot'), fn: (st, ux, uy) => { alive().sort((a, b) => b.hp - a.hp).slice(0, 3).forEach((e, k) => S.proj.push({ crit: true, k: 'bolt2', x: ux, y: uy - 18, tx: e.x, ty: e.y - 8, target: e, t: -k * 0.08, dur: 0.08, dmg: st.dmg * 5 * (e.boss ? 1.6 : 1), show: true, col: '#d9f99d' })); sfx('crit'); } },
   bomber: { name: L('융단 폭격', '絨毯爆撃', 'Carpet Bombing'), fn: (st) => { pickN(alive(), 7).forEach((e, k) => S.proj.push({ crit: true, k: 'bomb', x: e.x - 40 + Math.random() * 80, y: e.y - 170, tx: e.x, ty: e.y - 4, target: e, t: -k * 0.07, dur: 0.4, dmg: st.dmg * 3, r: 64, knock: 26, show: true, col: '#ff9a3c' })); } },
   chrono: { name: L('시간 정지', '時間停止', 'Time Stop'), fn: (st) => { for (const e of alive()) { e.stunT = Math.max(e.stunT || 0, e.boss ? 1.0 : 2.4); damage(e, st.dmg * 2, false); } flashScreen(0.3, '#cfe0ff'); sfx('shatter'); const [cx0, cy0] = cellCenter(7); S.fx.push({ k: 'shock', x: cx0, y: cy0, col: '#8fb8ff', r0: 10, r1: 220, w: 8, t: 0.7, max: 0.7 }); } },
-  hunter: { name: L('사냥 개시', '狩りの一撃', "Hunter's Mark"), fn: (st, ux, uy) => { const al = alive(); if (!al.length) return; const tg = al.reduce((a, b) => (b.boss && !a.boss) || (b.boss === a.boss && b.max > a.max) ? b : a); damage(tg, st.dmg * 3 + tg.max * (tg.boss ? 0.025 : 0.08), true, tg.x, tg.y - 20, true); S.fx.push({ k: 'shock', x: tg.x, y: tg.y - 20, col: '#4fd1a5', r0: 6, r1: 90, w: 6, t: 0.5, max: 0.5 }); S.fx.push({ k: 'pillar', x: tg.x, y: tg.y, t: 0.45, max: 0.45 }); hitstop(0.06); addShake(0.25); sfx('crit'); } },
+  hunter: { name: L('사냥 개시', '狩りの一撃', "Hunter's Mark"), fn: (st, ux, uy) => { const al = alive(); if (!al.length) return; const tg = al.reduce((a, b) => (b.boss && !a.boss) || (b.boss === a.boss && b.max > a.max) ? b : a); damage(tg, st.dmg * 3 + Math.min(tg.max * (tg.boss ? 0.025 : 0.08), st.dmg * 40), true, tg.x, tg.y - 20, true); S.fx.push({ k: 'shock', x: tg.x, y: tg.y - 20, col: '#4fd1a5', r0: 6, r1: 90, w: 6, t: 0.5, max: 0.5 }); S.fx.push({ k: 'pillar', x: tg.x, y: tg.y, t: 0.45, max: 0.45 }); hitstop(0.06); addShake(0.25); sfx('crit'); } },
   breaker: { name: L('대파괴', '大破壊', 'Shatter'), fn: (st) => { for (const e of alive()) { if (e.shield > 0) { e.shield = 0; e.shieldT = 9; shardsFx(e.x, e.y - 30, 8, '#fff3b0'); } if (e.tails > 0) e.tails = Math.max(0, e.tails - 3); if (e.bk === 'golem') e.armorOff = Math.max(e.armorOff || 0, 4); e.vulnT = Math.max(e.vulnT || 0, 5); e.vuln = Math.max(e.vuln || 1, 1.3); damage(e, st.dmg * 1.5, false); } flashScreen(0.25, '#ffd0c0'); addShake(0.25); sfx('shatter'); } },
   pioneer: { name: L('개척의 깃발', '開拓の旗', "Pioneer's Banner"), fn: (st, ux, uy) => { S.rallyT = 4; for (const e of pickN(alive(), 4)) damage(e, st.dmg * 2, false); S.fx.push({ k: 'shock', x: ux, y: uy, col: '#ffd166', r0: 10, r1: 220, w: 7, t: 0.6, max: 0.6 }); S.fx.push({ k: 'shock', x: ux, y: uy, col: '#ff9ad5', r0: 6, r1: 140, w: 5, t: 0.45, max: 0.45 }); flashScreen(0.15, '#ffe9f5'); sfx('jackpot'); } },
   cat:    { name: L('황금비', '黄金の雨', 'Golden Rain'), fn: (st, ux, uy) => { const g = Math.round((25 + S.wave * 3) * S.B.income); S.gold += g; S.dmg.push({ x: ux, y: uy - 36, v: '+' + g, t: 1.2, max: 1.2, gold: true, vx: 0 }); for (let k = 0; k < 8; k++) if (S.coins.length < 20) { const x0 = ux + (Math.random() - 0.5) * 120; S.coins.push({ x: x0, y: uy - 60, sx: x0, sy: uy - 60, t: -k * 0.05, dur: 0.6 }); } for (const e of alive()) damage(e, st.dmg * 0.8, false); sfx('coin'); } },
